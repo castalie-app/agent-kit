@@ -1812,31 +1812,56 @@
     {
       "name": "followup_check_list",
       "kind": "read",
-      "description": "List active follow-up checks for a spec or a brief (ordered by display order).",
+      "description": "List follow-up checks for one spec, one brief or one bug — the whole workspace when all three are omitted. Each check carries next_due_date, state (not_applicable | upcoming | overdue) and days_late.",
       "params": [
         {
-          "name": "featureSpecId",
+          "name": "feature_spec_id",
           "type": "int",
           "required": false
         },
         {
-          "name": "featureBriefId",
+          "name": "feature_brief_id",
           "type": "int",
           "required": false
+        },
+        {
+          "name": "bug_id",
+          "type": "int",
+          "required": false,
+          "description": "The checks that guard one fixed bug."
+        },
+        {
+          "name": "state",
+          "type": "string",
+          "required": false,
+          "description": "not_applicable | upcoming | overdue"
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "1 to 200, default 50."
         }
       ],
       "returns": {
         "success": "bool",
-        "checks": "object[]"
+        "total_count": "int",
+        "has_more": "bool",
+        "followup_checks": "object[]"
       }
     },
     {
       "name": "followup_check_update",
       "kind": "write",
-      "description": "Edit an existing follow-up check. Pass null to leave a field unchanged; empty string clears the prompt. Set isActive=false to deactivate.",
+      "description": "Update mutable fields of a follow-up check; only provided fields change. is_active=false retires the check: it leaves every list and is no longer scheduled nor handed out by followup_run_pick_next.",
       "params": [
         {
-          "name": "checkId",
+          "name": "id",
           "type": "int",
           "required": true
         },
@@ -1846,28 +1871,164 @@
           "required": false
         },
         {
-          "name": "followupPromptMd",
+          "name": "followup_prompt_md",
           "type": "string",
           "required": false
         },
         {
-          "name": "scheduleOffsetDays",
-          "type": "int",
-          "required": false
-        },
-        {
-          "name": "chainOffsetDays",
-          "type": "int",
-          "required": false
-        },
-        {
-          "name": "onFailAction",
+          "name": "check_type",
           "type": "string",
           "required": false
         },
         {
-          "name": "isActive",
+          "name": "schedule_offset_days",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "chain_offset_days",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "on_fail_action",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "is_active",
           "type": "bool",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
+      "name": "followup_run_pick_next",
+      "kind": "write",
+      "description": "Take the next due follow-up run nobody is holding, under a lease. Atomic: two sessions never get the same run. Returns the run with its check and the spec, brief or bug it guards.",
+      "params": [
+        {
+          "name": "picked_by",
+          "type": "string",
+          "required": true,
+          "description": "Who is taking it — a hostname, a session name."
+        },
+        {
+          "name": "followup_check_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "lease_minutes",
+          "type": "int",
+          "required": false,
+          "description": "Default 30."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "picked": "bool",
+        "run": "object"
+      }
+    },
+    {
+      "name": "followup_run_get",
+      "kind": "read",
+      "description": "Read one follow-up run with its check (prompt, on_fail_action, recommended model) and the spec, brief or bug it guards.",
+      "params": [
+        {
+          "name": "followup_run_id",
+          "type": "int",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "run": "object"
+      }
+    },
+    {
+      "name": "followup_run_list",
+      "kind": "read",
+      "description": "List follow-up runs — one check's, or the whole workspace's. Due runs are materialised first.",
+      "params": [
+        {
+          "name": "followup_check_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "description": "pending | due | passed | failed | skipped"
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "1 to 200, default 50."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "runs": "object[]"
+      }
+    },
+    {
+      "name": "followup_run_complete",
+      "kind": "write",
+      "description": "Close a follow-up run with its verdict. notes_md is required: the evidence of what was checked. final_status human_required raises the run onto the attention list even when the outcome is not a failure.",
+      "params": [
+        {
+          "name": "followup_run_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "description": "passed | failed | skipped"
+        },
+        {
+          "name": "notes_md",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "final_status",
+          "type": "string",
+          "required": false,
+          "description": "done | failed | human_required"
+        },
+        {
+          "name": "outcome_type",
+          "type": "string",
+          "required": false,
+          "description": "What the run produced: bug, brief, spec."
+        },
+        {
+          "name": "outcome_ref_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "model_used",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "total_cost_usd",
+          "type": "number",
           "required": false
         }
       ],

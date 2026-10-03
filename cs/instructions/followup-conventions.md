@@ -37,8 +37,34 @@ After each follow-up, reschedule from the result:
 
 | Result | Next horizon |
 |---|---|
-| Green and **stable** (≥ 2 consecutive passes, or a short-cycle spec) | stop — loop closed |
-| Green but **first cycle of a long cascade** (batch → J+7 green) | next: J+30 (then stop) |
-| Green first cycle of a new product | J+90 (then stop) |
+| Green and **stable** (≥ 2 consecutive passes, or a short-cycle spec) | retire, if the retirement rule below allows it |
+| Green but **first cycle of a long cascade** (batch → J+7 green) | next: J+30 (then retire) |
+| Green first cycle of a new product | J+90 (then retire) |
 | Minor anomalies (unexpected volumes, perf down but not broken) | **J+7** — quick re-check |
-| Hard regression (batch not running, feature unreachable) | stop + flag regression, propose a corrective spec |
+| Hard regression (batch not running, feature unreachable) | **J+7** re-check, check stays active; flag the regression, ticket per `on_fail_action` |
+| Unmeasurable today (baseline window gone, empty population) | run `skipped`, `final_status="human_required"`, check stays active |
+
+## Retirement — by `feature-followup`
+
+A check is retired (`is_active=false`) only when its subject is dead (below), or when it is green AND
+it carries no later horizon (`chain_offset_days` empty) AND its prompt asks for no lasting condition
+("stays", "remains", "over time", a recurring drift probe).
+
+- A failed run never retires its check: it stays active on its next horizon or a J+7 re-check, and
+  produces its ticket per `on_fail_action`.
+- A check with `chain_offset_days` is rescheduled to its next horizon after a green, never retired
+  after a single green.
+- A check that cannot be measured today closes its run `skipped` with `final_status="human_required"`
+  and stays active. Unmeasurable is never green.
+
+## Dead subject — by `feature-followup`, before any replay
+
+A check whose subject is gone is retired, never replayed. Dead means proven: spec or brief
+`Canceled`, bug ticket deleted or closed as not a defect or duplicate, feature removed from the
+product (route 404/410, code path gone from the default branch, flag permanently off), or a
+time-boxed experiment past its end date.
+
+| Subject | Check | Run |
+|---|---|---|
+| Dead, proven | `is_active=false` | `skipped`, the proof in `notes_md` — no failed verdict, ticket or corrective spec |
+| Uncertain | stays active | `skipped`, `final_status="human_required"`, the question in `notes_md` |
