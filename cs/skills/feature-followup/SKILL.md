@@ -29,6 +29,12 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    evidence.
 4. **Act on failure per `onFailAction`.** `create_spec` → draft a corrective `feature-spec`; `bug_fix` /
    `implement_spec` → note the follow-up work. Record what you decided.
+   **A check anchored on a delivery relaunches the work.** When it fails, or needs a person's
+   decision, close its run with `mcp__castalie__followup_run_complete(…, relaunch_prompt_md=…)`: a
+   prompt addressed to the session that will take the work back, which receives it word for word as
+   its first message. Say the criterion that was missed, what you measured (figures, queries,
+   links) and what that session must do: fix, replay the measure, or settle a named decision. It
+   is read alone, without the rest of the report.
 5. **Reschedule.** Per `${CLAUDE_PLUGIN_ROOT}/instructions/followup-conventions.md`: green + stable →
    close the loop; green first cycle of a cascade → next horizon; minor anomaly → J+7 re-check; hard
    regression → stop + flag. Apply via `mcp__castalie__followup_check_update(checkId, scheduleOffsetDays=…,

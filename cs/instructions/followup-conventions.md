@@ -7,6 +7,21 @@ Follow-up checks live on the brief (business checks) or the spec (technical chec
 `followup_check_add`; each carries a `scheduleOffsetDays` (first run at delivered_at + N days) and an
 optional `chainOffsetDays` (the next horizon, materialized when the check passes).
 
+## Anchor a check on its pull request
+
+A check that names the pull request it verifies (`anchorPrUrl`, and `anchorAlias` when one deployed
+component matters) counts from that pull request's successful production release, recorded by the
+host's release queue as a delivery: due at delivery + `scheduleOffsetDays`, whether its spec, bug or
+brief is closed or not. With no delivery recorded, it keeps its subject's own anchor (the spec's
+completion, the bug's closure), so a workspace that records no deliveries loses nothing.
+
+Anchor as soon as the pull request exists: `followup_check_add(…, anchorPrUrl)` for a new check,
+`followup_check_update(checkId, anchorPrUrl)` for one written earlier by `feature-spec` or
+`feature-brief`, which run before any pull request. A spec delivered phase by phase anchors each
+phase's checks on that phase's pull request; a check left unanchored waits for the spec's completion.
+A delivery also carries the session that requested the release: an anchored check that fails, or is
+not played, relaunches the work from it.
+
 ## First horizon — set by `feature-spec`
 
 When writing the spec, propose the first offset from the dominant nature of the work:
@@ -30,6 +45,7 @@ it needs exists.
   offset for the new category before adding the check.
 - If delivery slipped so the first horizon is already in the past or ≤ J+2, count from **today** — the
   clock starts after go-live, not after the spec was written.
+- Once a phase's pull request exists, anchor that phase's checks on it (section above).
 
 ## Cascade — by `feature-followup`
 

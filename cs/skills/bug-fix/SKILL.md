@@ -199,7 +199,9 @@ Two proofs, both required:
 
 Add a follow-up check with `mcp__castalie__followup_check_add`, or in their system if that is where
 bugs live: what to look at, on what horizon, to know this class of failure has not returned. One
-check, concrete enough to run without you.
+check, concrete enough to run without you. Once the pull request exists, anchor the check on it
+(`anchorPrUrl`, `${CLAUDE_PLUGIN_ROOT}/instructions/followup-conventions.md`): it then counts from
+the fix's production release instead of the ticket's closure.
 
 ### 7. Hand it over
 

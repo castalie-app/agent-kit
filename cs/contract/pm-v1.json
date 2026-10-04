@@ -1802,6 +1802,18 @@
           "type": "string",
           "required": false,
           "description": "bug_fix | implement_spec | create_spec"
+        },
+        {
+          "name": "anchorPrUrl",
+          "type": "string",
+          "required": false,
+          "description": "The pull request this check verifies: it then counts from that PR's recorded production delivery, whatever the state of its subject."
+        },
+        {
+          "name": "anchorAlias",
+          "type": "string",
+          "required": false,
+          "description": "With anchorPrUrl, the deployed component whose delivery counts (default: the PR's first delivery)."
         }
       ],
       "returns": {
@@ -1869,6 +1881,56 @@
           "name": "isActive",
           "type": "bool",
           "required": false
+        },
+        {
+          "name": "anchorPrUrl",
+          "type": "string",
+          "required": false,
+          "description": "Anchor the check on its pull request's production delivery; empty string removes the anchor."
+        },
+        {
+          "name": "anchorAlias",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
+      "name": "followup_run_complete",
+      "kind": "write",
+      "description": "Close a follow-up run with its verdict and the evidence seen. On a failure or a decision to take, relaunchPromptMd is handed word for word to the session that takes the work back.",
+      "params": [
+        {
+          "name": "followupRunId",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "description": "passed | failed | skipped"
+        },
+        {
+          "name": "notesMd",
+          "type": "string",
+          "required": true,
+          "description": "What was checked and what it gave."
+        },
+        {
+          "name": "finalStatus",
+          "type": "string",
+          "required": false,
+          "description": "done | failed | human_required"
+        },
+        {
+          "name": "relaunchPromptMd",
+          "type": "string",
+          "required": false,
+          "description": "Why the check relaunches the work, what was measured, what to do."
         }
       ],
       "returns": {
