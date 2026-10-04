@@ -408,6 +408,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
 | `contrarian` | Challenge an idea before you commit — adversarial sub-agents + a verdict you own. |
+| `plain-french` | Write and check French in a controlled style modelled on ASD-STE100: short sentences, active voice, no conditional hedging, one name per thing, French typography. Ships a check that finds what a machine can see. |
 | `analyse` | Meta-reflection on the assistant's own behavior, producing concrete rule edits. |
 | `ship` | Commit, open a PR, run a self-review panel, fix blockers — ends at "PR ready" (never merges). |
 | `end` | Celebrate a verified delivery with a live deep link. |

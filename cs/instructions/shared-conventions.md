@@ -38,6 +38,11 @@ the user: prefer a colon, a semicolon, a comma or parentheses.
 "Plain French" reads as **the user's own language**: a French team gets French, anyone else gets
 theirs, with the same demands.
 
+**A French text that is kept** (a report, a verdict, the body of a brief, a spec or a ticket, a
+procedure) is written under the `plain-french` skill, the controlled French modelled on
+ASD-STE100: load it before writing one, and run its check on the text before handing it back. A
+reply in the terminal follows the paragraph above and does not need it.
+
 ## The three verdicts, as they print
 
 The rules above stay in English; the verdict is written in the user's language. In French:
