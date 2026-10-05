@@ -147,6 +147,118 @@
       }
     },
     {
+      "name": "workspace_practices_get",
+      "kind": "read",
+      "description": "The address of the company's shared practices space on GitHub (https://github.com/<owner>/<repository>), as the workspace's owner recorded it, or null when none is recorded. Any member reads it: it is what lets a newcomer's Claude install the company's practices without asking anyone for the address.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "url": "string|null"
+      }
+    },
+    {
+      "name": "workspace_practices_set",
+      "kind": "write",
+      "description": "Record the address of the company's shared practices space on GitHub, so every member's Claude finds it with workspace_practices_get. Owner only, the same rule as the workspace settings screen: a member gets owner_only. An address that is not an https address on github.com is refused (not_github_https); the server normalises it to https://github.com/<path>, and an empty string clears the recorded address.",
+      "params": [
+        {
+          "name": "url",
+          "type": "string",
+          "required": true,
+          "description": "https://github.com/<owner>/<repository>; an empty string clears it."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "url": "string|null",
+        "error": "string"
+      }
+    },
+    {
+      "name": "member_invite",
+      "kind": "write",
+      "description": "Invite a person into this workspace by email address: Castalie sends them the invitation, and they join by signing in with that address. Owner only, the same rule as the invitation screen (/admin/utilisateurs/inviter): a member gets owner_only. Only the member role is invitable: owner is refused (role_not_invitable). An address already a member answers already_member, which comes back as an error (success false) like email_required, not_delivered and owner_only, but means the person is already in and there is nothing to do.",
+      "params": [
+        {
+          "name": "email",
+          "type": "string",
+          "required": true,
+          "description": "The person's work address."
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": false,
+          "enum": [
+            "member"
+          ],
+          "description": "member, the default and the only invitable role."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "sent": "bool",
+        "email": "string",
+        "role": "member",
+        "error": "string"
+      }
+    },
+    {
+      "name": "member_profile_get",
+      "kind": "read",
+      "description": "A member's work profile: a short job title and a few lines of markdown on what they do, what takes their time and what annoys them, as they told it to their Claude. Without user_id, the caller's own profile. Any member reads any member's profile in the workspace. job_title and work_md are null while nobody has written them.",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "int",
+          "required": false,
+          "description": "The member to read; the caller by default (see whoami)."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "user_id": "int",
+        "display_name": "string|null",
+        "job_title": "string|null",
+        "work_md": "string|null",
+        "updated_at": "string|null",
+        "error": "string"
+      }
+    },
+    {
+      "name": "member_profile_set",
+      "kind": "write",
+      "description": "Record a member's work profile, so every later session of theirs, and the workspace's own screens, know what they do. Each member writes their own: a user_id other than the caller's gets forbidden. A field left out is unchanged. work_md is a short summary, a few lines, never a document.",
+      "params": [
+        {
+          "name": "job_title",
+          "type": "string",
+          "required": false,
+          "description": "The job in a few words, as the person says it (« Assistante commerciale »)."
+        },
+        {
+          "name": "work_md",
+          "type": "string",
+          "required": false,
+          "description": "A few lines of markdown: what they do, the tasks of their week, what takes time or annoys them."
+        },
+        {
+          "name": "user_id",
+          "type": "int",
+          "required": false,
+          "description": "The caller by default; any other member's id is forbidden."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "user_id": "int",
+        "job_title": "string|null",
+        "work_md": "string|null",
+        "updated_at": "string",
+        "error": "string"
+      }
+    },
+    {
       "name": "strategy_list_periods",
       "kind": "read",
       "description": "List all strategy periods (annual, quarterly).",

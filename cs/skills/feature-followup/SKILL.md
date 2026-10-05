@@ -22,7 +22,8 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    check carries `followupPromptMd` — the executable instructions + explicit pass/fail thresholds — and
    an `onFailAction`.
 2. **Run each check against production.** Technical checks: open the page / call the endpoint / run the
-   verification query via your browser and data-store MCPs. Business checks: measure the promised
+   verification query via the kit's `playwright` browser
+   (`${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`) and your data-store MCPs. Business checks: measure the promised
    outcome (engagement, conversion, volume) against the threshold in the prompt. Never simulate — a run
    that logs "nothing to do" did not exercise the path; say so.
 3. **Judge.** For each check, a raw verdict: **PASS / FAILED / INCONCLUSIVE**, with the found-vs-expected

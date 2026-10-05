@@ -1,6 +1,6 @@
 ---
 name: audit-organisation
-description: Audit this team's engineering practices against Castalie's twenty recommended criteria, one criterion at a time, one line each. The same skill runs the first pass and every one after it. Fires on a plain sentence such as "audite mon projet", "démarre l'onboarding Castalie", "commence la prise en main", "fais le point", "start the Castalie audit", "où en sont nos pratiques ?", or whenever a session finds that nothing has ever been observed. Also fires on a question about a past audit — "où en sont les recommandations ?", "montre-moi l'audit", "what did the audit find?" — which it answers from the recorded state and ends on the address of the page, without opening a pass. It says what it is about to check, checks it, reports one line, and stops to have anything that is not green confirmed before writing it. It observes and proposes; it applies nothing, merges nothing, and triggers nothing.
+description: Audit this team's engineering practices against Castalie's twenty recommended criteria, one criterion at a time, one line each. The same skill runs the first pass and every one after it. Fires on a plain sentence such as "audite mon projet", "démarre l'onboarding Castalie", "commence la prise en main", "fais le point", "start the Castalie audit", "où en sont nos pratiques ?", or whenever a session finds that nothing has ever been observed. Also fires on a question about a past audit — "où en sont les recommandations ?", "montre-moi l'audit", "what did the audit find?" — which it answers from the recorded state and ends on the address of the page, without opening a pass. It says what it is about to check, checks it, reports one line, and stops to have anything that is not green confirmed before writing it. It observes and proposes; it applies nothing, merges nothing, and triggers nothing. For someone who is not a technician (a company leader) it runs no audit: « fais le point » gets a plain picture in three short lines and the next simple step.
 ---
 
 # audit-organisation — observe the practices, trigger nothing
@@ -10,6 +10,20 @@ is an opinion; a grid filled in by what you actually saw is a dated fact. If you
 state is "not verifiable" with its reason — a healthy result, not a failure.
 
 Everything in this file is for you, the agent. **None of it is to be recited to the user.**
+
+## First, who asked
+
+**Before any call, know who is in front of you** (the shared conventions, « Who is in front of
+you »): their `CLAUDE.md` first, the one question when it says nothing. A technician gets the pass
+below. **Someone who is not one gets no pass**: no criterion, no probe, no agent, no maturity run,
+nothing recorded. « Fais le point » from them is answered with a plain picture, three short lines
+at most, from what Castalie and their `CLAUDE.md` already say:
+
+- their workspace, by name (`mcp__castalie__whoami`);
+- the company's shared practices: recorded or not (`mcp__castalie__workspace_practices_get`);
+- the new website: its demo link, or not made yet (their `CLAUDE.md`).
+
+Then the next simple step, in one sentence, and stop. Nothing of the rest of this file applies.
 
 ## Why this skill is called `audit`, and what that costs you
 
