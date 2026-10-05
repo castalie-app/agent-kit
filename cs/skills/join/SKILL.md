@@ -1,6 +1,6 @@
 ---
 name: join
-description: Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their GitHub connection handled end to end, the company's practices installed from the shared space Castalie names, a personal CLAUDE.md that says they are not a technician, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", or right after the prompt of Castalie's public collaborator guide installed the kit. Every technical gesture is done for the person; they are asked only for what they alone can give.
+description: Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their GitHub connection handled end to end, the company's practices installed from the shared space Castalie names, a personal CLAUDE.md that says they are not a technician, their work recorded in their Castalie profile, a first quick win done together, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", right after the prompt of Castalie's public collaborator guide installed the kit, and on the guide's step 3 prompt ("Aide-moi à trouver un tout premier usage de l'IA dans mon travail", "find my first quick win"), which runs the quick win alone. Every technical gesture is done for the person; they are asked only for what they alone can give.
 ---
 
 # join — a collaborator joins the company's AI
@@ -17,8 +17,11 @@ Installe les outils de Castalie : ajoute la place de marché castalie-app/agent
 Connecte-moi ensuite à l'espace Castalie de mon entreprise. Demande-moi son adresse : elle figure dans le mail de mon dirigeant et finit par castalie.app. Enregistre pour moi seul le serveur MCP castalie à cette adresse, suivie de /mcp, sans jeton. Je me connecterai dans le navigateur avec mon adresse professionnelle.
 
 Lance ensuite /cs:join. Si /cs:join ou Castalie ne sont pas encore visibles dans cette session, ne cherche pas de contournement. Dis-moi simplement : « Ouvrez une nouvelle session et tapez /cs:join. »
-``` That prompt installed this kit and registered the company's
-workspace; now this skill finishes the job.
+```
+
+That prompt installed this kit and registered the company's workspace; now this skill finishes
+the job. The guide's step 3 is a second prompt, carried word for word in section 6: pasted on its
+own, it runs that section alone.
 
 **You do every technical gesture yourself**: installing a tool, signing in from the terminal,
 reading a repository, installing a plugin, writing a file. **You ask only for what only they can
@@ -28,7 +31,8 @@ and you wait for « c'est fait » before the next. A word like GitHub is gloss
 time (« GitHub, le service où l'entreprise range ses pratiques communes »), and never again.
 
 **What counts at the end**: the company's practices installed, a personal `CLAUDE.md` that says
-how to work with this person, and one real task written with the company's tone. A step that
+how to work with this person, their work recorded in Castalie, one first quick win done together,
+and one real task written with the company's tone. A step that
 cannot be finished today (an invitation still pending, an account not created yet) is named in the
 hand-back with what unblocks it, never left half-done in silence.
 
@@ -164,10 +168,81 @@ Mon référent : <Prénom Nom, adresse>
 The referent comes from the space's `README.md`; leave the line out when it names none. Say in one
 line that it is written, and that Claude reads it at the start of every session.
 
-## 6. A first real use
+## 6. Their work, and a first quick win
 
-**Ask for a real task, not an exercise**: « À qui devez-vous écrire cette semaine, et pour lui dire
-quoi ? » Then give them the line to paste, filled with their own words and the command as the `/`
+The guide's step 3 prompt, word for word; the guide changes only together with this skill:
+
+```
+Aide-moi à trouver un tout premier usage de l'IA dans mon travail. Pose-moi une question à la fois : mon métier, mes tâches de la semaine, ce qui me prend du temps ou m'agace. Enregistre ce que je fais dans mon profil Castalie.
+
+Ta mission : trouver la plus petite chose qui me simplifiera la vie dès aujourd'hui, avec un vrai effet waouh. Rien qui demande du code, des droits d'accès ou une installation compliquée : au plus, l'accès à ma messagerie.
+
+Propose-la-moi en une phrase (« Si tu veux, je peux… »), puis on la fait tout de suite ensemble.
+```
+
+When that prompt arrives on its own, in a later session, run this section alone, then hand back.
+
+**Read what Castalie already knows.** `mcp__castalie__member_profile_get`, with no argument, gives
+the person's own profile. When its `work_md` is written, say in one line what you know (« Vous êtes
+assistante commerciale, et les relances clients vous prennent du temps. ») and ask only « Est-ce
+toujours vrai, ou quelque chose a changé ? ». Without the verb, read the `## Mon travail` section of
+their personal `CLAUDE.md` the same way.
+
+**Otherwise, the interview, one question at a time**, each waiting for its answer:
+
+1. « Quel est votre métier, en quelques mots ? »
+2. « Qu'avez-vous à faire cette semaine ? Citez-moi trois ou quatre tâches. »
+3. « Qu'est-ce qui vous prend du temps, ou vous agace, dans tout ça ? »
+
+A short answer is enough. Ask one follow-up at most, when an answer gives nothing to work with:
+this is a conversation, never a questionnaire.
+
+**Record it in Castalie** before proposing anything. Say it once, first: « Je l'enregistre dans
+votre profil Castalie, que les membres de l'espace peuvent lire. » Leave out anything they would
+not tell a colleague. Then `mcp__castalie__member_profile_set` with:
+
+- `job_title`: the job in a few words, as they said it;
+- `work_md`: five lines at most, in their language: what they do, the tasks of their week, what
+  takes time or annoys them. Their words, not a job description.
+
+Say in one line that it is recorded. **When the verb is not in your catalogue, or answers an
+error**, say so plainly in one line (« Castalie ne sait pas encore garder votre profil : je le
+note dans votre CLAUDE.md. ») and write the same lines in their personal `CLAUDE.md`, under
+`## Mon travail` (replace that section when it exists, never the rest of the file). A later run
+that finds the verb served moves the section into Castalie, and says so in one line.
+
+**Find the quick win.** From what they said, pick the smallest thing that makes their life easier
+today with a real « waouh » effect: something they watch being done in a few minutes, on their own
+material. The bar:
+
+- no code, no access right to request from anyone, nothing to install beyond what this session
+  already has;
+- at most, access to their mailbox: a mail connector already in this session, or one they switch
+  on themselves in Claude's settings (« Paramètres », then « Connecteurs »). It is the only access
+  worth asking for;
+- their real material: a mail they received, a document they paste or drop in, a list they keep.
+  Never a made-up example.
+
+Shapes it often takes, to be chosen from what they said and never from this list alone: the replies
+to the mails waiting in their box, drafted in their tone; a long document turned into the five lines
+they need; the message they write every week turned into a ready model; a messy list sorted and
+deduplicated.
+
+**Propose it in one sentence**, and nothing else: « Si vous voulez, je peux préparer les réponses
+aux trois mails clients qui attendent depuis lundi. » On their yes, **do it right away, together**:
+ask for the material it needs, one thing at a time, do it, and show the result. A mail is a draft
+in their mailbox or a text ready to copy, and they send it themselves. On a no, propose the next
+smallest one, once.
+
+**Then two lines, no more**: what else they can ask, taken from their own week (« Vous pouvez aussi
+me demander de … ou de … »), and what they always check themselves (« Relisez toujours avant
+d'envoyer : les noms, les chiffres, les dates et les promesses. Rien ne part sans vous. »).
+
+## 7. A first real use
+
+**Take a real task, not an exercise**: a message to write, from the week they just described. Ask
+« À qui devez-vous écrire cette semaine, et pour lui dire quoi ? » only when nothing they said
+gives one. Then give them the line to paste, filled with their own words and the command as the `/`
 menu shows it (the README says it; otherwise `/<plugin>:redaction`):
 
 > Ouvrez une nouvelle session, gardez le dossier IA, et collez :
@@ -189,7 +264,11 @@ never a company skill of the same name. Two sentences and the line to type:
 
 - **Never ask for a password, a token or a code by message.** A code goes from one of their
   windows to another, never into the conversation.
-- **Never send** a message to the referent or anyone else: prepared, and the person sends it.
+- **Never send** a message to the referent or anyone else, nor a mail from their mailbox: prepared,
+  and the person sends it.
+- **Never stretch the quick win**: no code, no access right requested from anyone, no tool to
+  install. Their mailbox is the only access it may ask for.
+- **Never write someone else's profile**: `member_profile_set` records the person in front of you.
 - **Never open a second Castalie workspace**, and never run `connect`'s enrolment: the person was
   invited into the company's existing one.
 - **Never overwrite** the person's `CLAUDE.md`; add a section.
@@ -201,4 +280,5 @@ never a company skill of the same name. Two sentences and the line to type:
 Close the turn on the reply and the verdict of
 `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`. Opening a new session, accepting an
 invitation or sending a prepared message are gestures only the person can make: lines under
-*Finished* when everything else is delivered, never an *I need you*.
+*Finished* when everything else is delivered, never an *I need you*. A profile kept in the personal
+`CLAUDE.md` because Castalie could not take it yet is one line under *Finished* too.

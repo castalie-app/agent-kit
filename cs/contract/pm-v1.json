@@ -204,6 +204,61 @@
       }
     },
     {
+      "name": "member_profile_get",
+      "kind": "read",
+      "description": "A member's work profile: a short job title and a few lines of markdown on what they do, what takes their time and what annoys them, as they told it to their Claude. Without user_id, the caller's own profile. Any member reads any member's profile in the workspace. job_title and work_md are null while nobody has written them.",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "int",
+          "required": false,
+          "description": "The member to read; the caller by default (see whoami)."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "user_id": "int",
+        "display_name": "string|null",
+        "job_title": "string|null",
+        "work_md": "string|null",
+        "updated_at": "string|null",
+        "error": "string"
+      }
+    },
+    {
+      "name": "member_profile_set",
+      "kind": "write",
+      "description": "Record a member's work profile, so every later session of theirs, and the workspace's own screens, know what they do. Each member writes their own: a user_id other than the caller's gets forbidden. A field left out is unchanged. work_md is a short summary, a few lines, never a document.",
+      "params": [
+        {
+          "name": "job_title",
+          "type": "string",
+          "required": false,
+          "description": "The job in a few words, as the person says it (« Assistante commerciale »)."
+        },
+        {
+          "name": "work_md",
+          "type": "string",
+          "required": false,
+          "description": "A few lines of markdown: what they do, the tasks of their week, what takes time or annoys them."
+        },
+        {
+          "name": "user_id",
+          "type": "int",
+          "required": false,
+          "description": "The caller by default; any other member's id is forbidden."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "user_id": "int",
+        "job_title": "string|null",
+        "work_md": "string|null",
+        "updated_at": "string",
+        "error": "string"
+      }
+    },
+    {
       "name": "strategy_list_periods",
       "kind": "read",
       "description": "List all strategy periods (annual, quarterly).",
