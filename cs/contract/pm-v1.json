@@ -1982,6 +1982,222 @@
       }
     },
     {
+      "name": "scheduled_task_list",
+      "kind": "read",
+      "description": "List the workspace's scheduled tasks: the schedule in plain words, the next run in the task's time zone and in UTC, the last run and its label, whether an occurrence went unplayed and since when, and the number of runs. Archived tasks only on request.",
+      "params": [
+        {
+          "name": "include_archived",
+          "type": "bool",
+          "required": false,
+          "description": "Defaults to false."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "tasks": "object[]"
+      }
+    },
+    {
+      "name": "scheduled_task_get",
+      "kind": "read",
+      "description": "Read one scheduled task: title, description, prompt, cron expression, time zone, maximum duration, recommended model and effort, enabled, next run.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "task": "object"
+      }
+    },
+    {
+      "name": "scheduled_task_run_now",
+      "kind": "write",
+      "description": "Create a manual run of a scheduled task, due now or at not_before. Allowed on a disabled task, refused on an archived one (task_archived) and while a run of the task is pending or held (run_already_pending). Any member.",
+      "params": [
+        {
+          "name": "scheduled_task_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "not_before",
+          "type": "string",
+          "required": false,
+          "description": "ISO 8601, UTC or with an offset."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "run": "object"
+      }
+    },
+    {
+      "name": "scheduled_task_run_list",
+      "kind": "read",
+      "description": "List scheduled-task runs, newest first, optionally for one task and one label.",
+      "params": [
+        {
+          "name": "scheduled_task_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "description": "pending | running | passed | failed | human_required | skipped"
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "At most 200."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "runs": "object[]",
+        "total_count": "int",
+        "has_more": "bool"
+      }
+    },
+    {
+      "name": "scheduled_task_run_get",
+      "kind": "read",
+      "description": "Read one scheduled-task run with its task: the prompt copied when the run was created, the continuation it carries, who holds it and until when, and its verdict once closed.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "run": "object: id, scheduled_task_id, scheduled_for (UTC), trigger (schedule | manual), missed_occurrences, prompt_snapshot_md, continuation_md, picked_at, pick_lease_until, assigned_pc_hostname, ran_at, outcome, final_status, notes_md, outcome_type, outcome_ref_id, model_used, total_cost_usd, status_label, task { id, title, time_zone, max_duration_minutes, recommended_model, recommended_effort }"
+      }
+    },
+    {
+      "name": "scheduled_task_run_pick_next",
+      "kind": "write",
+      "description": "The launcher's gesture: materialise the runs that came due, then take the oldest one atomically under a lease. Never a run of a task that already has a run held. Returns picked=false when nothing is due.",
+      "params": [
+        {
+          "name": "picked_by",
+          "type": "string",
+          "required": true,
+          "description": "The workstation's host name."
+        },
+        {
+          "name": "lease_minutes",
+          "type": "int",
+          "required": false,
+          "description": "Defaults to 30. The launcher passes the task's maximum duration plus 15."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "picked": "bool",
+        "run": "object"
+      }
+    },
+    {
+      "name": "scheduled_task_run_complete",
+      "kind": "write",
+      "description": "Close a scheduled-task run with its verdict. notes_md is required; closing twice answers already_completed and keeps the first verdict. follow_up_not_before creates, in the same transaction, a manual run due at that time carrying follow_up_md as its continuation.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "description": "passed | failed | skipped"
+        },
+        {
+          "name": "notes_md",
+          "type": "string",
+          "required": true,
+          "description": "The result first, the figures, a link to each ticket or decision."
+        },
+        {
+          "name": "final_status",
+          "type": "string",
+          "required": false,
+          "description": "done | failed | human_required"
+        },
+        {
+          "name": "outcome_type",
+          "type": "string",
+          "required": false,
+          "description": "What the run produced: bug, arbitration, brief, spec..."
+        },
+        {
+          "name": "outcome_ref_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "model_used",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "follow_up_not_before",
+          "type": "string",
+          "required": false,
+          "description": "ISO 8601, UTC or with an offset."
+        },
+        {
+          "name": "follow_up_md",
+          "type": "string",
+          "required": false,
+          "description": "What is left to do. Required with follow_up_not_before (follow_up_md_required)."
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
+      "name": "scheduled_task_run_record_usage",
+      "kind": "write",
+      "description": "The launcher's gesture after the session: record what the run cost and the model that played it. Once per run (usage_already_recorded), closed or not.",
+      "params": [
+        {
+          "name": "run_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "total_cost_usd",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "model_used",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
       "name": "acceptance_open",
       "kind": "write",
       "description": "Open an acceptance pass on a running feature — one pass = one branch = one pull request. Idempotent on the branch: called again it hands back the pass already open, so a session that crashed and came back does not fork the queue in two. STAYS IN YOUR WORKSPACE, like every verb here.",

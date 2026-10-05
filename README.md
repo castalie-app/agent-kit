@@ -407,6 +407,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `feature-implement` | Implement a spec autonomously in your repo, phase by phase, ending at "PR ready". |
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
+| `scheduled-run` | Play one run of a scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
 | `contrarian` | Challenge an idea before you commit — adversarial sub-agents + a verdict you own. |
 | `plain-french` | Write and check French in a controlled style modelled on ASD-STE100: short sentences, active voice, no conditional hedging, one name per thing, French typography. Ships a check that finds what a machine can see. |
