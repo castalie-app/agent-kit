@@ -95,8 +95,8 @@ Each builder writes **only the home page**, in the same frame:
 - a page that works first on a phone, with real contrast.
 
 **Each builder runs a contrarian loop on its own page, two or three rounds**, in the stance of the
-kit's `contrarian` skill: a fresh critic that sees only the brief and the page (rendered in a
-browser when a browser tool is there, its HTML otherwise) states the page at its best, then names
+kit's `contrarian` skill: a fresh critic that sees only the brief and the page (rendered in the
+kit's `playwright` browser, its HTML only when no browser answers) states the page at its best, then names
 the three things that most stop it from being excellent; the builder fixes them, and the next round
 starts. It stops when the critic finds nothing that matters, or after three rounds. When a builder
 cannot launch a critic itself, you launch it and send its findings back to that builder.
@@ -117,7 +117,8 @@ Wait for both. **Only you commit and push**, once both are done.
   `gh api -X POST repos/<owner>/site/pages -f "source[branch]=main" -f "source[path]=/"`.
 - Wait until it is live: `gh api repos/<owner>/site/pages/builds/latest --jq .status` says `built`,
   then `curl -sI` answers 200 on both addresses. The first publication takes a minute or two.
-- **Look at both before they do**: each page answers, the animation runs and its fallback shows
+- **Look at both before they do**, in the kit's `playwright` browser at 390 px and 1440 px wide
+  (`${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`): each page answers, the animation runs and its fallback shows
   without WebGL, the logo and photos show, each contact link works, nothing overflows at phone
   width. Fix what is wrong first.
 - Note it in the leader's personal `CLAUDE.md`, one line under the shared space:
@@ -160,13 +161,14 @@ remplacera votre site actuel. On y va ? ». You do everything technical; they ma
    file holding `www.<domain>`, set it on Pages with
    `gh api -X PUT repos/<owner>/site/pages -f cname=www.<domain>`, and check the page still answers
    at its demo address.
-3. **The one gesture that is theirs**: the DNS records at their registrar. Only the web records
+3. **The DNS records at their registrar, done in their own browser.** Only the web records
    change: `www` becomes a `CNAME` to `<owner>.github.io.`, and the apex gets GitHub's four `A`
    records (`185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`) in place
    of the old ones. **Never touch `MX`, `TXT` or any other record**: their email must keep working.
-   Give the steps for that registrar, in plain words, one at a time, with the exact labels of its
-   screens, and wait for « c'est fait » after each. When a browser tool is available, offer to do it
-   with them in their browser: they sign in, you fill in the records.
+   Open the registrar's DNS page with `playwright-attach`, in the browser where they are signed
+   in, change the records and save them yourself: their yes above covers it. Their only gesture is
+   signing in, when the page asks for a password you do not have. Give the steps in words, one at
+   a time, only when no browser can be driven at all (`${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`).
 4. **Verify it yourself**: `nslookup www.<domain> 8.8.8.8` and `1.1.1.1` until both name GitHub;
    `gh api repos/<owner>/site/pages --jq .https_certificate.state` until `approved`, then
    `gh api -X PUT repos/<owner>/site/pages -F https_enforced=true`; `curl -sI https://www.<domain>`

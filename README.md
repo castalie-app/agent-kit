@@ -102,11 +102,28 @@ What that move *did* leave on an old workstation is the address the entry points
 keep arriving and nothing looks wrong, which is exactly why it is worth saying — a redirect is a
 courtesy, not an address. Re-running setup re-points the entry at `castalie-app/agent-kit`.
 
-The plugin declares no MCP server of its own, so it has nothing to connect to yet. Open your agent in
-your repository and it will say so and point you at the `connect` skill — or run the setup
-command above, which does the same thing in one line.
+The plugin's own MCP servers are its browser (below); the `castalie` server is yours to connect.
+Open your agent in your repository and it will say so and point you at the `connect` skill — or
+run the setup command above, which does the same thing in one line.
 
 Your token never goes into a tracked file, a shell profile, or the Windows registry.
+
+### A browser, installed with the kit
+
+The plugin declares the official Playwright MCP server, so your agent can open a page as soon as the
+kit is installed: no browser extension to pair first, no second command. Two servers, from
+`cs/.mcp.json`:
+
+- `playwright`: a headless browser of its own, for checking a published page, a preview or an
+  acceptance test;
+- `playwright-attach`: your own Chrome or Edge, where you are already signed in, through the
+  Playwright extension, for a gesture on a site such as a registrar.
+
+Your agent does the gesture itself, up to the last click, and hands you only the one that is yours
+(a payment, an acceptance). It needs Node.js: on a machine without it, the agent installs it
+(`winget` on Windows, Homebrew or the official installer on macOS), and the browser the same way.
+`PLAYWRIGHT_MCP_HEADLESS`, `PLAYWRIGHT_MCP_EXTENSION_TOKEN` and the other `PLAYWRIGHT_MCP_*`
+variables are read as the server documents them. The method is `cs/instructions/browser.md`.
 
 ### How updates reach you
 
@@ -571,6 +588,8 @@ cs/
   contract/conformance/           # the outward-only conformance suite (MCP + REST)
   bin/cs.mjs                      # the cs CLI
   bin/build-codex.mjs             # the Codex projection, shipped so a client can run `cs codex`
+  bin/playwright-mcp.mjs          # starts the browser the plugin declares in .mcp.json, on every OS
+  .mcp.json                       # the plugin's own MCP servers: playwright and playwright-attach
 types/claude-code.d.ts            # the function-hooks API, as /plugin-types wrote it; the pane is typed against this
 tsconfig.json                     # what CI recompiles on every push
 package.json                      # makes the repo itself runnable: npx -y github:castalie-app/agent-kit

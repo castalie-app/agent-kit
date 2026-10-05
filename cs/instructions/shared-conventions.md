@@ -132,6 +132,17 @@ copy of its own when it writes, and its result comes back to you; the turn then 
 name. A tab or a window the person has to watch hands the follow-up to them: open one only when
 they ask for it.
 
+## Up to the last click
+
+**You do the gesture yourself, on the website too.** Never « allez sur ce site, cliquez là ».
+Open the page with the kit's own browser, the `playwright` server (headless) or
+`playwright-attach` (the person's own browser, already signed in), fill it, and validate it
+yourself when you are allowed to. When you are not (a payment, a legal acceptance, a choice only
+they can make), stop on the ready screen and hand over one gesture: « Cliquez sur "Valider" ».
+Typed instructions only for a sign-in wall that needs a password you do not have. Never clear the
+data of the attached browser: it signs the person out of every site. A missing Node.js or browser
+is yours to install, never theirs to type: `${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`.
+
 ## What the hand-back is not
 
 - Not a progress log: a turn that did one thing says one thing.
