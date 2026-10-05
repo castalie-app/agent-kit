@@ -87,10 +87,18 @@ watchdog never fires — ideal.
 
 ## Autonomy contract
 
-Runs for hours; the developer is gone. The only acceptable stops: a real merge conflict on business
-logic, an unresolved business expectation that only the user can settle, a hard build/test failure
-you cannot fix, or an action only the user can take (report it + the
-resume command, then `CronDelete`). A gesture the spec's `Authorisations` lists is not one of them: a
+Runs for hours; the developer is gone. **A business question is not a stop: it becomes a decision,
+and the loop carries on.** An expectation only a person can settle, a merge conflict on business
+logic, an action only a person can take — file it with `decision_create`, on the phase it blocks
+(`subject_kind="feature_spec_phase"`) or on the spec, written by
+`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`: `resume_mode="asker"` with the branch, the
+phase and what each answer changes in `resume_state_md` (`robot_prompt` with
+`/feature-implement <specId> --continue` where the workspace lets a robot resume), and in
+`continuing_md` the phases and cases that do not depend on it. Then go on with exactly those. On
+`--continue`, `decision_list(asked_by_agent="feature-implement", status=answered)`, kept to this
+spec and its phases, returns what was settled: build each answer as an instruction, then
+`decision_mark_applied`. The only stops left are a hard build/test failure you cannot fix, or
+nothing left that does not wait on a decision (report it + the resume command, then `CronDelete`). A gesture the spec's `Authorisations` lists is not one of them: a
 first failure is a reason to retry, not to hand it to someone else. Naming, formatting, file layout, which seam to cut — decide from the
 repo's patterns and keep going. You are not the final reviewer: build + the `ship` panel + your CI are
 behind you. Continue independent work during a clarification; those later checks never authorize

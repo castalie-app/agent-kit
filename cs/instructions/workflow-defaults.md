@@ -102,21 +102,29 @@ deliverable — and a team answers them differently more often than not. Resolvi
 without saying which skill you meant is how a fix ends up governed by the answer somebody gave
 about a spec.
 
-### Two the instance owns, and no skill here reads
+### Three the instance owns, and no skill here reads
 
 | Namespace | Option | Values |
 |---|---|---|
 | `intake` | `robot_eligible` | `false`, `true` |
 | `intake` | `backlog_visible` | `false`, `true` |
+| `decisions` | `robot_resume` | `off`, `on` |
 
 **`intake` is not a skill of this kit.** Castalie itself honours these two, server-side: the backlog
 hides tickets filed by a customer system unless `backlog_visible` says otherwise, and an unattended
 robot is kept off them unless `robot_eligible` does. Both default to `false`, so a new client
 integration changes neither the backlog nor what runs unattended.
 
+**`decisions` is not a skill either.** `robot_resume` says whether a robot plays the resume of an
+answered decision on this workspace (`decision-resume --claim`). Castalie reads it when a decision
+is filed: on `off`, the default, `resume_mode="robot_prompt"` is refused with
+`resume_mode_unavailable`, because a resume nobody plays would wait for ever, and the agent files
+as `asker` instead (`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`). Turn it `on` only
+where a robot really passes; it is a workspace fact, so the owner sets it, not each developer.
+
 They are in the verbs' enums because a workspace can set them from here, and in the contract's
 vocabulary because the instance serves them — an option served and undeclared is the same drift as
-one declared and unserved, and this pair was the undeclared half of it. Do not look for a skill
+one declared and unserved, and `intake` was the undeclared half of it. Do not look for a skill
 that reads them, and do not write one: the reader is the product.
 
 ### `auto_ship` flow

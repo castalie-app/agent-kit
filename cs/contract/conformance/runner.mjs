@@ -38,6 +38,7 @@ const READ_ARGS = {
   workflow_default_get_all: {},
   feature_brief_list: { take: 1 },
   feature_spec_list: { take: 1 },
+  decision_list: { take: 1 },
 };
 
 const results = [];

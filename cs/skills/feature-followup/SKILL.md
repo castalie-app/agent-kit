@@ -36,6 +36,13 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    phase is not delivered yet is rescheduled (`followup_run_reschedule`), never failed. Say the criterion that was missed, what you measured (figures, queries,
    links) and what that session must do: fix, replay the measure, or settle a named decision. It
    is read alone, without the rest of the report.
+   **Any other run that needs a person is a decision on the run**, never a bare
+   `finalStatus=human_required`: first `decision_create(subject_kind="followup_run",
+   subject_id=<run>)`, written by `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, with
+   options whose effect is `continue` (a new run is due at once, with the answer joined to its
+   prompt) or `close` (the run closes as the option says); a run knows no `take_over`. Then close
+   the run with `mcp__castalie__followup_run_complete(…, finalStatus="human_required")`. A run your
+   own session left open is a run to finish or reschedule, not a decision.
 5. **Reschedule.** Per `${CLAUDE_PLUGIN_ROOT}/instructions/followup-conventions.md`: green + stable →
    close the loop; green first cycle of a cascade → next horizon; minor anomaly → J+7 re-check; hard
    regression → stop + flag. Apply via `mcp__castalie__followup_check_update(checkId, scheduleOffsetDays=…,

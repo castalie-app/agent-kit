@@ -1,1 +1,1 @@
-{"success":true,"id":5203,"status":"awaiting_validation","is_awaiting_feedback":true,"latest_event":"The team asked which browser was used and what happened after clicking Save.","latest_message":"Which browser did you use, and what happened after clicking Save?"}
+{"success":true,"id":5203,"decisions":[],"status":"in_progress","is_awaiting_feedback":true,"latest_event":"The team asked which browser was used and what happened after clicking Save.","latest_message":"Which browser did you use, and what happened after clicking Save?"}

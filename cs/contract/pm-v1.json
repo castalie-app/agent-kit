@@ -9,7 +9,8 @@
   "workflow_options": {
     "description": "The complete vocabulary of workflow preferences this kit knows: which skill owns which option, and the canonical values each accepts. This is the single authority - the enums on workflow_default_set, workflow_default_unset and workflow_policy_resolve are checked against it, and so is every option a skill cites. An option that is not here does not exist.",
     "server_owned_skills": [
-      "intake"
+      "intake",
+      "decisions"
     ],
     "server_owned_note": "Namespaces in the vocabulary below that NO skill of this kit owns: the Castalie instance itself honours them, and the agent's only business with them is setting them. They are listed so that the 'declared but never read' check does not cry ghost over an option the product really does read - and a name here that IS one of this kit's skills is refused, so the exemption cannot be used to silence a real ghost.",
     "options": {
@@ -84,6 +85,12 @@
           "false",
           "true"
         ]
+      },
+      "decisions": {
+        "robot_resume": [
+          "off",
+          "on"
+        ]
       }
     }
   },
@@ -121,7 +128,7 @@
   },
   "conventions": {
     "return_envelope": "Every tool returns a JSON string { success: bool, ... } and { success: false, error: string } on failure.",
-    "bodies": "Long markdown bodies (brief problem/vision, spec executive summary/problem/solution, ticket description/technical detail) are never passed as tool arguments — read and write them with the `cs content pull|push <type> <id>` CLI. Tools carry metadata only (title, phases, status, risks).",
+    "bodies": "Long markdown bodies (brief problem/vision, spec executive summary/problem/solution, ticket description/technical detail) are never passed as tool arguments — read and write them with the `cs content pull|push <type> <id>` CLI. Tools carry metadata only (title, phases, status, risks). A decision sheet is the exception: its executive_md and context_md travel as arguments of decision_create and decision_supersede, because the server's word caps are what keep a sheet readable in minutes.",
     "forbidden_fields": "No tool declares a parameter named code, diff, patch, file_content or source_code. The flow is outward-only.",
     "addresses": "An entity answer MAY carry `url`, the absolute https address of that entity's own page, computed by the workspace that served it because it alone knows its host: on `feature_spec_get` and `feature_brief_get`, on each node of `strategy_get_objective_breadcrumb`, on each item of `strategy_navigate_children`, and on any objective a workspace answers outside this contract. It is optional in both directions — a workspace that serves none is conformant, and a client that reads it falls back to plain text when it is absent, and when it is an address its own surface would refuse."
   },
@@ -1654,6 +1661,7 @@
           "description": "Skill name without the leading slash.",
           "enum": [
             "bug-fix",
+            "decisions",
             "feature-implement",
             "feature-single-deliverable",
             "intake",
@@ -1674,6 +1682,7 @@
             "release_hold",
             "release_trigger",
             "robot_eligible",
+            "robot_resume",
             "rollback_mode"
           ]
         }
@@ -1701,7 +1710,7 @@
     {
       "name": "workflow_default_set",
       "kind": "write",
-      "description": "Persist (upsert) one workflow preference for the current user. value is the canonical machine string the skill expects (e.g. 'stop-before-merge', 'always-manual', 'ask'), always one of the option's own values - 'on' and 'off' are not among them, and never a scalar: the vocabulary is closed and every value in it is a string.",
+      "description": "Persist (upsert) one workflow preference for the current user. value is the canonical machine string the skill expects (e.g. 'stop-before-merge', 'always-manual', 'ask'), always one of the option's own values - 'on' and 'off' belong to decisions/robot_resume alone, and never a scalar: the vocabulary is closed and every value in it is a string.",
       "params": [
         {
           "name": "skill",
@@ -1710,6 +1719,7 @@
           "description": "Skill name without the leading slash.",
           "enum": [
             "bug-fix",
+            "decisions",
             "feature-implement",
             "feature-single-deliverable",
             "intake",
@@ -1730,6 +1740,7 @@
             "release_hold",
             "release_trigger",
             "robot_eligible",
+            "robot_resume",
             "rollback_mode"
           ]
         },
@@ -1750,6 +1761,8 @@
             "merge-and-release",
             "merge-ships",
             "no-way-back",
+            "off",
+            "on",
             "redeploy-previous",
             "revert-and-reship",
             "separate-call",
@@ -1778,6 +1791,7 @@
           "required": true,
           "enum": [
             "bug-fix",
+            "decisions",
             "feature-implement",
             "feature-single-deliverable",
             "intake",
@@ -1797,6 +1811,7 @@
             "release_hold",
             "release_trigger",
             "robot_eligible",
+            "robot_resume",
             "rollback_mode"
           ]
         }
@@ -2128,7 +2143,7 @@
     {
       "name": "acceptance_claim_next",
       "kind": "write",
-      "description": "Take the oldest remark waiting, or one whose lease has run out, and hold it under a new lease. Steps over remarks parked on a question — the queue must not stall behind a decision that belongs to a person. Returns claimed=false when there is nothing to do.",
+      "description": "Take the oldest remark waiting, or one whose lease has run out, and hold it under a new lease. Steps over remarks waiting on a decision (decision_create with subject_kind acceptance_remark) — the queue must not stall behind a decision that belongs to a person. Returns claimed=false when there is nothing to do.",
       "params": [
         {
           "name": "session_id",
@@ -2180,47 +2195,6 @@
           "type": "string",
           "required": false,
           "description": "What changed — or why it was left alone."
-        }
-      ],
-      "returns": {
-        "success": "bool"
-      }
-    },
-    {
-      "name": "acceptance_park",
-      "kind": "write",
-      "description": "Park a remark on a question only a person can answer. The caller must then move on to the next remark, never wait. Use this only when the answer truly requires a person — anything settleable from the code in under a minute is settled on the spot.",
-      "params": [
-        {
-          "name": "remark_id",
-          "type": "int",
-          "required": true
-        },
-        {
-          "name": "question_md",
-          "type": "string",
-          "required": true,
-          "description": "The question, written to be read by the person answering."
-        }
-      ],
-      "returns": {
-        "success": "bool"
-      }
-    },
-    {
-      "name": "acceptance_answer",
-      "kind": "write",
-      "description": "Answer a parked question. The remark goes back to the queue at its own place, not at the front: the order the person gave still holds, and an answer is not a reason to jump the line.",
-      "params": [
-        {
-          "name": "remark_id",
-          "type": "int",
-          "required": true
-        },
-        {
-          "name": "answer_md",
-          "type": "string",
-          "required": true
         }
       ],
       "returns": {
@@ -2615,104 +2589,771 @@
       }
     },
     {
-      "name": "arbitration_ask",
+      "name": "decision_create",
       "kind": "write",
-      "description": "Deposit an arbitration you cannot settle yourself, then carry on with everything that does not depend on the answer. Returns the request id, or a refusal saying what to fix.",
+      "description": "Ask a person to decide something you cannot settle yourself, tied to the work it blocks — a ticket, a spec, a phase, a brief, a follow-up run, an acceptance remark. Then CARRY ON with everything that does not depend on the answer. Each option says what the answer does to that work (effect), and Castalie applies it as soon as the person answers. Returns decision_id and the url of the sheet, or a refusal saying what to fix. The sheet must read in under a minute (simple), three (standard) or seven (complex): the title is the QUESTION, 12 to 160 characters, ending with \"?\"; executive_md is capped at 80/200/400 words and context_md at 150/600/1500 (a fenced block does not count); a choice carries 2 to 4 options on different axes, each saying what it gives up; one option is recommended and recommendation_md says why; money needs a cost on every option. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
       "params": [
         {
           "name": "title",
           "type": "string",
           "required": true,
-          "description": "The arbitration to settle, not the topic."
+          "description": "The question to settle, 12 to 160 characters, ending with \"?\": \"Merge the VAT fix on credit notes?\", never \"VAT fix\"."
+        },
+        {
+          "name": "complexity",
+          "type": "string",
+          "required": true,
+          "description": "simple | standard | complex — it sets the length caps. simple: an approval or at most two options. complex: needs context_md.",
+          "enum": [
+            "simple",
+            "standard",
+            "complex"
+          ]
+        },
+        {
+          "name": "executive_md",
+          "type": "string",
+          "required": true,
+          "description": "The summary, opening on the fact that decides. Rich markdown: a ```mermaid block when the choice is about a flow."
+        },
+        {
+          "name": "why_human_md",
+          "type": "string",
+          "required": true,
+          "description": "Why THIS person is needed, at most 400 characters."
         },
         {
           "name": "escalation_reason",
           "type": "string",
           "required": true,
-          "description": "money, public_voice, shareholder, private_knowledge or irreversible. If none fits, the arbitration is yours."
-        },
-        {
-          "name": "why_human_md",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "blocked_md",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "continuing_md",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "resume_state",
-          "type": "string",
-          "required": true,
-          "description": "What you need to resume later; never shown to the human."
+          "description": "Why an agent cannot settle it. If none fits, the decision is yours — make it.",
+          "enum": [
+            "money",
+            "public_voice",
+            "shareholder",
+            "private_knowledge",
+            "irreversible",
+            "authorization",
+            "external_gesture"
+          ]
         },
         {
           "name": "answer_shape",
           "type": "string",
           "required": true,
-          "description": "closed (yes / no / other) or open (two or three written options)."
+          "description": "choice (2 to 4 options) | approve (yes / no, a reason is required on no) | free_text (a written answer only).",
+          "enum": [
+            "choice",
+            "approve",
+            "free_text"
+          ]
+        },
+        {
+          "name": "subject_kind",
+          "type": "string",
+          "required": true,
+          "description": "The work the answer unblocks.",
+          "enum": [
+            "bug",
+            "feature_spec",
+            "feature_spec_phase",
+            "feature_brief",
+            "followup_run",
+            "acceptance_remark",
+            "scheduled_task_run",
+            "maturity_question",
+            "knowledge_review_issue",
+            "none"
+          ]
+        },
+        {
+          "name": "subject_id",
+          "type": "int",
+          "required": false,
+          "description": "The id of that piece of work. Omit only for subject_kind none."
         },
         {
           "name": "options",
           "type": "object[]",
           "required": false,
-          "description": "For an open question: title, body, favours, givesUp."
+          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text."
+        },
+        {
+          "name": "recommendation_md",
+          "type": "string",
+          "required": false,
+          "description": "What you recommend and why. Required for choice and approve."
         },
         {
           "name": "context_md",
           "type": "string",
-          "required": false
+          "required": false,
+          "description": "The detailed context, folded away on a phone. Required for complex."
         },
         {
-          "name": "feature_brief_id",
-          "type": "int",
-          "required": false
-        },
-        {
-          "name": "feature_spec_id",
-          "type": "int",
-          "required": false
+          "name": "blocked_md",
+          "type": "string",
+          "required": false,
+          "description": "What waits on the answer, in real work."
         },
         {
           "name": "blocked_items",
           "type": "int",
-          "required": false
+          "required": false,
+          "description": "How many separate pieces of work the wait freezes. It orders the inbox; zero is a legitimate answer.",
+          "default": 0
+        },
+        {
+          "name": "continuing_md",
+          "type": "string",
+          "required": false,
+          "description": "What you carry on with meanwhile. Required when an agent asks."
+        },
+        {
+          "name": "addressee_user_id",
+          "type": "int",
+          "required": false,
+          "description": "Who is asked, by user id. Omitted: the person assigned to the subject, then its lead, then the workspace owner. Name them whenever you know who decides."
+        },
+        {
+          "name": "decide_by",
+          "type": "string",
+          "required": false,
+          "description": "An optional deadline, ISO 8601."
+        },
+        {
+          "name": "resume_mode",
+          "type": "string",
+          "required": false,
+          "description": "Who resumes once answered: subject (the subject's own handler applies the effect — the default), asker (you come back, read, and call decision_mark_applied), robot_prompt (a robot plays resume_prompt_md; only where the workspace setting decisions/robot_resume is on, refused with resume_mode_unavailable otherwise).",
+          "enum": [
+            "subject",
+            "asker",
+            "robot_prompt"
+          ],
+          "default": "subject"
+        },
+        {
+          "name": "resume_state_md",
+          "type": "string",
+          "required": false,
+          "description": "For you only, never shown: branch, step reached, what to do with each answer. Required for asker."
+        },
+        {
+          "name": "resume_prompt_md",
+          "type": "string",
+          "required": false,
+          "description": "The prompt a robot plays to resume. Required for robot_prompt."
+        },
+        {
+          "name": "dedupe_key",
+          "type": "string",
+          "required": false,
+          "description": "At most 190 characters. Makes a recurring question unique while it waits — \"model-upgrade:<usage>:<candidate>\". A second filing under a waiting key is refused with decision_already_pending and that decision's id (pending_decision_id)."
         },
         {
           "name": "asked_by_agent",
           "type": "string",
-          "required": false
+          "required": false,
+          "description": "Which agent is asking: used to route the answer and the reader's questions back."
         },
         {
-          "name": "surfaces",
+          "name": "author_kind",
           "type": "string",
-          "required": false
+          "required": false,
+          "description": "person | agent, as on discussion_post. Defaults to agent.",
+          "enum": [
+            "person",
+            "agent"
+          ],
+          "default": "agent"
+        },
+        {
+          "name": "author_user_id",
+          "type": "int",
+          "required": false,
+          "description": "The automation's OWN account to file under, by user id. Reserved for a service token."
         }
       ],
       "returns": {
         "success": "bool",
-        "arbitration_request_id": "int"
+        "decision_id": "int",
+        "url": "string — the sheet's page",
+        "status": "string",
+        "addressee_user_id": "int",
+        "next": "string"
       }
     },
     {
-      "name": "arbitration_check",
+      "name": "decision_get",
       "kind": "read",
-      "description": "Read one arbitration request you deposited: whether it was answered, the answer, and the state you left yourself to resume from.",
+      "description": "Read one decision: the sheet, its options and their effects, the answer and who gave it (answer: option_id, option_title, text_md, effect, channel, adjusted), the resume state you left yourself, the reader's questions (context_asks), and the journal of what happened to it (events).",
       "params": [
         {
-          "name": "arbitration_request_id",
+          "name": "id",
           "type": "int",
-          "required": true
+          "required": true,
+          "description": "The decision id, from decision_list or decision_create."
         }
       ],
       "returns": {
-        "success": "bool"
+        "success": "bool",
+        "decision": "object — with url, options[], answer, resume_state_md, resume_prompt_md, resume_job_state, context_asks[], events[]"
+      }
+    },
+    {
+      "name": "decision_list",
+      "kind": "read",
+      "description": "List decisions, ordered as the inbox orders them: failed resumes first, then missed deadlines, then the most work frozen, then the oldest. decision_list(scope=mine, status=pending) IS a person's inbox. Returns rows plus waiting, oldest_days, minutes (what answering every pending one costs) and never_opened.",
+      "params": [
+        {
+          "name": "scope",
+          "type": "string",
+          "required": false,
+          "description": "mine (addressed to the caller) | addressed_to (addressee_user_id) | asked_by_agent | subject (with subject_kind / subject_id) | all.",
+          "enum": [
+            "mine",
+            "addressed_to",
+            "asked_by_agent",
+            "subject",
+            "all"
+          ],
+          "default": "all"
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "description": "pending (the default) | answered | applied | cancelled | superseded | all."
+        },
+        {
+          "name": "subject_kind",
+          "type": "string",
+          "required": false,
+          "description": "Only this kind of subject."
+        },
+        {
+          "name": "subject_id",
+          "type": "int",
+          "required": false,
+          "description": "Only this subject id."
+        },
+        {
+          "name": "dedupe_key",
+          "type": "string",
+          "required": false,
+          "description": "Only this dedupe key — with status all, says whether a recurring question was already answered."
+        },
+        {
+          "name": "addressee_user_id",
+          "type": "int",
+          "required": false,
+          "description": "Only decisions addressed to this user."
+        },
+        {
+          "name": "asked_by_agent",
+          "type": "string",
+          "required": false,
+          "description": "Only decisions filed by this agent."
+        },
+        {
+          "name": "origin",
+          "type": "string",
+          "required": false,
+          "description": "agent | person | migration | facade."
+        },
+        {
+          "name": "has_open_context_ask",
+          "type": "bool",
+          "required": false,
+          "description": "true: only decisions where a reader asked for more context and is still waiting for it."
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false,
+          "description": "Rows to skip.",
+          "default": 0
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "Rows to return, 1 to 200.",
+          "default": 50
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "total_count": "int",
+        "waiting": "int",
+        "oldest_days": "int",
+        "minutes": "int",
+        "never_opened": "int",
+        "page_url": "string — the inbox",
+        "decisions": "object[] — each with url"
+      }
+    },
+    {
+      "name": "decision_answer",
+      "kind": "write",
+      "description": "Record a person's answer through the tool contract instead of the sheet — the answer a person just gave you in this session, signed as them. Pick an option (option_id), or write the answer (text_md) and say what it does (effect). A \"no\" on an approval and a free_text decision need words (answer_text_required). Refused decision_not_pending once answered; a service token never answers (answer_requires_person).",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "option_id",
+          "type": "int",
+          "required": false,
+          "description": "The option chosen, from decision_get."
+        },
+        {
+          "name": "text_md",
+          "type": "string",
+          "required": false,
+          "description": "The answer in words. With an option, it adjusts it; without one, it is the answer."
+        },
+        {
+          "name": "effect",
+          "type": "string",
+          "required": false,
+          "description": "Without an option: continue | take_over | close | none. Defaults to continue."
+        },
+        {
+          "name": "channel",
+          "type": "string",
+          "required": false,
+          "description": "How the person answered: click | text | voice | mcp.",
+          "enum": [
+            "click",
+            "text",
+            "voice",
+            "mcp"
+          ],
+          "default": "mcp"
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision_id": "int",
+        "status": "string",
+        "answer_effect": "string",
+        "answer_channel": "string",
+        "answer_adjusted": "bool",
+        "resume_job_state": "string",
+        "url": "string"
+      }
+    },
+    {
+      "name": "decision_revise_answer",
+      "kind": "write",
+      "description": "Change an answer while nothing has acted on it yet: the decision is answered and its resume not claimed. Once a robot holds the resume, or the decision is applied, it is refused with resume_already_started.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "option_id",
+          "type": "int",
+          "required": false,
+          "description": "The option now chosen."
+        },
+        {
+          "name": "text_md",
+          "type": "string",
+          "required": false,
+          "description": "The answer in words."
+        },
+        {
+          "name": "effect",
+          "type": "string",
+          "required": false,
+          "description": "Without an option: continue | take_over | close | none."
+        },
+        {
+          "name": "channel",
+          "type": "string",
+          "required": false,
+          "description": "click | text | voice | mcp.",
+          "enum": [
+            "click",
+            "text",
+            "voice",
+            "mcp"
+          ],
+          "default": "mcp"
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision_id": "int",
+        "status": "string",
+        "answer_effect": "string",
+        "answer_channel": "string",
+        "answer_adjusted": "bool",
+        "resume_job_state": "string",
+        "url": "string"
+      }
+    },
+    {
+      "name": "decision_ask_context",
+      "kind": "write",
+      "description": "Ask the agent that filed a decision for more context before answering it — the reader's right of appeal, the same one the sheet's \"Ask for more context\" link uses. The asker answers with decision_add_context.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "asked_md",
+          "type": "string",
+          "required": true,
+          "description": "What you need to know to decide, in your own words."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "context_ask": "object"
+      }
+    },
+    {
+      "name": "decision_add_context",
+      "kind": "write",
+      "description": "Add context to a decision you filed: in answer to a reader's question (context_ask_id), or on your own initiative while it still waits — the fact you found afterwards. The length caps apply to the RESULT (context_too_long): the fact earns its place by replacing something. A decision already answered is not added to (decision_not_pending): if the new fact overturns it, supersede it.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "context_md",
+          "type": "string",
+          "required": true,
+          "description": "What you add, written out. Appended to the context, or given as the answer to the reader's question."
+        },
+        {
+          "name": "context_ask_id",
+          "type": "int",
+          "required": false,
+          "description": "The reader's question you answer, from decision_get or decision_list(has_open_context_ask=true)."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision": "object"
+      }
+    },
+    {
+      "name": "decision_supersede",
+      "kind": "write",
+      "description": "Replace a waiting decision with a complete new sheet — the same subject unless you name another. The old one becomes superseded and points at the new one; a reader's open question follows it. Takes the same fields as decision_create. The sheet must read in under a minute (simple), three (standard) or seven (complex): the title is the QUESTION, 12 to 160 characters, ending with \"?\"; executive_md is capped at 80/200/400 words and context_md at 150/600/1500 (a fenced block does not count); a choice carries 2 to 4 options on different axes, each saying what it gives up; one option is recommended and recommendation_md says why; money needs a cost on every option. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The waiting decision to replace."
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "The question to settle, 12 to 160 characters, ending with \"?\": \"Merge the VAT fix on credit notes?\", never \"VAT fix\"."
+        },
+        {
+          "name": "complexity",
+          "type": "string",
+          "required": true,
+          "description": "simple | standard | complex — it sets the length caps. simple: an approval or at most two options. complex: needs context_md.",
+          "enum": [
+            "simple",
+            "standard",
+            "complex"
+          ]
+        },
+        {
+          "name": "executive_md",
+          "type": "string",
+          "required": true,
+          "description": "The summary, opening on the fact that decides. Rich markdown: a ```mermaid block when the choice is about a flow."
+        },
+        {
+          "name": "why_human_md",
+          "type": "string",
+          "required": true,
+          "description": "Why THIS person is needed, at most 400 characters."
+        },
+        {
+          "name": "escalation_reason",
+          "type": "string",
+          "required": true,
+          "description": "Why an agent cannot settle it. If none fits, the decision is yours — make it.",
+          "enum": [
+            "money",
+            "public_voice",
+            "shareholder",
+            "private_knowledge",
+            "irreversible",
+            "authorization",
+            "external_gesture"
+          ]
+        },
+        {
+          "name": "answer_shape",
+          "type": "string",
+          "required": true,
+          "description": "choice (2 to 4 options) | approve (yes / no, a reason is required on no) | free_text (a written answer only).",
+          "enum": [
+            "choice",
+            "approve",
+            "free_text"
+          ]
+        },
+        {
+          "name": "subject_kind",
+          "type": "string",
+          "required": false,
+          "description": "Another subject kind; omitted, the old decision's subject is kept."
+        },
+        {
+          "name": "subject_id",
+          "type": "int",
+          "required": false,
+          "description": "Its id, with subject_kind."
+        },
+        {
+          "name": "options",
+          "type": "object[]",
+          "required": false,
+          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text."
+        },
+        {
+          "name": "recommendation_md",
+          "type": "string",
+          "required": false,
+          "description": "What you recommend and why. Required for choice and approve."
+        },
+        {
+          "name": "context_md",
+          "type": "string",
+          "required": false,
+          "description": "The detailed context, folded away on a phone. Required for complex."
+        },
+        {
+          "name": "blocked_md",
+          "type": "string",
+          "required": false,
+          "description": "What waits on the answer, in real work."
+        },
+        {
+          "name": "blocked_items",
+          "type": "int",
+          "required": false,
+          "description": "How many separate pieces of work the wait freezes. It orders the inbox; zero is a legitimate answer.",
+          "default": 0
+        },
+        {
+          "name": "continuing_md",
+          "type": "string",
+          "required": false,
+          "description": "What you carry on with meanwhile. Required when an agent asks."
+        },
+        {
+          "name": "addressee_user_id",
+          "type": "int",
+          "required": false,
+          "description": "Who is asked; omitted, the same person. Kept the same, nobody is notified again."
+        },
+        {
+          "name": "decide_by",
+          "type": "string",
+          "required": false,
+          "description": "An optional deadline, ISO 8601."
+        },
+        {
+          "name": "resume_mode",
+          "type": "string",
+          "required": false,
+          "description": "Who resumes once answered: subject (the subject's own handler applies the effect — the default), asker (you come back, read, and call decision_mark_applied), robot_prompt (a robot plays resume_prompt_md; only where the workspace setting decisions/robot_resume is on, refused with resume_mode_unavailable otherwise).",
+          "enum": [
+            "subject",
+            "asker",
+            "robot_prompt"
+          ],
+          "default": "subject"
+        },
+        {
+          "name": "resume_state_md",
+          "type": "string",
+          "required": false,
+          "description": "For you only, never shown: branch, step reached, what to do with each answer. Required for asker."
+        },
+        {
+          "name": "resume_prompt_md",
+          "type": "string",
+          "required": false,
+          "description": "The prompt a robot plays to resume. Required for robot_prompt."
+        },
+        {
+          "name": "dedupe_key",
+          "type": "string",
+          "required": false,
+          "description": "Omitted, the old decision's key is kept."
+        },
+        {
+          "name": "asked_by_agent",
+          "type": "string",
+          "required": false,
+          "description": "Which agent is asking: used to route the answer and the reader's questions back."
+        },
+        {
+          "name": "author_kind",
+          "type": "string",
+          "required": false,
+          "description": "person | agent, as on discussion_post. Defaults to agent.",
+          "enum": [
+            "person",
+            "agent"
+          ],
+          "default": "agent"
+        },
+        {
+          "name": "author_user_id",
+          "type": "int",
+          "required": false,
+          "description": "The automation's OWN account to file under, by user id. Reserved for a service token."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision_id": "int",
+        "superseded_decision_id": "int",
+        "url": "string"
+      }
+    },
+    {
+      "name": "decision_cancel",
+      "kind": "write",
+      "description": "Withdraw a waiting decision whose question no longer stands — the work settled it on its own. The reason is shown to the person it was addressed to.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": true,
+          "description": "Why the question no longer stands."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision_id": "int",
+        "status": "string"
+      }
+    },
+    {
+      "name": "decision_mark_applied",
+      "kind": "write",
+      "description": "Say the work restarted on the answer: answered becomes applied. Call it when you resume from a decision you asked (resume_mode asker), or when you read an answered decision on a ticket you already hold. Refused decision_not_answered while nobody has answered. An answer that restarted nothing only moved the blockage.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "note_md",
+          "type": "string",
+          "required": false,
+          "description": "What you did with the answer, in a sentence."
+        },
+        {
+          "name": "applied_by_agent",
+          "type": "string",
+          "required": false,
+          "description": "Which agent applied it."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision_id": "int",
+        "status": "string",
+        "applied_at": "string"
+      }
+    },
+    {
+      "name": "decision_resume_claim_next",
+      "kind": "write",
+      "description": "For a robot at its pass: lease the oldest answered decision whose resume a robot plays (queued, or claimed under an expired lease). Returns the decision with its answer, resume_prompt_md and resume_state_md, or decision null when nothing waits. Two robots asking at once never get the same one. Close it with decision_resume_complete.",
+      "params": [
+        {
+          "name": "claimed_by",
+          "type": "string",
+          "required": true,
+          "description": "Who claims: the robot's name or host."
+        },
+        {
+          "name": "lease_minutes",
+          "type": "int",
+          "required": false,
+          "description": "How long the lease lasts, 1 to 240 minutes. Past it, another pass may claim it again.",
+          "default": 30
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision": "object | null"
+      }
+    },
+    {
+      "name": "decision_resume_complete",
+      "kind": "write",
+      "description": "Close a resume you claimed: outcome applied, or failed with the reason — the decision then returns to the top of its addressee's inbox, marked as a failed resume. Refused resume_not_claimed on a decision you do not hold. Never leave a claimed resume in silence.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "description": "applied | failed.",
+          "enum": [
+            "applied",
+            "failed"
+          ]
+        },
+        {
+          "name": "note_md",
+          "type": "string",
+          "required": false,
+          "description": "What was done, or why it failed. Required on failed."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "decision_id": "int",
+        "status": "string",
+        "resume_job_state": "string"
       }
     }
   ]

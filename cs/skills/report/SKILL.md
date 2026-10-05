@@ -145,7 +145,9 @@ context. Let `feature-brief` own the brief, its objective, and its follow-up.
 When the person asks “What happened to my report?” or an equivalent question, identify the ticket
 id from their link or ask for that id only in this follow-up path. Do not start a new report.
 
-1. Call `bug_get(id=<id>)` for the ticket.
+1. Call `bug_get(id=<id>)` for the ticket. Its `decisions` say what the ticket is waiting on: a
+   `pending` one is a question put to a person, and an `answered` or `applied` one is what that
+   person decided. Read them for the `Last event` line below.
 2. Call `discussion_read(entity_type="bug", entity_id=<id>)` for the ticket's
    discussion. Use the same id returned from the link; do not retry a successful read.
 3. If `is_awaiting_feedback` is true, show the latest question from the ticket's latest message,
@@ -166,6 +168,10 @@ id from their link or ask for that id only in this follow-up path. Do not start 
    Last event: <latest event>
    Last message: <latest discussion message>
    ```
+
+   When a decision on the ticket is newer than its latest event, it is the latest event: `Waiting
+   for a decision: <its question>` while it is pending, `Decided: <its question>: <the option
+   chosen>` once answered.
 
 ## Discipline
 

@@ -16,14 +16,16 @@ as raw code, or does not show at all.
 | Spec phase | `action_plan_md`, `validation_criterion_md` | **no** | — | — |
 | Spec acceptance test | `verification_md` | yes | no — shows as code | yes |
 | Thread message | `discussion_post` body | yes | no — shows as code | yes |
+| Decision | `executive_md`, `context_md` (arguments of `decision_create`) | yes | yes | yes |
 
 **`action_plan_md` and `validation_criterion_md` are displayed nowhere.** They are stored and
 returned by `feature_spec_get`, so they are the right place for what the next *agent* needs —
 the plan, the case table, the coverage evidence — and the wrong place for anything a *person*
 must see. Put that in the phase's objective, or in the spec's `solution`.
 
-The bodies that take an illustration are exactly the sections of the `cs content` buffer: write
-them there, never as a tool argument.
+The bodies that take an illustration are the sections of the `cs content` buffer, written there and
+never as a tool argument, and the two bodies of a decision sheet, which are arguments by design
+(`decision-sheet.md`).
 
 ## ```illustration — one complete HTML page, run in place
 
@@ -81,6 +83,7 @@ most), then reference the returned attachment id from any body:
 | Brief | `![alt](/Product/FeatureBrief/DownloadAttachment/<brief_id>/<attachment_id>)` |
 | Spec | `![alt](/Product/FeatureSpec/DownloadAttachment/<spec_id>/<attachment_id>)` |
 | Ticket | `![alt](/tickets/<ticket_id>/pieces/<attachment_id>)` |
+| Decision | `![alt](/decisions/<decision_id>/pieces/<attachment_id>)` |
 
 Use it for a screenshot of the running product — the one kind of evidence neither Mermaid nor
 an illustration can fake.

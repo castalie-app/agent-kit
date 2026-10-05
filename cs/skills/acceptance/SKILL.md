@@ -1,7 +1,7 @@
 ---
 name: acceptance
-description: Run an acceptance pass on a running feature — you fire remarks in rapid succession while you click through the product, each one is written to a local queue the instant it lands and then pushed to Castalie, then coded one at a time in the order received, one commit per remark, a single PR. Trivia is decided on the spot; a real product decision parks without stopping the queue. Ends by invoking the environment's release step on the drained pass; it merges nothing directly.
-allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill, mcp__castalie__whoami, mcp__castalie__acceptance_open, mcp__castalie__acceptance_add_remark, mcp__castalie__acceptance_list, mcp__castalie__acceptance_claim_next, mcp__castalie__acceptance_resolve, mcp__castalie__acceptance_park, mcp__castalie__acceptance_answer, mcp__castalie__acceptance_set_pr, mcp__castalie__acceptance_close
+description: Run an acceptance pass on a running feature — you fire remarks in rapid succession while you click through the product, each one is written to a local queue the instant it lands and then pushed to Castalie, then coded one at a time in the order received, one commit per remark, a single PR. Trivia is decided on the spot; a real product decision goes to a person as a decision on the remark, without stopping the queue. Ends by invoking the environment's release step on the drained pass; it merges nothing directly.
+allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill, mcp__castalie__whoami, mcp__castalie__acceptance_open, mcp__castalie__acceptance_add_remark, mcp__castalie__acceptance_list, mcp__castalie__acceptance_claim_next, mcp__castalie__acceptance_resolve, mcp__castalie__decision_create, mcp__castalie__decision_get, mcp__castalie__decision_answer, mcp__castalie__acceptance_set_pr, mcp__castalie__acceptance_close
 ---
 
 # acceptance — fire remarks, drain them one at a time, one PR
@@ -18,8 +18,8 @@ Each remark is then implemented **in the order received**: one commit per item, 
 | You typed | Mode |
 |---|---|
 | nothing, or a spec id / a topic | **start** — open or resume an acceptance pass |
-| `status` | show the queue and the open questions |
-| `answer <n> <text>` | reply to a parked question; the item re-queues |
+| `status` | show the queue and the decisions still waiting |
+| `answer <n> <text>` | answer the decision waiting on item `n`; the item re-queues |
 | `stop` | stop taking remarks, drain what is left, hand the PR to `ship` |
 | anything else, while a pass is open | a **remark** — it goes to the queue |
 
@@ -39,7 +39,7 @@ back months later — but **the file is written first, always**.
   "intake": "open",
   "items": [
     { "n": 1, "text": "the total ignores the discount", "status": "pending",
-      "question": null, "answer": null, "commit": null, "result": null,
+      "question": null, "decision_id": null, "answer": null, "commit": null, "result": null,
       "castalie_id": 41, "pushed": true }
   ]
 }
@@ -103,9 +103,15 @@ Pick the **oldest** `pending` item. Not the last one typed: a fresh remark joins
    keeps Castalie in step and, if you die mid-item, lets the next session pick it up when the lease runs out.
 2. Fix the cause, following the `bug-fix` discipline. **Decide trivia on the spot** — naming, which file,
    which format, anything you can settle from the code in under a minute.
-3. **Only what a commit cannot undo parks**: write the question into the item, set it `awaiting_user`,
-   `acceptance_park(castalie_id, question_md)`, and move to the next item. Never wait, never end the turn on
-   it. The person can also answer it from the Castalie screen, and the queue picks that up.
+3. **Only what a commit cannot undo goes to a person**: write the question into the item, set it
+   `awaiting_user`, file it as a decision on the remark —
+   `decision_create(subject_kind="acceptance_remark", subject_id=castalie_id, …)`, written by
+   `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, its options carrying `continue` (the remark
+   goes back to the queue with the answer), `take_over` or `close` (`wont_fix`) — record its
+   `decision_id` in the item, and move to the next item. Never wait, never end the turn on it.
+   The person can also answer it on the decision's page: Castalie puts the remark back in the queue,
+   `acceptance_claim_next` hands it to you again, and `decision_get(decision_id)` gives the answer
+   to build.
 4. Verify it on the surface the person was looking at, in the running product.
 5. One commit, referencing the item, pushed to the session branch.
 6. Mark it `done` with the commit sha and one line of what changed; then
@@ -127,14 +133,16 @@ together.
 ## status
 
 Print one compact block, every item named by its first words: done (with commits) · in progress ·
-pending · set aside · open questions.
+pending · set aside · decisions still waiting.
 Nothing else — **unless remarks are still `pushed: false`**, in which case say how many, on one line.
 That number is the only thing standing between a pass and a trace nobody will find.
 
 ## answer
 
-`answer <n> <text>` appends the answer to item `n`, calls `acceptance_answer(castalie_id, answer_md)`, and
-puts it back to `pending`. It is picked up in its original position, not at the front — the order the
+`answer <n> <text>` appends the answer to item `n` and records it on the item's decision, signed as the
+person: `decision_answer(decision_id, option_id=…)` when the text names one of its options (its letter
+or its title), `decision_answer(decision_id, text_md=<text>)` otherwise. Then it puts the item back to
+`pending`. It is picked up in its original position, not at the front — the order the
 person gave still holds.
 
 ## stop
@@ -159,7 +167,7 @@ person gave still holds.
 - **A failed push is not an event.** It costs the person nothing and it costs you one line at `status`.
   Never interrupt a pass to report one.
 - **Never end a turn waiting for a go.** A recap is not a stop. Keep draining.
-- **Park what a commit cannot undo, and nothing else.** A change one revert takes back is yours to
+- **Ask only what a commit cannot undo.** A change one revert takes back is yours to
   make: if you have a recommendation, apply it and say which one — waiting costs more than being wrong.
 - **Newest is not next.** After each item, re-pick the oldest `pending`.
 - **One item, one commit.** A commit that carries three remarks cannot be reverted for one of them.

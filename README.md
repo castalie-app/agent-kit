@@ -383,6 +383,15 @@ Whether that instance forwards anything to Castalie is an **instance setting you
 disabled by default. It is not a question put to the developer at the terminal, and no skill
 pretends otherwise.
 
+### When a skill needs a person
+
+With you in the session, a skill asks at the end of its turn. With nobody there, it files a
+**decision** in Castalie, tied to the ticket, spec or brief it blocks, and carries on with what does
+not depend on it. The decision lands in the inbox of the person who can answer, with its options,
+what each costs and what the agent recommends; they answer in a click, a sentence or by voice, and
+Castalie applies the answer to the work at once. How an agent writes a sheet worth three minutes of
+someone's time is `cs/instructions/decision-sheet.md`; how the work restarts is `decision-resume`.
+
 ## What you get
 
 Eighteen skills that take a need from idea to shipped, each driven by the Castalie objects you manage:
@@ -408,6 +417,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `feature-implement` | Implement a spec autonomously in your repo, phase by phase, ending at "PR ready". |
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
+| `decision-resume` | Pick the work back up once a person has answered an agent's decision: play a robot's resume, answer a reader who asked for more context, or resume one decision by its id. Never answers in a person's place. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
 | `contrarian` | Challenge an idea before you commit — adversarial sub-agents + a verdict you own. |
 | `plain-french` | Write and check French in a controlled style modelled on ASD-STE100: short sentences, active voice, no conditional hedging, one name per thing, French typography. Ships a check that finds what a machine can see. |
@@ -559,7 +569,7 @@ cs/
   hooks/where/                    # the pane beside the transcript: its rows are pure functions, its bind is register.ts
   statusline/bg-statusline.mjs    # the row under the prompt: objective > brief > spec, for this copy's own work
   agents/<name>.md                # the 6 subject agents the first pass dispatches
-  skills/<name>/SKILL.md          # the 17 skills
+  skills/<name>/SKILL.md          # the skills, one folder each
   instructions/                   # shared conventions the skills reference, projected to .agents/instructions/
   contract/pm-v1.json             # the project-management tool + REST contract
   contract/conformance/           # the outward-only conformance suite (MCP + REST)

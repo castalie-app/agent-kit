@@ -14,8 +14,8 @@ first production delivery of their subject, recorded by the host's release queue
 first delivery of a pull request of the spec or of one of its phases; for a bug, the delivery that
 names it; for a brief without a follow-up date, the first delivery of one of its specs. With no
 delivery recorded they fall back on the subject's completion. So they never wait for a spec to be
-closed. They are played by the usual passes; a failure stays on the attention screen and follows
-its `onFailAction`. They never reopen a session. Naming the pull request (`anchorPrUrl`) is optional:
+closed. They are played by the usual passes; a failure stays listed among the failed checks and
+follows its `onFailAction`. They never reopen a session. Naming the pull request (`anchorPrUrl`) is optional:
 it pins a check to one phase's delivery instead of the subject's first.
 
 **The post-deploy check** — the immediate verification of a change in production, played minutes
@@ -24,6 +24,15 @@ anchorPrUrl=<the pull request>)`. It is due the moment the delivery is recorded,
 machine plays it right away, and it is the only check that reopens the shipping session's work: when
 it fails or needs a decision, or is not played within two hours of the delivery. Register one only
 where an immediate production check makes sense; the rest is an ordinary follow-up.
+
+**A run that needs a person is a decision on the run.** Only the post-deploy check relaunches a
+session (`relaunch_prompt_md`), and that relaunch needs no decision. Every other run that cannot
+conclude without a person — a threshold only they can move, a gesture only they can make — files a
+decision on it first, `decision_create(subject_kind="followup_run", subject_id=<run>)`
+(`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), then closes with
+`finalStatus=human_required`. Its `continue` replays the check at once with the answer; its `close`
+closes the run. A run left open by a session that stopped is not a decision: finish it, or
+reschedule it.
 
 **A phase is not held open for a measurement a follow-up carries.** Close the phase at delivery and
 put the measurement in a check: a spec waiting on its check while its check waits on the spec moves

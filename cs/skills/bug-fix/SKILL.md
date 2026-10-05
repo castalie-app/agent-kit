@@ -41,11 +41,13 @@ one account.**
 `discussion_post` with `entity_type="bug"`, `author_kind="agent"` and `mentioned_user_ids`; in
 their tracker, its equivalent. **An unattended run answers too**: leaving a salesperson in front
 of a customer with no reply costs an account, where a reasoned refusal costs an afternoon. Hand it
-to a person only when the arbitration is genuinely someone else's — `bug_set_requires_human` with
-its required reason, so the ticket says what it is waiting for — never as a way of not answering.
-**And when what you are handing over is a choice, hand over the choice itself**: the options
-first, the way step 4 writes them, then the park. A reason sentence with nothing to keep is a
-question, and it asks the person to compose the answer you already had the material for.
+to a person only when the decision is genuinely someone else's — a decision on the ticket,
+`decision_create(subject_kind="bug", subject_id=<ticket>)` written by
+`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, so the ticket says what it is waiting for
+and on whom — never as a way of not answering. **And when what you are handing over is a choice,
+hand over the choice itself**: a `choice` whose options are the remedies, the way step 4 writes
+them, never an approval of a sentence. A reason with nothing to pick is a question, and it asks the
+person to compose the answer you already had the material for.
 
 A symptom that is measured and reproduces outside that account is not a demand. It is an ordinary
 bug, and it follows the order below.
@@ -148,23 +150,30 @@ No file, no figure: write the confidence in the comment and leave the ticket to 
 A defect rarely admits a single repair — the guard goes at the boundary or at the call site, the
 bad rows are migrated or tolerated, the contract is tightened or its caller is — and each of those
 gives something up. Settled in a commit message, the choice reaches the ticket as a fact and
-nobody can see there was a decision at all. So write one option per approach —
-`bug_add_decision_option(id, title, approach_md, risk, is_recommended)` — with **what it costs and
-what it leaves behind** in `approach_md`, mark the one you recommend, and let a person keep one
-with `bug_choose_fix_approach`. A ticket you picked up may already carry that answer: `bug_get`
-returns its decision options, and one with `chosen_at` set is a person's arbitration — **a
-constraint on the fix, not a suggestion**.
+nobody can see there was a decision at all. So when the choice is not yours to make (one of the
+seven reasons of `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), file it on the ticket:
+`decision_create(subject_kind="bug", subject_id=<ticket>, answer_shape="choice")`, one option per
+approach, each with **what it costs** (`cost_text`), **what it leaves behind** (`gives_up_md`), its
+`risk` and its `effect` — `continue` for the approaches the robot can carry, `take_over` for the one
+a person must — the one you recommend marked, and why in `recommendation_md`. Then carry on with
+what does not depend on it: the reproduction, the regression test.
+
+**A ticket you picked up may already carry the answer.** `bug_get` returns its `decisions`: an
+answered one is **an instruction, not a suggestion** — its option, or the words written over it
+(`answer.adjusted`), is the fix you build. When it is answered on a ticket you already hold,
+resume on it and call `decision_mark_applied(id, note_md)`, so the sheet says the work restarted;
+a ticket handed back to you by the answer is marked applied when you claim it.
 
 This is `feature-spec`'s "at least two realistic options, and the criterion that separated them",
 at the moment a defect is repaired instead of a feature designed — the same discipline, for the
 same reason: an option nobody wrote down is proposed again by the next reader, and the argument is
 had twice, the second time without the facts. **A bug's version has one thing a spec's does not:
-the options come in rounds, and a round is superseded rather than erased.** When the evidence
-moves under a decision already settled — a later comment undermines the premise the chosen
-approach rested on — open the next round with `start_new_round` and re-flag with
-`bug_set_requires_human`, instead of executing a decision the evidence has since disproved. The
-superseded round stays readable, so the ticket goes on saying what was decided, on what, and why
-it stopped holding.
+a decision is superseded rather than erased.** When the evidence moves under a question still
+waiting, file the corrected sheet with `decision_supersede(id, …)`; when it moves under one already
+answered — a later comment undermines the premise the chosen approach rested on — file a new
+decision on the ticket that says what changed, instead of executing an answer the evidence has
+since disproved. The earlier sheet stays readable, so the ticket goes on saying what was decided,
+on what, and why it stopped holding.
 
 - First extend existing regression coverage and observe the relevant failure before implementing
   the fix, following `${CLAUDE_PLUGIN_ROOT}/instructions/acceptance-criteria.md`. Keep the case and
@@ -226,7 +235,11 @@ means something if it is read every time.
 **On an unattended run**, `bug-fix`/`auto_ship` decides whether the human gate fires: `confident`
 finishes without asking **only when** your confidence is high and the risk is low; below that
 bar, or on `always-manual`, you stop and wait however sure you feel. A fix that did not clear the
-bar says so in the pull request rather than slipping through on a good mood.
+bar says so in the pull request rather than slipping through on a good mood. With nobody in the
+room, that wait is a merge authorisation filed on the ticket (`escalation_reason="authorization"`,
+an `approve` carrying the pull-request link, the state of its checks and the risk —
+`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), so a person is asked instead of a pull
+request left to be found.
 
 **The kit itself still merges nothing and deploys nothing.** That is a documented boundary, not a
 gap: `auto-merge` means you hand over to the process they already have — the one `cs:adapt`

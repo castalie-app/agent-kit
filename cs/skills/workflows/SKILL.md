@@ -51,6 +51,10 @@ and end with the `settings_url`. No option is worth more than one line.
 | `ship` | `release_trigger` | whether merging is already shipping here, or a separate call ships it afterwards |
 | `ship` | `release_hold` | whether a release stops and waits for a person, or goes as soon as the checks are green |
 | `ship` | `rollback_mode` | how going back is done here — including *there is no way back yet*, which is a real answer |
+| `decisions` | `robot_resume` | whether a robot plays the work back once a person answers an agent's decision, or the agent that asked comes back for it — a workspace fact the owner sets, `on` or `off` |
+
+The last row belongs to no skill: Castalie itself reads it when an agent files a decision, and it
+is off until the workspace has a robot that passes. Show it, and say so.
 
 **None of these makes the kit merge or deploy anything.** The kit stops at "PR ready" — that is a
 documented boundary, not a gap — and `merge_mode` only decides whether the loop pauses before
@@ -81,7 +85,7 @@ instead of writing a preference that will never be read.
 
 ## The value that always exists
 
-Every option accepts `ask`, and it is not a fallback — it is a real answer. A developer who wants
+Every option of a skill accepts `ask`, and it is not a fallback — it is a real answer. A developer who wants
 the question every time is not undecided; they have decided to stay in the loop. Never nudge them
 off it, and never treat a stored `ask` as an absent preference.
 

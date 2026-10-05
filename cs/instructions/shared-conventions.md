@@ -89,6 +89,12 @@ whole mechanism: the terminal draws it as a vertical bar, and nothing else has t
   `> **Terminé** : mise en production en cours, le travail sera relancé si besoin.`
 - **A gesture only the user can perform**, once everything else is delivered, is a line under
   *Finished*, never an *I need you*; one another session already took on is not asked again.
+- **I need you is for a person who is there.** A session nobody is watching (a scheduled run, a
+  robot, a tab left alone) does not end on a question nobody will read: it files the decision in
+  Castalie with `decision_create`, on the work it blocks, written by
+  `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, carries on with what does not depend on
+  it, and ends on *Waiting*, on that decision and its link.
+  `> **En attente** : de la décision « Fusionner la correction de la TVA ? », adressée à Claire.`
 
 ## The prose around it
 
