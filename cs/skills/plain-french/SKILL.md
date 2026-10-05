@@ -30,6 +30,10 @@ Do not apply it to:
 
 A style the user asks for wins over this skill.
 
+Replies in the terminal follow the hard rules of this skill too: the shared conventions carry them,
+so a reply needs neither this file nor the check. Load the skill and run the check for a text that
+is kept.
+
 ## Step 1 — Classify each part
 
 - **Procedural text** tells the reader to do something: « Ouvrez le rapport. »

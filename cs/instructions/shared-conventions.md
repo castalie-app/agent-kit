@@ -30,36 +30,48 @@ it as done.
 restating the request. Content the user must judge goes in the reply body itself. The turn's
 verdict goes in its own blockquote (`>`) at the end, opened by a bold heading; when it asks
 something, each item carries its lettered options and what each costs, answerable with a single
-letter without reading back up. Never inside the recap bullets. Terse phrasing is fine. Correct,
-plain French for a non-specialist; translate opaque anglicisms (gloss an unavoidable one once),
-keep the team's established abbreviations. Avoid em dashes, in replies and in any text written for
-the user: prefer a colon, a semicolon, a comma or parentheses.
+letter without reading back up. Never inside the recap bullets. Short, but in full sentences:
+keep the articles and the verb. Correct, plain French for a non-specialist; translate opaque
+anglicisms (gloss an unavoidable one once), keep the team's established abbreviations. Avoid em
+dashes, in replies and in any text written for the user: prefer a colon, a comma, parentheses or
+two sentences.
 
 "Plain French" reads as **the user's own language**: a French team gets French, anyone else gets
 theirs, with the same demands.
 
-**A French text that is kept** (a report, a verdict, the body of a brief, a spec or a ticket, a
-procedure) is written under the `plain-french` skill, the controlled French modelled on
-ASD-STE100: load it before writing one, and run its check on the text before handing it back. A
-reply in the terminal follows the paragraph above and does not need it.
+**Everything written in French follows the hard rules of the `plain-french` skill**, replies in
+the terminal included. They need no loading, because they are here:
+
+- the active voice and a named subject (« nous », « vous », never « on »);
+- no conditional and no impersonal detour (« il faudrait », « pourrait », « il convient de »):
+  say what is true, what must be done, or what is not known;
+- no gérondif (« en cliquant… »): two sentences;
+- one name for one thing, the name the screen uses, from the first line to the last;
+- the everyday word before the heavy one (« pour », not « afin de »; « après », not « suite à »);
+- sentences of 25 words at most, one idea each; no semicolon, no dash used as punctuation;
+- French typography: « » with no-break spaces inside, a no-break space before : ; ! ?
+
+**A French text that is kept** (a report, a verdict written to a work item, the body of a brief,
+a spec or a ticket, a procedure) also loads the skill, for its full rules and its replacements,
+and runs its check on the text before handing it back.
 
 ## The three verdicts, as they print
 
 The rules above stay in English; the verdict is written in the user's language. In French:
 
 ```
-> **Terminé** : la session peut être fermée.
+> **Terminé** : la session peut être fermée.
 ```
 
 ```
-> **En attente** : de la mise en production du correctif, pour la sonde de disponibilité.
+> **En attente** : de la mise en production du correctif, pour la sonde de disponibilité.
 ```
 
 ```
-> **J'ai besoin de vous : comment donner l'accès aux deux prestataires ?**
-> **A.** Acheter la licence d'annuaire : ce que ça coûte.
-> **B.** Leur créer un compte local : ce que ça coûte.
-> **C.** Attendre : ce que ça coûte.
+> **J'ai besoin de vous : comment donner l'accès aux deux prestataires ?**
+> **A.** Acheter la licence d'annuaire : ce que ça coûte.
+> **B.** Leur créer un compte local : ce que ça coûte.
+> **C.** Attendre : ce que ça coûte.
 ```
 
 In English the headings are **Finished**, **Waiting** and **I need you**. The blockquote is the
@@ -72,7 +84,7 @@ whole mechanism: the terminal draws it as a vertical bar, and nothing else has t
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
   right after the release, and a failure, or no play within two hours, relaunches the work by itself.
   Ordinary follow-ups (next day and later) never qualify a turn for this exception.
-  `> **Terminé** : mise en production en cours, le travail sera relancé si besoin.`
+  `> **Terminé** : mise en production en cours, le travail sera relancé si besoin.`
 - **A gesture only the user can perform**, once everything else is delivered, is a line under
   *Finished*, never an *I need you*; one another session already took on is not asked again.
 
