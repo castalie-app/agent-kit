@@ -1,212 +1,255 @@
 <!doctype html>
 <!--
-  The onboarding deck a leader sends to their colleagues. Filled by the `onboard-team` skill:
-  every {{…}} slot is replaced, every visible line is translated into the team's language, and a
-  slide that does not apply is deleted whole. Self-contained on purpose: no font, script or image
-  is fetched from anywhere, so it opens the same from a mail attachment, a published page or a
-  file on disk. Never put a token, a password or an invitation link in it.
+  The deck a leader sends to their colleagues, « Rejoindre l'I.A. de votre entreprise ».
+  Filled by the `onboard-team` skill: every {{…}} slot is replaced with the real value, and the
+  visible text is translated only when the team does not read French. What stays [entre crochets]
+  is the colleague's own words, never a slot. Four steps, then « Bravo ! » and the referent:
+  that structure is the validated one, keep it.
+
+  One file, nothing to install: the two faces come from Google Fonts and fall back to the system's
+  when the file is opened offline. Never put a token, a password or an invitation link in it.
 -->
-<html lang="{{LANG}}">
+<html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{COMPANY}} · Start with Claude</title>
+<title>Rejoindre l'I.A. de {{COMPANY}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f7f6f2;
-    --card: #ffffff;
-    --ink: #1d1d1b;
-    --muted: #5d5b55;
-    --line: #e2dfd6;
-    --accent: #1f4e79;
-    --accent-ink: #ffffff;
-    --code-bg: #f1efe8;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #161614;
-      --card: #201f1c;
-      --ink: #f2f0ea;
-      --muted: #b3afa5;
-      --line: #36342f;
-      --accent: #8ab4dc;
-      --accent-ink: #10202f;
-      --code-bg: #2a2925;
-    }
+    --night: #0a2a50;
+    --paper: #f3f7fb;
+    --amber: #f4ad45;
+    --ink: #0b2c4f;
+    --ink-2: #2f527c;
+    --muted: #5b7ea6;
+    --overline: #9a5f0e;
+    --night-ink: #eef6ff;
+    --night-title: #f8fcff;
+    --night-2: #d3e7fa;
+    --night-muted: #a4c3e2;
+    --divider: #d4dfeb;
+    --display: "Chakra Petch", "Bahnschrift", system-ui, sans-serif;
+    --text: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
   html { scroll-snap-type: y mandatory; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
-    font: 18px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 20px/1.5 var(--text); }
   section {
+    position: relative;
     min-height: 100vh;
     scroll-snap-align: start;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
-    padding: 32px 16px;
+    padding: 64px 16px 96px;
+    /* The home page's ruling: 25 px squares, a firmer line every 125 px. */
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(rgba(10, 42, 80, .08) 1.5px, transparent 1.5px),
+      linear-gradient(90deg, rgba(10, 42, 80, .08) 1.5px, transparent 1.5px),
+      linear-gradient(rgba(10, 42, 80, .035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10, 42, 80, .035) 1px, transparent 1px);
+    background-size: 125px 125px, 125px 125px, 25px 25px, 25px 25px;
   }
-  .slide {
-    width: 100%;
-    max-width: 760px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 40px 32px;
+  section.night {
+    background-color: var(--night);
+    color: var(--night-ink);
+    background-image:
+      linear-gradient(rgba(255, 255, 255, .06) 1.5px, transparent 1.5px),
+      linear-gradient(90deg, rgba(255, 255, 255, .06) 1.5px, transparent 1.5px),
+      linear-gradient(rgba(255, 255, 255, .028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, .028) 1px, transparent 1px);
   }
-  .step {
-    display: inline-block;
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: .04em;
+  .wrap { width: 100%; max-width: 1180px; margin: 0 auto; }
+  .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
+  .overline {
+    font: 500 18px/1.2 var(--display);
+    letter-spacing: 4px;
     text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 8px;
+    color: var(--overline);
+    margin: 0 0 16px;
   }
-  h1 { font-size: 40px; line-height: 1.15; margin: 0 0 16px; }
-  h2 { font-size: 30px; line-height: 1.2; margin: 0 0 16px; }
-  p, li { color: var(--muted); margin: 0 0 12px; }
-  strong { color: var(--ink); }
-  ol { padding-left: 22px; margin: 0; }
-  a { color: var(--accent); }
-  .prompt {
-    position: relative;
-    background: var(--code-bg);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 20px;
-    margin: 16px 0;
-    color: var(--ink);
-    font-size: 16px;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+  .night .overline { color: var(--amber); }
+  h1, h2 { font-family: var(--display); font-weight: 700; margin: 0 0 24px; }
+  h1 { font-size: clamp(44px, 7vw, 96px); line-height: 1.02; color: var(--night-title); }
+  h1 em, h2 em { font-style: normal; color: var(--amber); }
+  h2 { font-size: clamp(32px, 4.2vw, 56px); line-height: 1.08; }
+  p { margin: 0 0 16px; color: var(--ink-2); }
+  .night p { color: var(--night-2); }
+  b { color: var(--ink); }
+  .plate {
+    display: inline-block;
+    border: 3px solid var(--night-ink);
+    border-radius: 6px;
+    background: #0c2c4e;
+    padding: 10px 16px;
+    margin-bottom: 56px;
+    font-family: var(--display);
+    line-height: 1.1;
   }
+  .plate strong { display: block; font-size: 32px; font-weight: 700; color: var(--night-title); }
+  .gestures { margin: 0; padding: 0; list-style: none; counter-reset: g; }
+  .gestures li { overflow-wrap: anywhere; counter-increment: g; position: relative; padding-left: 56px; margin-bottom: 24px; color: var(--ink-2); }
+  .gestures li::before {
+    content: counter(g);
+    position: absolute; left: 0; top: 0;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--night); color: var(--amber);
+    font: 700 18px/36px var(--display); text-align: center;
+  }
+  .box { background: #ffffff; border: 2px solid var(--ink); border-radius: 8px; }
+  .box-head {
+    font: 500 16px/1.2 var(--display);
+    letter-spacing: 3px;
+    color: var(--muted);
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--divider);
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  .prompt { padding: 24px; margin: 0; overflow-wrap: anywhere; font-style: italic; font-size: 22px; line-height: 1.5; color: var(--ink); }
+  .prompt b { font-style: normal; }
   button {
-    font: inherit;
-    font-size: 16px;
-    font-weight: 600;
-    background: var(--accent);
-    color: var(--accent-ink);
+    font: 600 15px/1 var(--text);
+    letter-spacing: 0;
+    color: var(--ink);
+    background: var(--amber);
     border: 0;
-    border-radius: 10px;
-    padding: 10px 18px;
+    border-radius: 6px;
+    padding: 10px 14px;
     cursor: pointer;
+    white-space: nowrap;
   }
-  .done { margin-left: 12px; color: var(--muted); font-size: 15px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  td { padding: 10px 0; border-bottom: 1px solid var(--line); }
-  td:first-child { color: var(--muted); }
-  td:last-child { text-align: right; font-weight: 600; }
-  .hint { font-size: 15px; margin-top: 24px; }
-  @media (max-width: 600px) {
-    body { font-size: 17px; }
-    .slide { padding: 28px 20px; }
-    h1 { font-size: 30px; }
-    h2 { font-size: 24px; }
+  .note { font-size: 18px; color: var(--muted); }
+  .night .bravo { font: 700 clamp(64px, 9vw, 120px)/1 var(--display); color: var(--amber); margin: 0 0 40px; }
+  .checks { list-style: none; padding: 0; margin: 0 0 48px; }
+  .checks li { font: 500 clamp(22px, 2.6vw, 36px)/1.3 var(--display); color: var(--night-title); margin-bottom: 16px; }
+  .checks li::before { content: "✓"; color: var(--amber); margin-right: 20px; }
+  .checks b { color: var(--amber); }
+  .night .referent { font-size: 24px; color: var(--night-2); }
+  .referent strong { color: var(--night-title); }
+  footer { position: absolute; left: 0; right: 0; bottom: 32px; text-align: center; font-size: 16px; color: var(--muted); }
+  @media (max-width: 800px) {
+    .split { grid-template-columns: 1fr; gap: 24px; }
+    .prompt { font-size: 18px; }
   }
   @media print {
     html { scroll-snap-type: none; }
-    section { min-height: auto; page-break-after: always; padding: 0; }
-    .slide { border: 0; }
-    button, .done, .hint { display: none; }
+    section { min-height: 100vh; page-break-after: always; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    button { display: none; }
   }
 </style>
 </head>
 <body>
 
-<section>
-  <div class="slide">
-    <span class="step">{{COMPANY}}</span>
-    <h1>Start working with Claude</h1>
-    <p>Six short steps, about fifteen minutes. Follow them in order.</p>
-    <p class="hint">Scroll down, or press the arrow keys.</p>
+<section class="night">
+  <div class="wrap">
+    <div class="plate"><strong>{{COMPANY}}</strong></div>
+    <p class="overline">Guide collaborateur</p>
+    <h1>Rejoindre l'I.A. <em>de votre entreprise</em></h1>
+    <p>Quatre étapes, avec les prompts à coller dans Claude Desktop.</p>
   </div>
 </section>
 
 <section>
-  <div class="slide">
-    <span class="step">Step 1</span>
-    <h2>Install Claude Desktop</h2>
-    <ol>
-      <li>Download it from <a href="https://claude.ai/download">claude.ai/download</a>.</li>
-      <li>Sign in with <strong>your work address</strong>. Your seat is attached to it.</li>
-      <li>Open the <strong>Code</strong> tab.</li>
+  <div class="wrap split">
+    <div>
+      <p class="overline">Étape 1</p>
+      <h2>Installez Claude Desktop</h2>
+    </div>
+    <ol class="gestures">
+      <li>Ouvrez <b>https://claude.ai/download</b> et cliquez sur «&#160;Télécharger&#160;», ligne <b>macOS</b> pour un Mac, <b>Windows</b> pour un PC. Ouvrez le fichier téléchargé.</li>
+      <li>Connectez-vous avec votre adresse professionnelle&#160;: l'entreprise vous a déjà ouvert un accès.</li>
+      <li>En haut de la barre de gauche, cliquez sur «&#160;Code&#160;», à côté de «&#160;Accueil&#160;».</li>
     </ol>
   </div>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 2</footer>
 </section>
 
 <section>
-  <div class="slide">
-    <span class="step">Step 2</span>
-    <h2>Accept your two invitations</h2>
-    <p>Both are waiting in your work mailbox.</p>
-    <ol>
-      <li><strong>GitHub</strong>: the service where {{COMPANY}} keeps its shared practices. If you have no account, create a free one with your work address.</li>
-      <li><strong>Castalie</strong>: where the team follows its projects. Click the link in the email.</li>
-    </ol>
+  <div class="wrap split">
+    <div>
+      <p class="overline">Étape 2</p>
+      <h2>Installez les bonnes pratiques de l'entreprise</h2>
+      <p>Acceptez d'abord les deux invitations reçues par mail&#160;: GitHub et Castalie.</p>
+      <p>Puis collez ce bloc dans Claude et appuyez sur Entrée.</p>
+    </div>
+    <div class="box">
+      <div class="box-head">À COLLER DANS CLAUDE DESKTOP, ONGLET CODE <button type="button" data-copy="p-install">Copier</button></div>
+      <p class="prompt" id="p-install">Installe les bonnes pratiques de mon entreprise depuis notre espace commun sur GitHub&#160;: {{GITHUB_SPACE_URL}}. Si je n'ai pas de compte GitHub, guide-moi pour en créer un gratuit.<br><br>Installe aussi les outils gratuits de Castalie&#160;: ajoute la place de marché castalie-app/agent-kit et installe le plugin cs@castalie. Puis enregistre, pour moi seul, le serveur MCP castalie à l'adresse {{CASTALIE_WORKSPACE_URL}}/mcp. Si GitHub ou Castalie me demandent de me connecter, dis-moi où cliquer, une étape à la fois.<br><br>Enregistre dans mon <b>CLAUDE.md</b> perso que je ne suis pas technicien&#160;: fais tout ce qui est technique toi-même, et ne me demande que ce que je suis seul à pouvoir faire.</p>
+    </div>
   </div>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 3</footer>
 </section>
 
 <section>
-  <div class="slide">
-    <span class="step">Step 3</span>
-    <h2>Paste this prompt into the Code tab</h2>
-    <div class="prompt" id="prompt">{{PROMPT}}</div>
-    <button type="button" id="copy">Copy the prompt</button><span class="done" id="done" hidden>Copied</span>
-    <p class="hint">If a page asks you to sign in to GitHub or Castalie, use your work address.</p>
+  <div class="wrap split">
+    <div>
+      <p class="overline">Étape 3</p>
+      <h2>Écrivez avec le ton de l'entreprise</h2>
+      <p><b>{{WRITE_COMMAND}}</b> connaît les valeurs et le ton de l'entreprise. Relisez avant d'envoyer.</p>
+      <p class="note">Remplacez ce qui est entre crochets par votre propre demande.</p>
+    </div>
+    <div class="box">
+      <div class="box-head">À COLLER DANS CLAUDE DESKTOP, ONGLET CODE <button type="button" data-copy="p-write">Copier</button></div>
+      <p class="prompt" id="p-write"><b>{{WRITE_COMMAND}}</b> prépare un mail à [un client] pour [ce que vous avez à lui dire].</p>
+    </div>
   </div>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 4</footer>
 </section>
 
 <section>
-  <div class="slide">
-    <span class="step">Step 4</span>
-    <h2>Try {{WRITE_COMMAND}}</h2>
-    <p>Type <strong>{{WRITE_COMMAND}}</strong> and ask for something from your own day.</p>
-    <p>For example: <strong>{{WRITE_EXAMPLE}}</strong></p>
+  <div class="wrap split">
+    <div>
+      <p class="overline">Étape 4</p>
+      <h2>Claude ne travaille pas comme vous voulez&#160;?</h2>
+      <p>Une phrase suffit&#160;: ce que Claude a fait, et ce qu'il aurait dû faire.</p>
+    </div>
+    <div class="box">
+      <div class="box-head">À COLLER DANS CLAUDE DESKTOP, ONGLET CODE <button type="button" data-copy="p-analyse">Copier</button></div>
+      <p class="prompt" id="p-analyse"><b>{{ANALYSE_COMMAND}}</b> tu as fait x et tu aurais dû faire y.</p>
+    </div>
   </div>
+  <div class="wrap"><h2 style="margin-top:48px">Et Claude apprend <em>pour toute l'entreprise.</em></h2></div>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 5</footer>
 </section>
 
-<section>
-  <div class="slide">
-    <span class="step">Step 5</span>
-    <h2>Claude does not do what you want? Type {{ANALYSE_COMMAND}}</h2>
-    <p>Say what went wrong. Claude explains why it acted that way and proposes a rule to change.</p>
-    <p>Send that proposal to your referent: once accepted, it helps the whole team.</p>
-  </div>
-</section>
-
-<section>
-  <div class="slide">
-    <span class="step">Step 6</span>
-    <h2>Who to ask</h2>
-    <table>
-      {{REFERENT_ROWS}}
-    </table>
+<section class="night">
+  <div class="wrap">
+    <p class="bravo">Bravo&#160;!</p>
+    <ul class="checks">
+      <li>1. Installer Claude Desktop</li>
+      <li>2. Installer les bonnes pratiques de l'entreprise</li>
+      <li>3. Écrire avec le ton de l'entreprise, <b>{{WRITE_COMMAND}}</b></li>
+      <li>4. Corriger Claude, <b>{{ANALYSE_COMMAND}}</b></li>
+    </ul>
+    <p class="referent">Une question&#160;? Votre référent&#160;: <strong>{{REFERENT}}</strong></p>
   </div>
 </section>
 
 <script>
-  // The only script: the copy button. The prompt stays selectable by hand when the clipboard is
-  // refused (a file opened from disk, an old browser).
-  document.getElementById("copy").addEventListener("click", function () {
-    var text = document.getElementById("prompt").innerText;
-    var shown = function () { document.getElementById("done").hidden = false; };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(shown, function () { select(); });
-    } else {
-      select();
-    }
-    function select() {
-      var range = document.createRange();
-      range.selectNodeContents(document.getElementById("prompt"));
-      var selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
+  // The only script: the copy buttons. Copies the prompt as plain text, one paragraph per line;
+  // when the clipboard is refused (a file opened from disk), the prompt is selected instead.
+  document.querySelectorAll("[data-copy]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var node = document.getElementById(button.getAttribute("data-copy"));
+      var label = button.textContent;
+      var select = function () {
+        var range = document.createRange();
+        range.selectNodeContents(node);
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      };
+      var done = function () { button.textContent = "Copié"; setTimeout(function () { button.textContent = label; }, 1800); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(node.innerText).then(done, select);
+      } else {
+        select();
+      }
+    });
   });
 </script>
 </body>

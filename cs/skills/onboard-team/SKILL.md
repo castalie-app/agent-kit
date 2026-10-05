@@ -57,10 +57,11 @@ repository.
 <plugin>/skills/<skill>/SKILL.md       the company's skills (redaction, analyse, …)
 <plugin>/instructions.md               the company-wide instructions, if there are any
 <plugin>/hooks/hooks.json              a SessionStart hook that prints instructions.md
-README.md                              what the space is, who the referents are
+README.md                              what the space is, how to install it, the referents
 ```
 
-The colleague then installs it with `claude plugin marketplace add <org>/<repository>` and
+The colleague's prompt names only the space's address, so its `README.md` opens on the two
+install commands, for the colleague's Claude to read. The colleague then installs it with `claude plugin marketplace add <org>/<repository>` and
 `claude plugin install <plugin>@<org>`: that is what the deck's prompt asks their Claude to do.
 
 **Nothing personal leaves the leader's `CLAUDE.md`.** Their skills are **copied** into the space,
@@ -109,38 +110,38 @@ Record the referents in the space's `README.md`, team by team, and push.
 
 ## 3. The deck for collaborators
 
-**Much simpler than the leader's guide.** A colleague reads it once, follows it in fifteen minutes,
-and never needs it again. Start from `${CLAUDE_PLUGIN_ROOT}/skills/onboard-team/deck.html`: it is
-self-contained (no script, font or image fetched from anywhere), it reads on a phone, and it prints
-one slide per page. Fill every `{{…}}` slot, translate every visible line into the team's
-language, and delete a slide that does not apply. Its slides, in order:
+**Much simpler than the leader's guide**, and its structure is fixed: « Rejoindre l'I.A. de votre
+entreprise », four steps, then « Bravo ! » and the referent. A colleague follows it once, in
+fifteen minutes. Start from `${CLAUDE_PLUGIN_ROOT}/skills/onboard-team/deck.html`, which carries
+that structure, its French text and its look (night blue and paper grounds, amber accent, Chakra
+Petch and Instrument Sans), reads on a phone and prints one slide per page.
 
-1. **Install Claude Desktop**, from `https://claude.ai/download`, and sign in with the work address
-   the seat was given to. Open the Code tab.
-2. **Accept the two invitations** waiting in the work mailbox: GitHub (create a free account with
-   that same address if they have none) and Castalie.
-3. **Paste one prompt** into the Code tab. It installs the company's practices from the shared
-   space, installs the Castalie kit (`cs@castalie`, from the `castalie-app/agent-kit` marketplace)
-   and registers the `castalie` MCP server over HTTP at `https://<their-workspace>.castalie.app/mcp`
-   for this person. **No token in it**: the first time, Castalie asks the colleague to sign in, in
-   the browser, with the address that was invited. That is what joins them to the company's
+1. **Installez Claude Desktop**: download it from `https://claude.ai/download` (macOS or Windows),
+   sign in with the work address (« l'entreprise vous a déjà ouvert un accès »), then click the
+   « Code » tab.
+2. **Installez les bonnes pratiques de l'entreprise**: accept the two invitations first (GitHub and
+   Castalie), then paste one prompt. It installs the company's practices from the shared space,
+   guides the creation of a free GitHub account when there is none, installs `cs@castalie` from the
+   `castalie-app/agent-kit` marketplace, registers the `castalie` MCP server at the workspace's
+   `/mcp` address for this person alone, and records in their personal `CLAUDE.md` that they are
+   not a technician. **No token in it**: the first time, Castalie asks the colleague to sign in, in
+   the browser, with the invited address. The invitation is what joins them to the company's
    existing workspace instead of opening a new one.
-4. **Try the writing skill**: one concrete request from their own day.
-5. **When Claude does not work the way you want, type the analysis skill** and say what went
-   wrong. It proposes a rule change; the referent shares it with everyone.
-6. **Who to ask**: the referent of each team.
+3. **Écrivez avec le ton de l'entreprise**: « **/redaction** prépare un mail à [un client] pour
+   [ce que vous avez à lui dire]. »
+4. **Claude ne travaille pas comme vous voulez ?**: « **/analyse** tu as fait x et tu aurais dû
+   faire y. » Then « Et Claude apprend pour toute l'entreprise. »
 
-The prompt of slide 3, to translate and fill (`{{PROMPT}}`):
+The end: « Bravo ! » with the four steps checked, then « Une question ? Votre référent : » and the
+referent's first and last name and address.
 
-```
-Install <Company>'s practices: add the plugin marketplace <org>/<repository> and install the
-plugin <plugin>@<org>. Then add the marketplace castalie-app/agent-kit and install cs@castalie.
-Then register, for me alone, the MCP server named castalie over HTTP at
-https://<their-workspace>.castalie.app/mcp. If GitHub or Castalie asks me to sign in, tell me
-what to click, one step at a time.
-```
-
-`{{REFERENT_ROWS}}` is one `<tr><td>team</td><td>referent</td></tr>` per team.
+**Fill every `{{…}}` slot with the real value**: `{{COMPANY}}`, `{{GITHUB_SPACE_URL}}` (the
+space's address), `{{CASTALIE_WORKSPACE_URL}}` (the workspace's address, without `/mcp`),
+`{{WRITE_COMMAND}}` and `{{ANALYSE_COMMAND}}` (each skill as the `/` menu shows it on the leader's
+machine), `{{REFERENT}}` (« Prénom Nom, adresse »). What stays `[entre crochets]` is the
+colleague's own words: leave it. When the referents differ by team, write one deck per team,
+`onboarding/<team>.html`, each with its own referent. Translate the visible text only when the
+team does not read French. Change nothing else: the structure and the look are the validated ones.
 
 **Never a secret in the deck**: no token, no password, no invitation link. Everything in it is an
 address the colleague can only use once they have been invited.
