@@ -44,7 +44,9 @@ the terminal included. They need no loading, because they are here:
 
 - the active voice and a named subject (« nous », « vous », never « on »);
 - no conditional and no impersonal detour (« il faudrait », « pourrait », « il convient de »):
-  say what is true, what must be done, or what is not known;
+  say what is true, what must be done, or what is not known, and never turn an uncertainty into a
+  decision;
+- the genre kept: a report stays a report, only a procedure becomes a list of orders;
 - no gérondif (« en cliquant… »): two sentences;
 - one name for one thing, the name the screen uses, from the first line to the last;
 - the everyday word before the heavy one (« pour », not « afin de »; « après », not « suite à »);
@@ -52,8 +54,8 @@ the terminal included. They need no loading, because they are here:
 - French typography: « » with no-break spaces inside, a no-break space before : ; ! ?
 
 **A French text that is kept** (a report, a verdict written to a work item, the body of a brief,
-a spec or a ticket, a procedure) also loads the skill, for its full rules and its replacements,
-and runs its check on the text before handing it back.
+a spec or a ticket, a procedure) also loads the skill, for its replacements and its check, and runs
+the check on the text before handing it back.
 
 ## The three verdicts, as they print
 
