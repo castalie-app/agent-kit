@@ -1,13 +1,14 @@
 ---
 name: join
-description: Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their GitHub connection handled end to end, the company's practices installed from the shared space Castalie names, a personal CLAUDE.md that says they are not a technician, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", or right after the prompt of the onboarding deck installed the kit. Every technical gesture is done for the person; they are asked only for what they alone can give.
+description: Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their GitHub connection handled end to end, the company's practices installed from the shared space Castalie names, a personal CLAUDE.md that says they are not a technician, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", or right after the prompt of Castalie's public collaborator guide installed the kit. Every technical gesture is done for the person; they are asked only for what they alone can give.
 ---
 
 # join — a collaborator joins the company's AI
 
 The person in front of you is a collaborator, not a technician. Their leader invited them into the
-company's Castalie workspace and into its shared space on GitHub, sent them a short guide, and they
-pasted its prompt into Claude Desktop. That prompt installed this kit and registered the company's
+company's Castalie workspace and into its shared space on GitHub, sent them the link to
+Castalie's public guide, and they pasted its prompt into Claude Desktop. The guide is the same for
+every company: nothing you need is in it, everything you need is in Castalie. That prompt installed this kit and registered the company's
 workspace; now this skill finishes the job.
 
 **You do every technical gesture yourself**: installing a tool, signing in from the terminal,
@@ -24,16 +25,11 @@ hand-back with what unblocks it, never left half-done in silence.
 
 ## 0. Why, first
 
-Open on two or three plain sentences, before any gesture. In French:
+Open on two or three plain sentences, before any gesture, the same for every company. In French:
 
 > Votre entreprise équipe chaque collaborateur d'une I.A. qui travaille à sa façon : son ton, ses
 > consignes, ses modèles de documents. Quand vous corrigez Claude, la correction profite à toute
-> l'équipe. Je m'occupe de toute la technique : vous aurez seulement quelques clics à faire.
-
-**The leader's own words come first when you can already read them**: the `## Pourquoi` (or
-`## Why`) section of the shared space's `README.md`, written there by `onboard-team`. Quote them,
-with the leader's name, in place of the first sentence. The space is often unreadable before step
-3; then open with the plain version, and quote the leader when the space opens in step 4.
+> l'équipe. Je m'occupe de toute la technique : vous cliquerez seulement là où je vous le dirai.
 
 ## 1. Castalie answers
 
@@ -44,8 +40,9 @@ with the leader's name, in place of the first sentence. The space is often unrea
   they are connected with. When the address is not the one their leader invited, say so now: the
   invitation is tied to an address, and signing in with another one opens nothing.
 - **Absent, and `claude mcp list` shows no `castalie`**: the guide's prompt did not register it.
-  Ask the workspace address once (« l'adresse de l'espace Castalie de votre entreprise, qui finit
-  par castalie.app »), then register it for this person alone, with no token:
+  Ask the workspace address once (« Quelle est l'adresse de l'espace Castalie de votre
+  entreprise ? Elle figure dans le mail d'invitation de Castalie et finit par castalie.app. »),
+  then register it for this person alone, with no token:
   `claude mcp add --transport http --scope user castalie https://<workspace>.castalie.app/mcp`.
 - **Absent, but `claude mcp list` shows `castalie`**: it was registered after this session opened,
   and a session keeps the tools it found at its opening. This is the normal case right after the
@@ -120,13 +117,21 @@ the access is not open yet; find out why, in this order:
 **Read how the space packages itself**: its `.claude-plugin/marketplace.json`
 (`gh api repos/<owner>/<repository>/contents/.claude-plugin/marketplace.json -H "Accept:
 application/vnd.github.raw"`) gives the marketplace's name and its plugin; its `README.md` gives
-the leader's « Pourquoi », the referents, and how the skills show in the `/` menu. Quote the
-leader now if step 0 could not.
+the referents, the company's skills and how each one shows in the `/` menu.
 
 **Install it**: `claude plugin marketplace add <owner>/<repository>`, then
 `claude plugin install <plugin>@<marketplace>`. When the `claude` command is not on this machine's
 path, the person types the two lines in Claude's input, one at a time: give them each line,
 prefixed with `/plugin`, and wait for each.
+
+**Say what a skill is, before using one**, in plain words:
+
+> Une skill est une consigne que Claude retient une fois pour toutes. Pour la rappeler, tapez
+> une barre oblique, puis son nom.
+
+Then list the skills the company shares, one line each: the command as the `/` menu shows it, and
+what it is for, in a few everyday words. Take them from the `README.md`; when it lists none, read
+the `description` of each `<plugin>/skills/<skill>/SKILL.md` in the space.
 
 A plugin installed during a session shows its skills in the next one. Say it now, once, so the
 first use below does not surprise them.
@@ -162,9 +167,14 @@ menu shows it (the README says it; otherwise `/<plugin>:redaction`):
 When the writing skill already shows in this session (the practices were installed in an earlier
 one), run it now on their task instead.
 
-**Then the analysis skill, in two sentences**: « Quand Claude ne travaille pas comme vous voulez,
-tapez /analyse et une phrase : ce qu'il a fait, et ce qu'il aurait dû faire. Il corrige ses
-consignes, et la correction profite à toute l'équipe. »
+**Then the analysis skill**: it is the kit's own `/cs:analyse`, already installed with this kit,
+never a company skill of the same name. Two sentences and the line to type:
+
+> Quand Claude ne travaille pas comme vous voulez, tapez /cs:analyse et une phrase : ce qu'il a
+> fait, et ce qu'il aurait dû faire. Il corrige ses consignes, et la correction profite à toute
+> l'équipe.
+>
+> /cs:analyse tu as fait x et tu aurais dû faire y.
 
 ## What this skill never does
 
