@@ -113,9 +113,14 @@ Record the referents in the space's `README.md`, team by team, and push.
 
 **Then the invitations, two of them per person.**
 
-- **Castalie**: `mcp__castalie__member_invite` for each address, as a member. Only an owner may
-  invite, the same rule as the invitation screen, and the leader opened the workspace, so they
-  are its owner. `already_member` is not an error: say nothing about it. When the verb is not in
+- **Castalie**: `mcp__castalie__member_invite` for each address, with no role: an invitation
+  always brings a member, and the leader promotes someone afterwards on the members screen if they
+  want to. Only an owner may invite, the same rule as the invitation screen, and the leader opened
+  the workspace, so they are its owner. Two refusals are not failures of this run:
+  `already_member` (that person is already in, say nothing) and `not_delivered` (the invitation is
+  recorded but the workspace sent no email: say so in one line, and the leader's email below is
+  then the only message that colleague receives). `owner_only` means the session is not signed in
+  as the owner: say it, and stop the invitations there. When the verb is not in
   your tool catalogue, say so in one line, then open the workspace's invitation screen for them,
   `https://<their-workspace>.castalie.app/admin/utilisateurs/inviter`, and give them the list of
   addresses to paste, one per invitation. Either way the colleague receives an email from

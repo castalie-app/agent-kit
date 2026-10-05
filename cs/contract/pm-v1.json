@@ -159,25 +159,26 @@
     {
       "name": "workspace_practices_set",
       "kind": "write",
-      "description": "Record the address of the company's shared practices space on GitHub, so every member's Claude finds it with workspace_practices_get. Owner only, the same rule as the workspace settings screen: a member gets forbidden. An address that is not https://github.com/<owner>/<repository> is refused (invalid_url).",
+      "description": "Record the address of the company's shared practices space on GitHub, so every member's Claude finds it with workspace_practices_get. The address is normalised to https://github.com/<path>; an empty string clears it (url null). Owner only, the same rule as the workspace settings screen: a member gets owner_only. An address that is not https on github.com gets not_github_https.",
       "params": [
         {
           "name": "url",
           "type": "string",
           "required": true,
-          "description": "https://github.com/<owner>/<repository>"
+          "description": "https://github.com/<owner>/<repository>, or an empty string to clear it."
         }
       ],
       "returns": {
         "success": "bool",
-        "url": "string",
-        "error": "string"
+        "url": "string|null",
+        "error": "string (owner_only|not_github_https)",
+        "message": "string"
       }
     },
     {
       "name": "member_invite",
       "kind": "write",
-      "description": "Invite a person into this workspace by email address: Castalie sends them the invitation, and they join by signing in with that address. Owner only, the same rule as the invitation screen (/admin/utilisateurs/inviter): a member gets forbidden. An address already a member answers already_member, which is not an error.",
+      "description": "Invite a person into this workspace by email address, as a member: Castalie sends them the invitation, and they join by signing in with that address. Owner only, the same rule as the invitation screen (/admin/utilisateurs/inviter): a member gets owner_only. An invitation always brings someone in as a member; the owner promotes afterwards on /admin/utilisateurs, so any other role gets role_not_invitable. already_member: the address is already in the workspace. not_delivered: the invitation is recorded but the instance has no mail sender, so nobody received it. email_required: no address given.",
       "params": [
         {
           "name": "email",
@@ -190,17 +191,18 @@
           "type": "string",
           "required": false,
           "enum": [
-            "member",
-            "owner"
+            "member"
           ],
-          "description": "member by default."
+          "description": "member, the only role an invitation brings; omit it."
         }
       ],
       "returns": {
         "success": "bool",
-        "email": "string",
-        "status": "invited|already_member",
-        "error": "string"
+        "sent": "bool",
+        "email": "string (lowercased)",
+        "role": "string (member)",
+        "error": "string (owner_only|already_member|not_delivered|email_required|role_not_invitable)",
+        "message": "string"
       }
     },
     {
