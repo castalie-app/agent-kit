@@ -74,6 +74,14 @@ notes.
 - **Never wait for a person.** An « I need you » verdict of a loaded skill becomes a decision
   (section 4); a confirmation it would ask for before a gesture is either granted by the prompt in
   writing, or refused: the gesture is not made, and the notes say so.
+- **Never wait for anything.** This session is headless: it ends the moment its turn ends, and
+  nothing wakes it again — not a monitor, not a background task, not a CI or release notification.
+  A turn that ends on « waiting for the quality gate » or « I'll check when the build is done » leaves
+  the run open, and the launcher closes it blind. Anything that finishes later (a pipeline, a merge
+  queue, a release, a job) is handed to a **follow-up run** (section 7): close now with
+  `follow_up_not_before` at the hour it should be done and `follow_up_md` naming what to read and
+  what to do next. Short checks you can make right now (a status that answers within the session's
+  time) are made now; everything else is a follow-up.
 - **Never stop at the first failure.** Carry on with what does not depend on it, then close `failed`
   with what remains broken.
 
@@ -174,7 +182,8 @@ scheduled_task_run_complete(id, outcome, notes_md, final_status, outcome_type, o
   was above zero. Written in the workspace's language; French follows the `plain-french` skill —
   load it and run its check on the notes before closing.
 - **`model_used`**: the model id this session runs on.
-- **A follow-up at a given time** — wait for something to finish, then read its result — goes through
+- **A follow-up at a given time** — wait for something to finish, then read its result, never by
+  staying in the session — goes through
   `follow_up_not_before` (ISO 8601, UTC or with an offset) and `follow_up_md` (what is left to do,
   read alone by the next session). Castalie creates that run in the same transaction. Never
   `mcp__castalie__scheduled_task_run_now` while this run is held: it is refused, and the follow-up
