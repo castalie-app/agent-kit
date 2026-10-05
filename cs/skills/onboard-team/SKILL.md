@@ -30,7 +30,7 @@ COLLABORATOR_GUIDE = https://claude.ai/artifact/BrzAdshHg5dqEbA1jfCe4r
 and connects the company's workspace, then `/cs:join`, which does the rest. **You never build,
 fill or attach a guide.** A leader does not manage the sharing of a generated file, and nothing in
 the guide is company-specific: the colleague finds the workspace's address in the invitation
-email Castalie sends them, and `/cs:join` reads everything else from Castalie.
+email the leader sends them, and `/cs:join` reads everything else from Castalie.
 
 ## 1. The shared GitHub space
 
@@ -119,7 +119,8 @@ Record the referents in the space's `README.md`, team by team, and push.
   your tool catalogue, say so in one line, then open the workspace's invitation screen for them,
   `https://<their-workspace>.castalie.app/admin/utilisateurs/inviter`, and give them the list of
   addresses to paste, one per invitation. Either way the colleague receives an email from
-  Castalie, and that email carries the workspace's address the guide asks for.
+  Castalie. The workspace's address, which the guide's prompt asks for, is written in the email
+  below.
 - **GitHub**, by email, and say which of the two it was:
   - **the space belongs to an organisation** (`gh api repos/<org>/<repository> --jq .owner.type`
     answers `Organization`): invite each address into it, as a member,
@@ -155,15 +156,17 @@ Objet : Votre démarrage avec Claude chez <Entreprise>
 
 Bonjour,
 
-Vous avez reçu deux invitations : une de GitHub et une de Castalie. Acceptez-les toutes les deux,
-et gardez le mail de Castalie : le guide vous demande l'adresse de notre espace, elle y figure.
+Vous avez reçu deux invitations : une de GitHub et une de Castalie. Acceptez-les toutes les deux.
 Ensuite, suivez ce guide, il prend un quart d'heure : COLLABORATOR_GUIDE
+Claude vous demandera l'adresse de notre espace Castalie : https://<espace>.castalie.app
 Votre référent pour les questions : <prénom>.
 
 <Prénom du dirigeant>
 ```
 
-Write the guide's address in full in place of `COLLABORATOR_GUIDE`. When the team does not read
+Write the guide's address in full in place of `COLLABORATOR_GUIDE`, and the workspace's real
+address, without `/mcp`, in place of `https://<espace>.castalie.app`: the guide is the same for
+every company, so this line of the email is the only place a colleague reads it. When the team does not read
 French, translate the email; the link stays the same.
 
 ## What this skill never does

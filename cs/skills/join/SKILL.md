@@ -8,7 +8,16 @@ description: Bring one collaborator into their company's AI, once their Claude i
 The person in front of you is a collaborator, not a technician. Their leader invited them into the
 company's Castalie workspace and into its shared space on GitHub, sent them the link to
 Castalie's public guide, and they pasted its prompt into Claude Desktop. The guide is the same for
-every company: nothing you need is in it, everything you need is in Castalie. That prompt installed this kit and registered the company's
+every company: nothing you need is in it, everything you need is in Castalie. Its prompt is
+this one, word for word, and the guide changes only together with this skill:
+
+```
+Installe les outils de Castalie : ajoute la place de marché castalie-app/agent-kit, puis installe le plugin cs@castalie.
+
+Connecte-moi ensuite à l'espace Castalie de mon entreprise. Demande-moi son adresse : elle figure dans le mail de mon dirigeant et finit par castalie.app. Enregistre pour moi seul le serveur MCP castalie à cette adresse, suivie de /mcp, sans jeton. Je me connecterai dans le navigateur avec mon adresse professionnelle.
+
+Lance ensuite /cs:join. Si /cs:join ou Castalie ne sont pas encore visibles dans cette session, ne cherche pas de contournement. Dis-moi simplement : « Ouvrez une nouvelle session et tapez /cs:join. »
+``` That prompt installed this kit and registered the company's
 workspace; now this skill finishes the job.
 
 **You do every technical gesture yourself**: installing a tool, signing in from the terminal,
@@ -41,7 +50,7 @@ Open on two or three plain sentences, before any gesture, the same for every com
   invitation is tied to an address, and signing in with another one opens nothing.
 - **Absent, and `claude mcp list` shows no `castalie`**: the guide's prompt did not register it.
   Ask the workspace address once (« Quelle est l'adresse de l'espace Castalie de votre
-  entreprise ? Elle figure dans le mail d'invitation de Castalie et finit par castalie.app. »),
+  entreprise ? Elle figure dans le mail de votre dirigeant et finit par castalie.app. »),
   then register it for this person alone, with no token:
   `claude mcp add --transport http --scope user castalie https://<workspace>.castalie.app/mcp`.
 - **Absent, but `claude mcp list` shows `castalie`**: it was registered after this session opened,
