@@ -147,6 +147,63 @@
       }
     },
     {
+      "name": "workspace_practices_get",
+      "kind": "read",
+      "description": "The address of the company's shared practices space on GitHub (https://github.com/<owner>/<repository>), as the workspace's owner recorded it, or null when none is recorded. Any member reads it: it is what lets a newcomer's Claude install the company's practices without asking anyone for the address.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "url": "string|null"
+      }
+    },
+    {
+      "name": "workspace_practices_set",
+      "kind": "write",
+      "description": "Record the address of the company's shared practices space on GitHub, so every member's Claude finds it with workspace_practices_get. Owner only, the same rule as the workspace settings screen: a member gets forbidden. An address that is not https://github.com/<owner>/<repository> is refused (invalid_url).",
+      "params": [
+        {
+          "name": "url",
+          "type": "string",
+          "required": true,
+          "description": "https://github.com/<owner>/<repository>"
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "url": "string",
+        "error": "string"
+      }
+    },
+    {
+      "name": "member_invite",
+      "kind": "write",
+      "description": "Invite a person into this workspace by email address: Castalie sends them the invitation, and they join by signing in with that address. Owner only, the same rule as the invitation screen (/admin/utilisateurs/inviter): a member gets forbidden. An address already a member answers already_member, which is not an error.",
+      "params": [
+        {
+          "name": "email",
+          "type": "string",
+          "required": true,
+          "description": "The person's work address."
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": false,
+          "enum": [
+            "member",
+            "owner"
+          ],
+          "description": "member by default."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "email": "string",
+        "status": "invited|already_member",
+        "error": "string"
+      }
+    },
+    {
       "name": "strategy_list_periods",
       "kind": "read",
       "description": "List all strategy periods (annual, quarterly).",

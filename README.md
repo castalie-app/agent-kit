@@ -392,7 +392,8 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `audit` | Where your practices stand, first pass and every one after: audit how you already track work, open the adapting pull request, observe the twenty criteria, record what was seen. Applies nothing. |
 | `adapt` | Turn the kit's generic skills into skills bound to your environment, as a pull request. Never overwrites, never merges. |
 | `connect` | Wire a repository to your workspace, or diagnose a connection that answers nothing. |
-| `onboard-team` | For a leader who is not a technician: the company's shared GitHub space that installs its practices in one gesture, the first colleagues and their referents, a short onboarding deck, and the email that sends it, drafted and never sent. |
+| `onboard-team` | For a leader who is not a technician: the company's shared GitHub space that installs its practices in one gesture, recorded in Castalie, the first colleagues invited into Castalie and GitHub with their referents, a short onboarding deck that opens on the leader's own words, and the email that sends it, drafted and never sent. |
+| `join` | For each colleague the leader invited: why the company does it, their GitHub account and sign-in handled end to end, the company's practices installed from the space Castalie names, a personal CLAUDE.md that says they are not a technician, and a first real use of the writing skill. |
 | `workflows` | See and change what the skills may do on your behalf — and what your administrator decided for everyone. |
 | `bug-fix` | A bug from report to pull request: reproduce first, fix the cause, prove it on the user's own path, leave a follow-up check. |
 | `report` | Receive a bug report or improvement request from an agent, find or create its ticket, and return the link. |

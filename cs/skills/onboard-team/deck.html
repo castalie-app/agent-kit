@@ -3,8 +3,9 @@
   The deck a leader sends to their colleagues, « Rejoindre l'I.A. de votre entreprise ».
   Filled by the `onboard-team` skill: every {{…}} slot is replaced with the real value, and the
   visible text is translated only when the team does not read French. What stays [entre crochets]
-  is the colleague's own words, never a slot. Four steps, then « Bravo ! » and the referent:
-  that structure is the validated one, keep it.
+  is the colleague's own words, never a slot. The cover, « Pourquoi » in the leader's own words,
+  four steps, then « Bravo ! » and the referent: that structure is the validated one, keep it.
+  Step 1 names the Claude Desktop buttons as the screen shows them; never shorten those gestures.
 
   One file, nothing to install: the two faces come from Google Fonts and fall back to the system's
   when the file is opened offline. Never put a token, a password or an invitation link in it.
@@ -123,6 +124,9 @@
     white-space: nowrap;
   }
   .note { font-size: 18px; color: var(--muted); }
+  .gestures li strong { display: block; font: 700 20px/1.3 var(--display); color: var(--ink); margin-bottom: 4px; }
+  .quote { margin: 0 0 32px; padding-left: 24px; border-left: 4px solid var(--amber); font-size: clamp(24px, 2.6vw, 32px); line-height: 1.4; color: var(--ink); }
+  .quote cite { display: block; margin-top: 12px; font: 500 18px/1.3 var(--display); font-style: normal; letter-spacing: 1px; color: var(--muted); }
   .night .bravo { font: 700 clamp(64px, 9vw, 120px)/1 var(--display); color: var(--amber); margin: 0 0 40px; }
   .checks { list-style: none; padding: 0; margin: 0 0 48px; }
   .checks li { font: 500 clamp(22px, 2.6vw, 36px)/1.3 var(--display); color: var(--night-title); margin-bottom: 16px; }
@@ -154,18 +158,30 @@
 </section>
 
 <section>
+  <div class="wrap">
+    <p class="overline">Pourquoi</p>
+    <h2>Une I.A. qui travaille <em>comme l'entreprise</em></h2>
+    <blockquote class="quote">{{WHY}}<cite>{{LEADER}}</cite></blockquote>
+    <p>Claude connaît déjà le ton et les consignes de l'entreprise&#160;; chaque correction profite à toute l'équipe.</p>
+  </div>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 2</footer>
+</section>
+
+<section>
   <div class="wrap split">
     <div>
       <p class="overline">Étape 1</p>
       <h2>Installez Claude Desktop</h2>
     </div>
     <ol class="gestures">
-      <li>Ouvrez <b>https://claude.ai/download</b> et cliquez sur «&#160;Télécharger&#160;», ligne <b>macOS</b> pour un Mac, <b>Windows</b> pour un PC. Ouvrez le fichier téléchargé.</li>
-      <li>Connectez-vous avec votre adresse professionnelle&#160;: l'entreprise vous a déjà ouvert un accès.</li>
-      <li>En haut de la barre de gauche, cliquez sur «&#160;Code&#160;», à côté de «&#160;Accueil&#160;».</li>
+      <li><strong>Télécharger</strong>Ouvrez <b>https://claude.ai/download</b> et cliquez sur «&#160;Télécharger&#160;», ligne <b>macOS</b> pour un Mac, <b>Windows</b> pour un PC. Ouvrez le fichier téléchargé. Connectez-vous avec votre adresse professionnelle&#160;: l'entreprise vous a déjà ouvert un accès.</li>
+      <li><strong>Passer en mode Code</strong>En haut de la barre de gauche, cliquez sur «&#160;Code&#160;», à côté de «&#160;Accueil&#160;».</li>
+      <li><strong>Choisir le dossier de travail</strong>Cliquez sur «&#160;Local&#160;», puis sur «&#160;Select folder&#160;». Choisissez un dossier «&#160;IA&#160;», par exemple dans Documents. Créez-le s'il n'existe pas.</li>
+      <li><strong>Vérifier le mode Auto</strong>Sous la zone de saisie, en bas à gauche, le sélecteur de permissions affiche «&#160;Auto&#160;». Sinon, cliquez dessus et choisissez «&#160;Auto&#160;».</li>
+      <li><strong>Coller un prompt</strong>Collez le texte dans la zone «&#160;Tapez / pour les commandes.&#160;», puis appuyez sur Entrée.</li>
     </ol>
   </div>
-  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 2</footer>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 3</footer>
 </section>
 
 <section>
@@ -174,14 +190,15 @@
       <p class="overline">Étape 2</p>
       <h2>Installez les bonnes pratiques de l'entreprise</h2>
       <p>Acceptez d'abord les deux invitations reçues par mail&#160;: GitHub et Castalie.</p>
-      <p>Puis collez ce bloc dans Claude et appuyez sur Entrée.</p>
+      <p>Puis collez ce bloc dans Claude et appuyez sur Entrée. Claude fait toute la technique et vous dit où cliquer.</p>
+      <p class="note">Claude vous demande d'ouvrir une nouvelle session&#160;? Cliquez sur «&#160;Nouvelle session&#160;» en haut de la barre de gauche, gardez le dossier IA, puis tapez <b>/cs:join</b> et appuyez sur Entrée.</p>
     </div>
     <div class="box">
       <div class="box-head">À COLLER DANS CLAUDE DESKTOP, ONGLET CODE <button type="button" data-copy="p-install">Copier</button></div>
-      <p class="prompt" id="p-install">Installe les bonnes pratiques de mon entreprise depuis notre espace commun sur GitHub&#160;: {{GITHUB_SPACE_URL}}. Si je n'ai pas de compte GitHub, guide-moi pour en créer un gratuit.<br><br>Installe aussi les outils gratuits de Castalie&#160;: ajoute la place de marché castalie-app/agent-kit et installe le plugin cs@castalie. Puis enregistre, pour moi seul, le serveur MCP castalie à l'adresse {{CASTALIE_WORKSPACE_URL}}/mcp. Si GitHub ou Castalie me demandent de me connecter, dis-moi où cliquer, une étape à la fois.<br><br>Enregistre dans mon <b>CLAUDE.md</b> perso que je ne suis pas technicien&#160;: fais tout ce qui est technique toi-même, et ne me demande que ce que je suis seul à pouvoir faire.</p>
+      <p class="prompt" id="p-install">Installe les outils de Castalie&#160;: ajoute la place de marché castalie-app/agent-kit, puis installe le plugin cs@castalie.<br><br>Connecte-moi ensuite à l'espace Castalie de {{COMPANY}}&#160;: enregistre pour moi seul le serveur MCP castalie à l'adresse {{CASTALIE_WORKSPACE_URL}}/mcp, sans jeton. Je me connecterai dans le navigateur avec mon adresse professionnelle.<br><br>Lance ensuite <b>/cs:join</b>. Si /cs:join ou Castalie ne sont pas encore visibles dans cette session, ne cherche pas de contournement. Dis-moi simplement&#160;: «&#160;Ouvrez une nouvelle session et tapez /cs:join.&#160;»</p>
     </div>
   </div>
-  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 3</footer>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 4</footer>
 </section>
 
 <section>
@@ -197,7 +214,7 @@
       <p class="prompt" id="p-write"><b>{{WRITE_COMMAND}}</b> prépare un mail à [un client] pour [ce que vous avez à lui dire].</p>
     </div>
   </div>
-  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 4</footer>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 5</footer>
 </section>
 
 <section>
@@ -213,7 +230,7 @@
     </div>
   </div>
   <div class="wrap"><h2 style="margin-top:48px">Et Claude apprend <em>pour toute l'entreprise.</em></h2></div>
-  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 5</footer>
+  <footer>{{COMPANY}} · Rejoindre l'I.A. de votre entreprise · 6</footer>
 </section>
 
 <section class="night">

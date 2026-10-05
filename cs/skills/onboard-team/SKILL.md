@@ -1,6 +1,6 @@
 ---
 name: onboard-team
-description: Bring a non-technical leader's colleagues on board — the company's shared GitHub space that installs its practices in one gesture, who comes first and who answers each team's questions, a short onboarding deck for collaborators, and the email that sends it, drafted and never sent. Fires on "partagez les bonnes pratiques avec vos collaborateurs", "embarque mon équipe", "onboard my team", "share our practices with the team", or right after `connect` on a leader's first workspace. Every technical gesture is done for the leader; they are asked only for what they alone can give.
+description: Bring a non-technical leader's colleagues on board — the company's shared GitHub space that installs its practices in one gesture, recorded in Castalie, who comes first and who answers each team's questions, their invitations into Castalie and GitHub, the leader's own words on why, a short onboarding deck for collaborators that ends on `/cs:join`, and the email that sends it, drafted and never sent. Fires on "partagez les bonnes pratiques avec vos collaborateurs", "embarque mon équipe", "onboard my team", "share our practices with the team", or right after `connect` on a leader's first workspace. Every technical gesture is done for the leader; they are asked only for what they alone can give.
 ---
 
 # onboard-team — the leader's practices, in every colleague's hands
@@ -24,10 +24,12 @@ finished today is named in the hand-back and skipped, never left half-done in si
 
 **Find it before asking for it.** Look, in this order, and stop at the first answer:
 
-1. the leader's personal `CLAUDE.md` (`~/.claude/CLAUDE.md`), and the project's own, for a
+1. `mcp__castalie__workspace_practices_get`, when it is in your tool catalogue: the address
+   recorded in the workspace, or null;
+2. the leader's personal `CLAUDE.md` (`~/.claude/CLAUDE.md`), and the project's own, for a
    `github.com/<owner>/<repository>` address noted as the company's shared space;
-2. the remotes of the current folder (`git remote -v`), when it is a clone of such a space;
-3. the leader, once: « Votre espace partagé sur GitHub existe déjà ? Si oui, quelle est son
+3. the remotes of the current folder (`git remote -v`), when it is a clone of such a space;
+4. the leader, once: « Votre espace partagé sur GitHub existe déjà ? Si oui, quelle est son
    adresse ? »
 
 **When there is none, propose to create it**, in one sentence that says what it is for: a private
@@ -77,31 +79,51 @@ the menu shows it, not the way you expect it.
 
 ## 2. The address, then the people
 
-**Write the space's address into the leader's personal `CLAUDE.md`** as soon as it is known, under
-the line that already describes their company, or in a short section of its own: « Espace partagé
-de l'entreprise : https://github.com/<org>/<repository> ». A next session finds it there.
+**Record the space's address in Castalie** as soon as it is known:
+`mcp__castalie__workspace_practices_set` with `https://github.com/<org>/<repository>`. The leader
+owns the workspace, so the verb accepts it, and every colleague's `join` reads it from there
+instead of asking anyone. When the verb is not in your tool catalogue, say so in one line
+(« Castalie ne sait pas encore garder cette adresse : je la note dans votre CLAUDE.md ») and write
+it into the leader's personal `CLAUDE.md` instead, under the line that describes their company:
+« Espace partagé de l'entreprise : https://github.com/<org>/<repository> ». A next run moves it
+into Castalie once the verb is served.
 
-Then two questions, **one at a time**, each waiting for its answer:
+Then three questions, **one at a time**, each waiting for its answer:
 
 1. **Who comes first?** « Qui voulez-vous embarquer en premier ? Donnez-moi les prénoms et les
    adresses professionnelles. » Three to five people is a good first wave; take what they give.
 2. **Who answers each team's questions?** « Pour chaque équipe, qui sera le référent, la personne
    que votre équipe vient voir quand Claude ne fait pas ce qu'elle veut ? »
    One name per team. The leader may be the referent of every team; say nothing against it.
+3. **Why does the company do this?** « En deux ou trois phrases, pourquoi l'entreprise fait-elle
+   cela ? Vos mots ouvrent le guide de vos collaborateurs. » Keep their words as they are: fix
+   only the typography, never the tone.
 
-Record the referents in the space's `README.md`, team by team, and push.
+Record the referents in the space's `README.md`, team by team, and the leader's words under a
+`## Pourquoi` section signed with their name: `join` quotes them to each colleague. Push.
 
 **Then the invitations, two of them per person.**
 
-- **GitHub**: invite each address into the organisation, as a member:
-  `gh api -X POST orgs/<org>/invitations -f email=<address> -f role=direct_member`. A member reads
-  the organisation's repositories by default; if the organisation's base permission was lowered,
-  give the repository read access to the members. Do not ask for anyone's GitHub username.
-- **Castalie**: no MCP verb invites a member today. The leader invites each address from the
-  workspace's member screen, `https://<their-workspace>.castalie.app/admin/utilisateurs/inviter`,
-  which only an owner reaches (the leader opened the workspace, so they are its owner). Open the
-  page for them and give them the list of addresses to paste, one per invitation. The colleague
-  receives an email from Castalie and joins the workspace by clicking it.
+- **Castalie**: `mcp__castalie__member_invite` for each address, as a member. Only an owner may
+  invite, the same rule as the invitation screen, and the leader opened the workspace, so they
+  are its owner. `already_member` is not an error: say nothing about it. When the verb is not in
+  your tool catalogue, say so in one line, then open the workspace's invitation screen for them,
+  `https://<their-workspace>.castalie.app/admin/utilisateurs/inviter`, and give them the list of
+  addresses to paste, one per invitation. Either way the colleague receives an email from
+  Castalie and joins the workspace by clicking it.
+- **GitHub**, by email, and say which of the two it was:
+  - **the space belongs to an organisation** (`gh api repos/<org>/<repository> --jq .owner.type`
+    answers `Organization`): invite each address into it, as a member,
+    `gh api -X POST orgs/<org>/invitations -f email=<address> -f role=direct_member`. A member
+    reads the organisation's repositories by default; if the organisation's base permission was
+    lowered, give the repository read access to the members.
+  - **the space belongs to a personal account** (`User`): GitHub invites a collaborator by
+    username only, never by email, and nobody new has a username yet. Say so in one line and
+    offer once to move the space into an organisation. Otherwise each colleague's `join` prepares
+    the message that sends their username to the referent, who then runs
+    `gh api -X PUT repos/<owner>/<repository>/collaborators/<username> -f permission=pull`.
+
+  Do not ask the leader for anyone's GitHub username.
 
   The workspace address is the one the `castalie` server is registered with: read it in
   `claude mcp list`, never with `claude mcp get`, which prints the token. If the workspace was
@@ -111,22 +133,33 @@ Record the referents in the space's `README.md`, team by team, and push.
 ## 3. The deck for collaborators
 
 **Much simpler than the leader's guide**, and its structure is fixed: « Rejoindre l'I.A. de votre
-entreprise », four steps, then « Bravo ! » and the referent. A colleague follows it once, in
-fifteen minutes. Start from `${CLAUDE_PLUGIN_ROOT}/skills/onboard-team/deck.html`, which carries
+entreprise », « Pourquoi », four steps, then « Bravo ! » and the referent. A colleague follows it
+once, in fifteen minutes. Start from `${CLAUDE_PLUGIN_ROOT}/skills/onboard-team/deck.html`, which carries
 that structure, its French text and its look (night blue and paper grounds, amber accent, Chakra
 Petch and Instrument Sans), reads on a phone and prints one slide per page.
 
-1. **Installez Claude Desktop**: download it from `https://claude.ai/download` (macOS or Windows),
-   sign in with the work address (« l'entreprise vous a déjà ouvert un accès »), then click the
-   « Code » tab.
+- **Pourquoi**: the leader's words, signed, then one plain line: « Claude connaît déjà le ton et
+  les consignes de l'entreprise ; chaque correction profite à toute l'équipe. »
+
+1. **Installez Claude Desktop**, five gestures named as the screen names them, never shortened:
+   « Télécharger » (`https://claude.ai/download`, then sign in with the work address),
+   « Passer en mode Code » (« Code », next to « Accueil », at the top of the left bar),
+   « Choisir le dossier de travail » (« Local », then « Select folder », a folder « IA », for
+   instance in Documents), « Vérifier le mode Auto » (the permission selector under the input,
+   bottom left, reads « Auto »), « Coller un prompt » (paste into « Tapez / pour les commandes. »,
+   then Entrée).
 2. **Installez les bonnes pratiques de l'entreprise**: accept the two invitations first (GitHub and
-   Castalie), then paste one prompt. It installs the company's practices from the shared space,
-   guides the creation of a free GitHub account when there is none, installs `cs@castalie` from the
-   `castalie-app/agent-kit` marketplace, registers the `castalie` MCP server at the workspace's
-   `/mcp` address for this person alone, and records in their personal `CLAUDE.md` that they are
-   not a technician. **No token in it**: the first time, Castalie asks the colleague to sign in, in
-   the browser, with the invited address. The invitation is what joins them to the company's
-   existing workspace instead of opening a new one.
+   Castalie), then paste **one** prompt. It installs `cs@castalie` from the `castalie-app/agent-kit`
+   marketplace, registers the `castalie` MCP server at the workspace's `/mcp` address for this
+   person alone, then runs `/cs:join`, which does the rest: the GitHub account and sign-in, the
+   company's practices, the personal `CLAUDE.md`, a first real use. **No token in it**: the first
+   time, Castalie asks the colleague to sign in, in the browser, with the invited address. The
+   invitation is what joins them to the company's existing workspace instead of opening a new one.
+
+   **A plugin or a server installed during a session is reached in the next one.** The prompt says
+   so to the colleague's Claude, and the slide says it to the colleague: « Ouvrez une nouvelle
+   session et tapez /cs:join. » That is the expected path, not a failure, and nobody looks for a
+   workaround.
 3. **Écrivez avec le ton de l'entreprise**: « **/redaction** prépare un mail à [un client] pour
    [ce que vous avez à lui dire]. »
 4. **Claude ne travaille pas comme vous voulez ?**: « **/analyse** tu as fait x et tu aurais dû
@@ -135,8 +168,9 @@ Petch and Instrument Sans), reads on a phone and prints one slide per page.
 The end: « Bravo ! » with the four steps checked, then « Une question ? Votre référent : » and the
 referent's first and last name and address.
 
-**Fill every `{{…}}` slot with the real value**: `{{COMPANY}}`, `{{GITHUB_SPACE_URL}}` (the
-space's address), `{{CASTALIE_WORKSPACE_URL}}` (the workspace's address, without `/mcp`),
+**Fill every `{{…}}` slot with the real value**: `{{COMPANY}}`, `{{WHY}}` (the leader's words) and
+`{{LEADER}}` (« Prénom Nom, fonction »), `{{CASTALIE_WORKSPACE_URL}}` (the workspace's address,
+without `/mcp`; the space's own address is not in the deck, `join` reads it from Castalie),
 `{{WRITE_COMMAND}}` and `{{ANALYSE_COMMAND}}` (each skill as the `/` menu shows it on the leader's
 machine), `{{REFERENT}}` (« Prénom Nom, adresse »). What stays `[entre crochets]` is the
 colleague's own words: leave it. When the referents differ by team, write one deck per team,
@@ -181,8 +215,8 @@ Votre référent pour les questions : <prénom>.
 - **Never move** anything out of the leader's personal `CLAUDE.md`; copy, and only what they
   confirm.
 - **Never write a token**, a password or an invitation link into the space, the deck or the email.
-- **Never invent a verb.** What Castalie cannot do through its tools today is done on its screen,
-  and said so.
+- **Never invent a verb.** What Castalie cannot do through the tools in your catalogue is done on
+  its screen, and said so.
 - **Never open a second Castalie workspace** for a colleague: the prompt registers the company's
   existing one, and the invitation is what lets them in.
 
