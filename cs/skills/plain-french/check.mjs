@@ -50,11 +50,17 @@ function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// The forms of a verb in -er, so that « supporter » matches « supporte » and « supporté » but
+// never the noun « support » (« l'équipe support »), nor « impacter » the noun « impact ».
+const ER_ENDINGS = "(?:e|es|ent|er|ez|ons|é|ée|és|ées|ai|a|ait|aient|era|eront|erait|eraient|ant)";
+
 /** One pattern per left-hand entry; a verb in the infinitive matches its other forms too. */
 function patternFor(phrase) {
   const words = phrase.split(/\s+/).map((word, index) => {
-    const isVerb = index === 0 && /(?:er|re|ir)$/.test(word) && word.length > 5;
-    return isVerb ? `${escapeRegExp(word.slice(0, -2))}${WORD}*` : escapeRegExp(word);
+    if (index !== 0 || word.length <= 5) return escapeRegExp(word);
+    if (/er$/.test(word)) return `${escapeRegExp(word.slice(0, -2))}${ER_ENDINGS}`;
+    if (/(?:re|ir)$/.test(word)) return `${escapeRegExp(word.slice(0, -2))}${WORD}*`;
+    return escapeRegExp(word);
   });
   return new RegExp(`(?<!${WORD})${words.join("\\s+")}(?!${WORD})`, "giu");
 }
@@ -157,7 +163,9 @@ function lineFindings(line, mode) {
 /** Rule 2.2: three « de » in one noun group, each at most four words after the previous one. */
 function deChains(line) {
   const tokens = line.split(new RegExp(`[\\s${NBSP}]+`)).filter(Boolean);
-  const isDe = (token) => /^(?:de|du|des|d['’]\S*)$/i.test(token.replace(/[,.;:!?)]+$/, ""));
+  // « du » and « des » are left out: as often as not they are articles (« des défauts »), and a
+  // chain they close is counted by the « de » around them anyway.
+  const isDe = (token) => /^(?:de|d['’]\S*)$/i.test(token.replace(/[,.;:!?)]+$/, ""));
   const found = [];
   let positions = [];
   tokens.forEach((token, index) => {
