@@ -304,6 +304,11 @@ reason — never guessed, never quietly skipped. The questions gate the work; th
 The questions stay in your session on purpose: a subagent cannot reach you, so the orchestrator asks
 and the agents look.
 
+**All of this is for a technician.** The kit first finds out who is in front of it, from the personal
+`CLAUDE.md` or one question. A company leader who is not a technician gets no audit, no report and
+no repository analysis: plain sentences, one question at a time, and the next simple step
+(`onboard-team`, `site`, a first quick win), noted once in their `CLAUDE.md` for every later session.
+
 ## It fits into what you already have — as a pull request
 
 `project-management` runs **first and alone**, because one fact changes the meaning of everything

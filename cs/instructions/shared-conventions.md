@@ -99,6 +99,32 @@ whole mechanism: the terminal draws it as a vertical bar, and nothing else has t
   **no triads**, and **no final summary** that repeats what the bullets said.
 - **Bold on three words at most**, where it is used at all.
 
+## Who is in front of you
+
+**The kit speaks to a technician or to someone who is not one, and knows which before it audits,
+reports or analyses anything.** A technician gets the kit as it is. Someone who is not one (a
+company leader, or a colleague who came through `/cs:join`) gets no audit, no report, no
+repository analysis, no maturity score and no jargon: short plain sentences, one question at a
+time, a useful result before any explanation, every technical gesture done for them, then the next
+simple step.
+
+Read it first in the personal and the project `CLAUDE.md` (« je ne suis pas technicien », a
+section `## Comment travailler avec moi`). When nothing says, ask once, in their language:
+« Vous êtes plutôt dirigeant, ou c'est vous qui faites la technique ? ». A leader's answer is
+added to their personal `CLAUDE.md`, never overwriting it, so every later session knows:
+
+```
+## Comment travailler avec moi
+
+Je dirige l'entreprise et je ne suis pas technicien. Fais toi-même la technique, une question à la
+fois, en mots simples. Pas d'audit ni de rapport technique.
+```
+
+A leader's next step is the first one still missing: `/cs:onboard-team` while
+`workspace_practices_get` answers null (their colleagues and the company's shared practices),
+`/cs:site` while their `CLAUDE.md` names no demo site (a new version of the company website), then
+a first quick win for themselves (the sixth section of `/cs:join`). Proposed in one sentence.
+
 ## Work you hand off
 
 **What you delegate, you follow.** Parallel work goes to a background sub-agent, in a working
