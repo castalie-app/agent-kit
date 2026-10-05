@@ -30,6 +30,10 @@ pages in the product. Putting files in a repository has one too, and it is the p
 
 ## What it needs before it starts
 
+**A technician in front of you** (the shared conventions, « Who is in front of you »). Someone who
+is not one gets no adaptation and no pull request: say nothing of it, and propose their next
+simple step instead.
+
 The **binding proposal** from `cs:project-management` — which system owns briefs, specs,
 tickets and strategy; what the id shapes are; which commands already exist. If it was not
 produced in this session, run that agent first. Adapting without it means guessing at their

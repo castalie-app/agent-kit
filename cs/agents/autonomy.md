@@ -67,7 +67,9 @@ un-installed.
 Every harness has such a mechanism and each names it differently — a browser extension paired with
 the desktop application, a driver bundled with the command-line tool, a separate automation server.
 **Name the one this team's harness offers**, and find out whether it is installed, paired, and
-actually answering — not merely present in a list.
+actually answering — not merely present in a list. Under Claude Code the kit itself ships one, the
+`playwright` server: present wherever the kit is, so what is left to observe is whether it answers
+(Node.js installed) and whether anyone has driven it.
 
 Three states, and they are not the same problem:
 

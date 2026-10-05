@@ -315,7 +315,7 @@ with ids of your workspace.
   "resume_mode": "asker",
   "resume_state_md": "Usage ticket-triage, candidate model-b. Switch now: change TRIAGE_MODEL to model-b, replay the 200 tickets, record the score. Wait: schedule the switch for 15 January. Stay: nothing; the dedupe key keeps the question from coming back while price and candidate are unchanged.",
   "dedupe_key": "model-upgrade:ticket-triage:model-b",
-  "asked_by_agent": "scheduled-run"
+  "asked_by_agent": "scheduled-task:14"
 }
 ```
 

@@ -107,9 +107,15 @@ conversation is a token in a log, in a backup, and in whatever the transcript is
 
 Say what changed, in one line, then get out of the way — the user came to work, not to configure.
 
-If this repository has never been observed, offer the `cs:audit-organisation` skill: it tours the ground, says
-where the practices stand against the twenty criteria, and records what it saw. It reads and proposes;
-it changes nothing on its own.
+**Then know who is in front of you** (the shared conventions, « Who is in front of you »): their
+`CLAUDE.md` first, the one question when it says nothing.
+
+- **A technician**: if this repository has never been observed, offer the `cs:audit-organisation`
+  skill: it tours the ground, says where the practices stand against the twenty criteria, and
+  records what it saw. It reads and proposes; it changes nothing on its own.
+- **Someone who is not**: no audit offered, no repository read. One plain sentence that Castalie is
+  connected, then the next simple step, in one sentence (« Si vous voulez, nous embarquons
+  maintenant vos collaborateurs. »).
 
 ## What this skill never does
 

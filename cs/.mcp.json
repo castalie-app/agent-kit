@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/playwright-mcp.mjs"]
+    },
+    "playwright-attach": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/playwright-mcp.mjs", "--attach"]
+    }
+  }
+}

@@ -166,25 +166,25 @@
     {
       "name": "workspace_practices_set",
       "kind": "write",
-      "description": "Record the address of the company's shared practices space on GitHub, so every member's Claude finds it with workspace_practices_get. Owner only, the same rule as the workspace settings screen: a member gets forbidden. An address that is not https://github.com/<owner>/<repository> is refused (invalid_url).",
+      "description": "Record the address of the company's shared practices space on GitHub, so every member's Claude finds it with workspace_practices_get. Owner only, the same rule as the workspace settings screen: a member gets owner_only. An address that is not an https address on github.com is refused (not_github_https); the server normalises it to https://github.com/<path>, and an empty string clears the recorded address.",
       "params": [
         {
           "name": "url",
           "type": "string",
           "required": true,
-          "description": "https://github.com/<owner>/<repository>"
+          "description": "https://github.com/<owner>/<repository>; an empty string clears it."
         }
       ],
       "returns": {
         "success": "bool",
-        "url": "string",
+        "url": "string|null",
         "error": "string"
       }
     },
     {
       "name": "member_invite",
       "kind": "write",
-      "description": "Invite a person into this workspace by email address: Castalie sends them the invitation, and they join by signing in with that address. Owner only, the same rule as the invitation screen (/admin/utilisateurs/inviter): a member gets forbidden. An address already a member answers already_member, which is not an error.",
+      "description": "Invite a person into this workspace by email address: Castalie sends them the invitation, and they join by signing in with that address. Owner only, the same rule as the invitation screen (/admin/utilisateurs/inviter): a member gets owner_only. Only the member role is invitable: owner is refused (role_not_invitable). An address already a member answers already_member, which comes back as an error (success false) like email_required, not_delivered and owner_only, but means the person is already in and there is nothing to do.",
       "params": [
         {
           "name": "email",
@@ -197,16 +197,71 @@
           "type": "string",
           "required": false,
           "enum": [
-            "member",
-            "owner"
+            "member"
           ],
-          "description": "member by default."
+          "description": "member, the default and the only invitable role."
         }
       ],
       "returns": {
         "success": "bool",
+        "sent": "bool",
         "email": "string",
-        "status": "invited|already_member",
+        "role": "member",
+        "error": "string"
+      }
+    },
+    {
+      "name": "member_profile_get",
+      "kind": "read",
+      "description": "A member's work profile: a short job title and a few lines of markdown on what they do, what takes their time and what annoys them, as they told it to their Claude. Without user_id, the caller's own profile. Any member reads any member's profile in the workspace. job_title and work_md are null while nobody has written them.",
+      "params": [
+        {
+          "name": "user_id",
+          "type": "int",
+          "required": false,
+          "description": "The member to read; the caller by default (see whoami)."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "user_id": "int",
+        "display_name": "string|null",
+        "job_title": "string|null",
+        "work_md": "string|null",
+        "updated_at": "string|null",
+        "error": "string"
+      }
+    },
+    {
+      "name": "member_profile_set",
+      "kind": "write",
+      "description": "Record a member's work profile, so every later session of theirs, and the workspace's own screens, know what they do. Each member writes their own: a user_id other than the caller's gets forbidden. A field left out is unchanged. work_md is a short summary, a few lines, never a document.",
+      "params": [
+        {
+          "name": "job_title",
+          "type": "string",
+          "required": false,
+          "description": "The job in a few words, as the person says it (« Assistante commerciale »)."
+        },
+        {
+          "name": "work_md",
+          "type": "string",
+          "required": false,
+          "description": "A few lines of markdown: what they do, the tasks of their week, what takes time or annoys them."
+        },
+        {
+          "name": "user_id",
+          "type": "int",
+          "required": false,
+          "description": "The caller by default; any other member's id is forbidden."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "user_id": "int",
+        "job_title": "string|null",
+        "work_md": "string|null",
+        "updated_at": "string",
         "error": "string"
       }
     },
@@ -2047,6 +2102,222 @@
           "type": "string",
           "required": false,
           "description": "Why the check relaunches the work, what was measured, what to do."
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
+      "name": "scheduled_task_list",
+      "kind": "read",
+      "description": "List the workspace's scheduled tasks: the schedule in plain words, the next run in the task's time zone and in UTC, the last run and its label, whether an occurrence went unplayed and since when, and the number of runs. Archived tasks only on request.",
+      "params": [
+        {
+          "name": "include_archived",
+          "type": "bool",
+          "required": false,
+          "description": "Defaults to false."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "tasks": "object[]"
+      }
+    },
+    {
+      "name": "scheduled_task_get",
+      "kind": "read",
+      "description": "Read one scheduled task: title, description, prompt, cron expression, time zone, maximum duration, recommended model and effort, enabled, next run.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "task": "object"
+      }
+    },
+    {
+      "name": "scheduled_task_run_now",
+      "kind": "write",
+      "description": "Create a manual run of a scheduled task, due now or at not_before. Allowed on a disabled task, refused on an archived one (task_archived) and while a run of the task is pending or held (run_already_pending). Any member.",
+      "params": [
+        {
+          "name": "scheduled_task_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "not_before",
+          "type": "string",
+          "required": false,
+          "description": "ISO 8601, UTC or with an offset."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "run": "object"
+      }
+    },
+    {
+      "name": "scheduled_task_run_list",
+      "kind": "read",
+      "description": "List scheduled-task runs, newest first, optionally for one task and one label.",
+      "params": [
+        {
+          "name": "scheduled_task_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "description": "pending | running | passed | failed | human_required | skipped"
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "At most 200."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "runs": "object[]",
+        "total_count": "int",
+        "has_more": "bool"
+      }
+    },
+    {
+      "name": "scheduled_task_run_get",
+      "kind": "read",
+      "description": "Read one scheduled-task run with its task: the prompt copied when the run was created, the continuation it carries, who holds it and until when, and its verdict once closed.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "run": "object: id, scheduled_task_id, scheduled_for (UTC), trigger (schedule | manual), missed_occurrences, prompt_snapshot_md, continuation_md, picked_at, pick_lease_until, assigned_pc_hostname, ran_at, outcome, final_status, notes_md, outcome_type, outcome_ref_id, model_used, total_cost_usd, status_label, task { id, title, time_zone, max_duration_minutes, recommended_model, recommended_effort }"
+      }
+    },
+    {
+      "name": "scheduled_task_run_pick_next",
+      "kind": "write",
+      "description": "The launcher's gesture: materialise the runs that came due, then take the oldest one atomically under a lease. Never a run of a task that already has a run held. Returns picked=false when nothing is due.",
+      "params": [
+        {
+          "name": "picked_by",
+          "type": "string",
+          "required": true,
+          "description": "The workstation's host name."
+        },
+        {
+          "name": "lease_minutes",
+          "type": "int",
+          "required": false,
+          "description": "Defaults to 30. The launcher passes the task's maximum duration plus 15."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "picked": "bool",
+        "run": "object"
+      }
+    },
+    {
+      "name": "scheduled_task_run_complete",
+      "kind": "write",
+      "description": "Close a scheduled-task run with its verdict. notes_md is required; closing twice answers already_completed and keeps the first verdict. follow_up_not_before creates, in the same transaction, a manual run due at that time carrying follow_up_md as its continuation.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "description": "passed | failed | skipped"
+        },
+        {
+          "name": "notes_md",
+          "type": "string",
+          "required": true,
+          "description": "The result first, the figures, a link to each ticket or decision."
+        },
+        {
+          "name": "final_status",
+          "type": "string",
+          "required": false,
+          "description": "done | failed | human_required"
+        },
+        {
+          "name": "outcome_type",
+          "type": "string",
+          "required": false,
+          "description": "What the run produced: bug, decision, brief, spec..."
+        },
+        {
+          "name": "outcome_ref_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "model_used",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "follow_up_not_before",
+          "type": "string",
+          "required": false,
+          "description": "ISO 8601, UTC or with an offset."
+        },
+        {
+          "name": "follow_up_md",
+          "type": "string",
+          "required": false,
+          "description": "What is left to do. Required with follow_up_not_before (follow_up_md_required)."
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
+      "name": "scheduled_task_run_record_usage",
+      "kind": "write",
+      "description": "The launcher's gesture after the session: record what the run cost and the model that played it. Once per run (usage_already_recorded), closed or not.",
+      "params": [
+        {
+          "name": "run_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "total_cost_usd",
+          "type": "number",
+          "required": true
+        },
+        {
+          "name": "model_used",
+          "type": "string",
+          "required": false
         }
       ],
       "returns": {

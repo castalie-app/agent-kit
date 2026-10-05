@@ -95,7 +95,7 @@ the way the menu shows it, not the way you expect it.
 **Record the space's address in Castalie** as soon as it is known:
 `mcp__castalie__workspace_practices_set` with `https://github.com/<org>/<repository>`. The leader
 owns the workspace, so the verb accepts it, and every colleague's `join` reads it from there
-instead of asking anyone. When the verb is not in your tool catalogue, say so in one line
+instead of asking anyone. The server normalises the address; a refusal `not_github_https` means it is not an https address on github.com. When the verb is not in your tool catalogue, say so in one line
 (« Castalie ne sait pas encore garder cette adresse : je la note dans votre CLAUDE.md ») and write
 it into the leader's personal `CLAUDE.md` instead, under the line that describes their company:
 « Espace partagé de l'entreprise : https://github.com/<org>/<repository> ». A next run moves it
@@ -115,7 +115,7 @@ Record the referents in the space's `README.md`, team by team, and push.
 
 - **Castalie**: `mcp__castalie__member_invite` for each address, as a member. Only an owner may
   invite, the same rule as the invitation screen, and the leader opened the workspace, so they
-  are its owner. `already_member` is not an error: say nothing about it. When the verb is not in
+  are its owner. `already_member` comes back as an error (`success: false`) but means the person is already in: nothing to do, say nothing about it. Any other error (`owner_only`, `email_required`, `not_delivered`) is reported. When the verb is not in
   your tool catalogue, say so in one line, then open the workspace's invitation screen for them,
   `https://<their-workspace>.castalie.app/admin/utilisateurs/inviter`, and give them the list of
   addresses to paste, one per invitation. Either way the colleague receives an email from
@@ -187,3 +187,4 @@ French, translate the email; the link stays the same.
 Close the turn on the reply and the verdict of
 `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`. The gestures only the leader can make
 (send the draft, finish the Castalie invitations) are lines under *Finished*, not a question.
+The next simple step closes the reply, in one sentence: the company's new website, `/cs:site`.

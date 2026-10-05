@@ -80,7 +80,8 @@ source code.
 - **Pages to open**: local URL + the production URL expected after deploy
 - **What to see**: precise description (text, state, layout, breakpoint, hover, dark mode if relevant)
 - **Interactions to test**: clicks, inputs, navigation
-- **Tool**: your browser-automation MCP; attach a screenshot to the final report
+- **Tool**: the kit's `playwright` browser (`${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`), or the
+  team's own browser-automation MCP; attach a screenshot to the final report
 
 ### Non-visual delivery (batch, worker, API, computation, migration)
 

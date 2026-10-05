@@ -102,11 +102,28 @@ What that move *did* leave on an old workstation is the address the entry points
 keep arriving and nothing looks wrong, which is exactly why it is worth saying — a redirect is a
 courtesy, not an address. Re-running setup re-points the entry at `castalie-app/agent-kit`.
 
-The plugin declares no MCP server of its own, so it has nothing to connect to yet. Open your agent in
-your repository and it will say so and point you at the `connect` skill — or run the setup
-command above, which does the same thing in one line.
+The plugin's own MCP servers are its browser (below); the `castalie` server is yours to connect.
+Open your agent in your repository and it will say so and point you at the `connect` skill — or
+run the setup command above, which does the same thing in one line.
 
 Your token never goes into a tracked file, a shell profile, or the Windows registry.
+
+### A browser, installed with the kit
+
+The plugin declares the official Playwright MCP server, so your agent can open a page as soon as the
+kit is installed: no browser extension to pair first, no second command. Two servers, from
+`cs/.mcp.json`:
+
+- `playwright`: a headless browser of its own, for checking a published page, a preview or an
+  acceptance test;
+- `playwright-attach`: your own Chrome or Edge, where you are already signed in, through the
+  Playwright extension, for a gesture on a site such as a registrar.
+
+Your agent does the gesture itself, up to the last click, and hands you only the one that is yours
+(a payment, an acceptance). It needs Node.js: on a machine without it, the agent installs it
+(`winget` on Windows, Homebrew or the official installer on macOS), and the browser the same way.
+`PLAYWRIGHT_MCP_HEADLESS`, `PLAYWRIGHT_MCP_EXTENSION_TOKEN` and the other `PLAYWRIGHT_MCP_*`
+variables are read as the server documents them. The method is `cs/instructions/browser.md`.
 
 ### How updates reach you
 
@@ -304,6 +321,11 @@ reason — never guessed, never quietly skipped. The questions gate the work; th
 The questions stay in your session on purpose: a subagent cannot reach you, so the orchestrator asks
 and the agents look.
 
+**All of this is for a technician.** The kit first finds out who is in front of it, from the personal
+`CLAUDE.md` or one question. A company leader who is not a technician gets no audit, no report and
+no repository analysis: plain sentences, one question at a time, and the next simple step
+(`onboard-team`, `site`, a first quick win), noted once in their `CLAUDE.md` for every later session.
+
 ## It fits into what you already have — as a pull request
 
 `project-management` runs **first and alone**, because one fact changes the meaning of everything
@@ -402,7 +424,8 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `adapt` | Turn the kit's generic skills into skills bound to your environment, as a pull request. Never overwrites, never merges. |
 | `connect` | Wire a repository to your workspace, or diagnose a connection that answers nothing. |
 | `onboard-team` | For a leader who is not a technician: the company's shared GitHub space that installs its practices in one gesture, recorded in Castalie, the first colleagues invited into Castalie and GitHub with their referents, and the email that links them to Castalie's public collaborator guide, drafted and never sent. |
-| `join` | For each colleague the leader invited: why the company does it, their GitHub account and sign-in handled end to end, the company's practices installed from the space Castalie names and each of its skills explained, a personal CLAUDE.md that says they are not a technician, a first real use of the writing skill, and `/cs:analyse` to correct Claude. |
+| `join` | For each colleague the leader invited: why the company does it, their GitHub account and sign-in handled end to end, the company's practices installed from the space Castalie names and each of its skills explained, a personal CLAUDE.md that says they are not a technician, their work recorded in their Castalie profile and a first quick win done together, a first real use of the writing skill, and `/cs:analyse` to correct Claude. |
+| `site` | For a leader who is not a technician, the company's first project: two new home pages built in parallel from a four-question interview (« Sublimer » inside the current brand, « Réinventer » free to rework it), plain HTML and LESS with a three.js hero, each refined by a contrarian review and published free with GitHub Pages in about fifteen minutes; then the chosen one is iterated, and put on the company's own domain only on the leader's explicit yes. |
 | `workflows` | See and change what the skills may do on your behalf — and what your administrator decided for everyone. |
 | `bug-fix` | A bug from report to pull request: reproduce first, fix the cause, prove it on the user's own path, leave a follow-up check. |
 | `report` | Receive a bug report or improvement request from an agent, find or create its ticket, and return the link. |
@@ -418,6 +441,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
 | `decision-resume` | Pick the work back up once a person has answered an agent's decision: play a robot's resume, answer a reader who asked for more context, or resume one decision by its id. Never answers in a person's place. |
+| `scheduled-run` | Play one run of a scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
 | `contrarian` | Challenge an idea before you commit — adversarial sub-agents + a verdict you own. |
 | `plain-french` | Write and check French in a controlled style modelled on ASD-STE100: short sentences, active voice, no conditional hedging, one name per thing, French typography. Ships a check that finds what a machine can see. |
@@ -575,6 +599,8 @@ cs/
   contract/conformance/           # the outward-only conformance suite (MCP + REST)
   bin/cs.mjs                      # the cs CLI
   bin/build-codex.mjs             # the Codex projection, shipped so a client can run `cs codex`
+  bin/playwright-mcp.mjs          # starts the browser the plugin declares in .mcp.json, on every OS
+  .mcp.json                       # the plugin's own MCP servers: playwright and playwright-attach
 types/claude-code.d.ts            # the function-hooks API, as /plugin-types wrote it; the pane is typed against this
 tsconfig.json                     # what CI recompiles on every push
 package.json                      # makes the repo itself runnable: npx -y github:castalie-app/agent-kit
