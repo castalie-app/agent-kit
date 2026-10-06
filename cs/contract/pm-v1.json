@@ -2194,6 +2194,88 @@
       }
     },
     {
+      "name": "workstation_report",
+      "kind": "write",
+      "description": "A workstation declares the agent tasks it runs for this workspace, usually every 15 minutes through cs agent-tasks report. The report replaces the workstation's set: a task absent from it is marked removed. Castalie counts finished runs that fail in a row and remembers the run each report announces. Owner or member (the robot's account included); a viewer gets forbidden. Never a command's arguments: action_summary carries the executable and the script paths only.",
+      "params": [
+        {
+          "name": "hostname",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "tasks",
+          "type": "object[]",
+          "required": true,
+          "description": "Each: key, name, description, enabled, state, triggers (kind boot|logon|daily|weekly|monthly|once|interval|other, at, days_interval, days_of_week, days_of_month, start_at, every_minutes, for_minutes), execution_limit_minutes, wake_to_run, action_summary, working_directory, last_run_at, last_result_code, next_run_at."
+        },
+        {
+          "name": "os",
+          "type": "string",
+          "required": false,
+          "description": "windows, macos or linux. Defaults to windows."
+        },
+        {
+          "name": "always_on",
+          "type": "bool",
+          "required": false,
+          "description": "The machine runs day and night: it is called silent when its reports stop."
+        },
+        {
+          "name": "time_zone",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "kit_version",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "workstation": "object"
+      }
+    },
+    {
+      "name": "workstation_list",
+      "kind": "read",
+      "description": "The workstations that run this workspace's agents and each one's tasks, with nature (permanent, watch, recurring), triggers in words, last run and result, next run, and health (healthy, disabled, silent, stuck, failing, missed). Anybody in the workspace may read, as on /taches-planifiees.",
+      "params": [
+        {
+          "name": "hostname",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "unhealthy_only",
+          "type": "bool",
+          "required": false,
+          "description": "Defaults to false."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "workstations": "object[]"
+      }
+    },
+    {
+      "name": "workstation_forget",
+      "kind": "write",
+      "description": "Take a decommissioned workstation off the screen and the attention card. It comes back if it reports again. Owner only, as the screen's button.",
+      "params": [
+        {
+          "name": "hostname",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "forgotten": "string"
+      }
+    },
+    {
       "name": "scheduled_task_list",
       "kind": "read",
       "description": "List the workspace's scheduled tasks: the schedule in plain words, the next run in the task's time zone and in UTC, the last run and its label, whether an occurrence went unplayed and since when, and the number of runs. Archived tasks only on request.",

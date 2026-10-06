@@ -73,6 +73,9 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    session ended without a verdict": exit code, duration, last lines of output>)`. An
    `already_completed` answer means the session closed the run itself: the normal case.
 7. **A log line per run** on the workstation: slot, run, task, start, end, exit code, cost.
+8. **Its own health, reported.** The launcher is itself a task of the workstation's scheduler: install
+   `cs agent-tasks` on that machine (`--always-on` on a robot) so Castalie shows whether it runs, fails
+   or is stuck, beside the tasks it plays — `${CLAUDE_PLUGIN_ROOT}/instructions/agent-tasks.md`.
 
 ## How to name and describe the task
 

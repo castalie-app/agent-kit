@@ -34,6 +34,7 @@
 //   cs content pull <type> <id>        # type = feature-brief | feature-spec | bug
 //   cs content push <type> <id>
 //   cs on-behalf                       # attended or not, and the workspace's robot account
+//   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
 
@@ -212,6 +213,7 @@ const HELP = `cs — Castalie project-management CLI
   cs content pull <type> <id>       # type = feature-brief | feature-spec | bug
   cs content push <type> <id>
   cs on-behalf                      # unattended or not, and the workspace's robot account
+  cs agent-tasks help               # declare this workstation's agent tasks to Castalie
   cs version                        # the version of the kit that is running
   cs codex [--verify|--check]       # project this kit's skills, instructions and agents into
                                     #   .agents/ and .codex/ here, for a Codex session
@@ -232,6 +234,11 @@ async function main() {
   // working directory — so the raw tail goes through untouched, as `bug-evaluation`'s does. Its
   // defaults need no argument: the plugin root is this file's own folder one level up, and the
   // repository to write into is where the user is standing.
+  // `agent-tasks` repeats `--match`, which the shared parser would collapse to its last value.
+  if (cmd === "agent-tasks") {
+    const agentTasks = await import("./agent-tasks.mjs");
+    return agentTasks.runCli(rest);
+  }
   if (cmd === "codex") {
     const projection = await import("./build-codex.mjs");
     return projection.runCli(rest);

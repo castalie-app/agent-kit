@@ -58,6 +58,11 @@ jobs:
       - name: Le panneau rejoue ses contrats sur les deux espaces de travail
         run: node scripts/check-where.mjs
 
+      # What a workstation's report selects and sends: the workspace's tasks and never a
+      # developer's own, never a command's arguments. Pure functions, no scheduler needed.
+      - name: The workstation report selects and never sends arguments
+        run: node cs/bin/agent-tasks.test.mjs
+
       # The decisions panel the same way: its cards, its groups per agent and its whole sheet are
       # pure functions, replayed on answers in the server's own shape. What reaches the engine
       # itself — the bind, the panes, a press, on the terminal's table and the desktop's — is
