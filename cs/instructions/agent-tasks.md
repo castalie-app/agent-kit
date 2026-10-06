@@ -29,8 +29,13 @@ node <plugin>/bin/cs.mjs agent-tasks install --endpoint https://<workspace>.cast
 - The task « Castalie - report agent tasks » runs every 15 minutes with no window, from the
   marketplace copy of the kit, so a kit update does not break it. `cs agent-tasks uninstall` removes
   it; the owner then takes the machine off the screen with « Oublier ce poste » or `workstation_forget`.
-- The token is `CASTALIE_TOKEN`, else `.cs/config.json`, else the one Claude Code stored when `/mcp`
-  signed in to the server on this machine's account (Windows and Linux; on macOS set `CASTALIE_TOKEN`).
+- The token is `CASTALIE_TOKEN`, else `.cs/config.json` when its `endpoint` is this one, else the one
+  Claude Code stored when `/mcp` signed in to the server on this machine's account (Windows and Linux;
+  on macOS set `CASTALIE_TOKEN`). That stored token stays fresh only while Claude sessions on the
+  account use the server; the reporter never refreshes it. When it lapses the reports stop, and an
+  always-on machine shows silent — on a machine nobody opens Claude on, set `CASTALIE_TOKEN`.
+- The task runs in the account's interactive session (no password stored): a machine with nobody
+  logged on does not report, which is what « silent » then says.
 
 ## What leaves the machine, and what never does
 

@@ -64,15 +64,28 @@ export function belongsToWorkspace(task, { roots = [], patterns = [] } = {}) {
  * The executable and the script files an action runs — never its arguments, which may carry a
  * token, a password or a customer's name. Script paths are recognised by their extension.
  */
-export function actionSummary(actions = []) {
+export function actionSummary(actions = [], { exists = existsSync } = {}) {
   const parts = [];
+  const scriptPath = new RegExp(`\\.(?:${SCRIPT_EXTENSIONS})$`, "i");
+  // One path from end to end: a drive, a UNC or relative root, then no quote, separator of commands,
+  // assignment, second drive nor flag.
+  const wholePath = /^(?:[A-Za-z]:[\\/]|\\\\|[\\/]|\.{1,2}[\\/])[^"';&|=<>:]*$/;
+  const keep = (candidate) => {
+    const path = candidate.trim();
+    if (!scriptPath.test(path) || !/[\\/]/.test(path) || /\s[-/]/.test(path)) return;
+    if (exists(path) && !parts.includes(path)) parts.push(path);
+  };
+  const split = (text) => text.split(/[\s"';&|=,()<>]+/).forEach(keep);
   for (const action of actions) {
     if (action.execute) parts.push(basename(String(action.execute).replace(/"/g, "").replace(/\\/g, "/")));
-    const re = new RegExp(`"([^"]+\\.(?:${SCRIPT_EXTENSIONS}))"|'([^']+\\.(?:${SCRIPT_EXTENSIONS}))'|([^\\s"']+\\.(?:${SCRIPT_EXTENSIONS}))(?=[\\s"']|$)`, "gi");
-    for (const match of String(action.arguments || "").matchAll(re)) {
-      const path = match[1] || match[2] || match[3];
-      if (path && !parts.includes(path)) parts.push(path);
-    }
+    // A quoted segment counts as one path (spaces allowed) only when it is shaped like one from end
+    // to end; any other quoted text — an inline command — is split and only its paths survive.
+    const unquoted = String(action.arguments || "").replace(/"([^"]*)"|'([^']*)'/g, (_, double, simple) => {
+      const segment = (double ?? simple).trim();
+      if (wholePath.test(segment)) keep(segment); else split(segment);
+      return " ";
+    });
+    split(unquoted);
   }
   return parts.join(" ").slice(0, 500) || null;
 }
@@ -155,8 +168,8 @@ $rows = foreach ($t in Get-ScheduledTask) {
     limit = [string]$t.Settings.ExecutionTimeLimit; wake = [bool]$t.Settings.WakeToRun
     actions = @($t.Actions | ForEach-Object { [pscustomobject]@{ execute = $_.Execute; arguments = $_.Arguments; workingDirectory = $_.WorkingDirectory } })
     triggers = @($t.Triggers | ForEach-Object { [pscustomobject]@{ type = $_.CimClass.CimClassName; enabled = $_.Enabled; start = $_.StartBoundary; interval = $_.Repetition.Interval; duration = $_.Repetition.Duration; daysInterval = $_.DaysInterval; daysOfWeek = $_.DaysOfWeek; daysOfMonth = $_.DaysOfMonth } })
-    lastRun = $(if ($i -and $i.LastRunTime -and $i.LastRunTime.Year -gt 2000) { $i.LastRunTime.ToString('o') } else { $null })
-    nextRun = $(if ($i -and $i.NextRunTime) { $i.NextRunTime.ToString('o') } else { $null })
+    lastRun = $(if ($i -and $i.LastRunTime -and $i.LastRunTime.Year -gt 2000) { ([DateTimeOffset]$i.LastRunTime).ToString('o') } else { $null })
+    nextRun = $(if ($i -and $i.NextRunTime) { ([DateTimeOffset]$i.NextRunTime).ToString('o') } else { $null })
     result = $(if ($i) { [int64][uint32]$i.LastTaskResult } else { $null })
   }
 }
@@ -227,12 +240,24 @@ export function storedOAuthToken(endpoint, credentialsPath) {
   return candidates[0]?.accessToken || null;
 }
 
+const bareEndpoint = (value) => String(value || "").replace(/\/+$/, "").replace(/\/mcp$/i, "").toLowerCase();
+
+/** The endpoint to report to: --endpoint, else CASTALIE_ENDPOINT, else .cs/config.json. Installing needs nothing more. */
+function resolveEndpoint(args, config) {
+  const endpoint = (args.endpoint && args.endpoint !== true ? args.endpoint : null) || process.env.CASTALIE_ENDPOINT || config.endpoint;
+  if (!endpoint) fail("No endpoint. Pass --endpoint https://<workspace>.castalie.app, or set CASTALIE_ENDPOINT.");
+  return String(endpoint).replace(/\/+$/, "").replace(/\/mcp$/i, "");
+}
+
+/**
+ * The token, read only for the endpoint it was issued for: CASTALIE_TOKEN (set by whoever runs the
+ * reporter), .cs/config.json's when its own endpoint is this one, else Claude Code's for <endpoint>/mcp.
+ */
 function resolveConnection(args, repo) {
   const config = readConfigFrom(repo);
-  let endpoint = args.endpoint || process.env.CASTALIE_ENDPOINT || config.endpoint;
-  if (!endpoint) fail("No endpoint. Pass --endpoint https://<workspace>.castalie.app, or set CASTALIE_ENDPOINT.");
-  endpoint = String(endpoint).replace(/\/+$/, "").replace(/\/mcp$/i, "");
-  const token = process.env.CASTALIE_TOKEN || config.token || storedOAuthToken(endpoint);
+  const endpoint = resolveEndpoint(args, config);
+  const configToken = config.token && bareEndpoint(config.endpoint) === bareEndpoint(endpoint) ? config.token : null;
+  const token = process.env.CASTALIE_TOKEN || configToken || storedOAuthToken(endpoint);
   if (!token) {
     fail(`No token for ${endpoint}/mcp. Set CASTALIE_TOKEN, write .cs/config.json { "token": ... }, `
       + "or sign in to the castalie MCP server once in Claude Code (/mcp) on this machine's account.");
@@ -331,8 +356,9 @@ export function stableCliPath(running = fileURLToPath(new URL("./cs.mjs", import
   return running;
 }
 
-function quote(value) {
-  return `"${String(value).replace(/"/g, '\\"')}"`;
+/** One Windows command-line argument: inner quotes escaped, trailing backslashes doubled so they never escape the closing quote. */
+export function quote(value) {
+  return `"${String(value).replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, "$1$1")}"`;
 }
 
 
@@ -402,7 +428,7 @@ async function cmdInstall(args) {
   requireWindows();
   const repo = mainCheckout(resolve(args.repo && args.repo !== true ? args.repo : process.cwd()));
   if (!repo) fail("Run it from a working copy of your repository, or pass --repo <dir>.");
-  const { endpoint } = resolveConnection(args, repo);
+  const endpoint = resolveEndpoint(args, readConfigFrom(repo));
   const every = Math.max(5, Math.min(60, Number(args.every) || 15));
   const name = args.taskName && args.taskName !== true ? String(args.taskName) : DEFAULT_TASK_NAME;
   const cli = stableCliPath();

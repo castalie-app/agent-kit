@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  actionSummary, belongsToWorkspace, durationMinutes, globToRegExp, normaliseWindowsTrigger, parseAgentTaskArgs,
+  actionSummary, belongsToWorkspace, durationMinutes, globToRegExp, normaliseWindowsTrigger, parseAgentTaskArgs, quote,
   stableCliPath, storedOAuthToken, toReportedTask,
 } from "./agent-tasks.mjs";
 
@@ -38,12 +38,32 @@ const hidden = (script) => ({
 
 // ── never the arguments ──
 {
-  const summary = actionSummary([hidden("Watch.ps1")]);
+  const everyFile = { exists: () => true };
+  const summary = actionSummary([hidden("Watch.ps1")], everyFile);
   assert.equal(summary, "wscript.exe C:\\Work\\repo\\scripts\\Run-HiddenTask.vbs C:\\Work\\repo\\scripts\\Invoke-HiddenRun.ps1 C:\\Work\\repo\\scripts\\Watch.ps1");
   assert.ok(!summary.includes("s3cr3t"), "an argument value never leaves the machine");
   assert.ok(!summary.includes("-Token"));
-  const inline = actionSummary([{ execute: "powershell.exe", arguments: "-Command \"$env:X='y'; & 'C:\\infra\\Sync-Access.ps1' -Password hunter2\"" }]);
+
+  const inline = actionSummary([{ execute: "powershell.exe", arguments: "-Command \"$env:X='y'; & 'C:\\infra\\Sync-Access.ps1' -Password hunter2\"" }], everyFile);
   assert.equal(inline, "powershell.exe C:\\infra\\Sync-Access.ps1");
+
+  // A quoted inline command ending in a script path: only the path survives, never the command.
+  const command = actionSummary([{ execute: "pwsh.exe", arguments: "-Command \"Set-Foo -Token s3cr3t; & C:\\x\\run.ps1\"" }], everyFile);
+  assert.equal(command, "pwsh.exe C:\\x\\run.ps1");
+
+  // A value that merely ends like a script is not a path.
+  assert.equal(actionSummary([{ execute: "node.exe", arguments: "--key=abc.js --secret s3cr3t.ps1" }], everyFile), "node.exe");
+
+  // A quoted path with spaces is one path; a path that does not exist on this machine never leaves.
+  assert.equal(actionSummary([{ execute: "pwsh.exe", arguments: "-File \"C:\\My Scripts\\run.ps1\"" }], everyFile), "pwsh.exe C:\\My Scripts\\run.ps1");
+  assert.equal(actionSummary([{ execute: "pwsh.exe", arguments: "-File \"C:\\not\\there.ps1\"" }]), "pwsh.exe");
+}
+
+// ── one Windows argument ──
+{
+  assert.equal(quote("C:\\repo\\"), "\"C:\\repo\\\\\"", "a trailing backslash cannot escape the closing quote");
+  assert.equal(quote("GA *"), "\"GA *\"");
+  assert.equal(quote("say \"hi\""), "\"say \\\"hi\\\"\"");
 }
 
 // ── durations and triggers ──
