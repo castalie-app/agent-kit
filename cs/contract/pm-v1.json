@@ -182,6 +182,91 @@
       }
     },
     {
+      "name": "site_get",
+      "kind": "read",
+      "description": "The workspace's own static site, hosted by Castalie: its public address (https://<workspace>.castalie.page/, not indexed by search engines), the live version (version_id, published_at, published_by, file_count, total_bytes) or null while nothing is published, the files of the live version (path, content_type, byte_size — never their content) and the limits. Any active member reads it, the same rule as /admin/site.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "address": "string|null",
+        "live": "object|null",
+        "files": "object[]",
+        "limits": "object"
+      }
+    },
+    {
+      "name": "site_publish",
+      "kind": "write",
+      "description": "Publish the workspace's static site at its Castalie address, returned as address (never build it by hand). files is the WHOLE new site and replaces the previous one in one gesture; or version_id publishes a draft prepared with site_stage, for a site too large for one call. Owner or member (a viewer gets forbidden), the same rule as /admin/site. A refused file publishes nothing and names its path: invalid_path, unsupported_type, file_too_large, site_too_large, too_many_files, duplicate_path, invalid_content, empty_site, version_not_found, files_or_version_id. warnings carries no_root_index when / has no index.html.",
+      "params": [
+        {
+          "name": "files",
+          "type": "object[]",
+          "required": false,
+          "description": "The whole new site: each {path, content} for UTF-8 text or {path, content_base64} for bytes. path is relative, forward slashes, case-sensitive (index.html, sublimer/index.html, img/logo.png). Static types only; at most 5 MiB per file, 25 MiB and 1000 files per site."
+        },
+        {
+          "name": "version_id",
+          "type": "int",
+          "required": false,
+          "description": "A draft's version_id from site_stage, instead of files."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "address": "string|null",
+        "version_id": "int|null",
+        "file_count": "int",
+        "total_bytes": "int",
+        "warnings": "string[]",
+        "error": "string",
+        "path": "string|null",
+        "message": "string|null"
+      }
+    },
+    {
+      "name": "site_stage",
+      "kind": "write",
+      "description": "Prepare a draft of the workspace's site across several calls when it is too large for one site_publish call (keep each call under ~15 MB of base64); nothing is visible until site_publish(version_id). The first call omits version_id and returns one; the next calls pass it back; a path already in the draft is replaced. Same limits, refusals and rights as site_publish. A draft left unpublished for a day is deleted at the next publication.",
+      "params": [
+        {
+          "name": "files",
+          "type": "object[]",
+          "required": true,
+          "description": "The whole new site: each {path, content} for UTF-8 text or {path, content_base64} for bytes. path is relative, forward slashes, case-sensitive (index.html, sublimer/index.html, img/logo.png). Static types only; at most 5 MiB per file, 25 MiB and 1000 files per site."
+        },
+        {
+          "name": "version_id",
+          "type": "int",
+          "required": false,
+          "description": "The draft's version_id from a previous site_stage call; omit to start a new draft."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "address": "string|null",
+        "version_id": "int|null",
+        "file_count": "int",
+        "total_bytes": "int",
+        "warnings": "string[]",
+        "error": "string",
+        "path": "string|null",
+        "message": "string|null"
+      }
+    },
+    {
+      "name": "site_unpublish",
+      "kind": "write",
+      "description": "Take the workspace's site down: its address answers 404 until the next site_publish. Owner or member (a viewer gets forbidden), the same rule as /admin/site.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "address": "string|null",
+        "error": "string",
+        "message": "string|null"
+      }
+    },
+    {
       "name": "member_invite",
       "kind": "write",
       "description": "Invite a person into this workspace by email address: Castalie sends them the invitation, and they join by signing in with that address. Owner only, the same rule as the invitation screen (/admin/utilisateurs/inviter): a member gets owner_only. Only the member role is invitable: owner is refused (role_not_invitable). An address already a member answers already_member, which comes back as an error (success false) like email_required, not_delivered and owner_only, but means the person is already in and there is nothing to do.",
