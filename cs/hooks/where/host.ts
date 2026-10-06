@@ -70,6 +70,9 @@ export type Host = {
 
   /** `$.command.register`; rejects a name already taken, the plugin's own skill included. */
   registerCommand: (spec: CommandSpec) => Promise<unknown>
+
+  /** `$.ui.focus`: the ring of one of the plugin's panes onto an element it drew there. */
+  focus: (requestId: string, key: string) => Promise<unknown>
 }
 
 /**

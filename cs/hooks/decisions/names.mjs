@@ -130,3 +130,62 @@ export const NO_WORKSPACE_TEXT =
   "No workspace answers `decision_list` here — connect this repository first (the `connect` skill).";
 export const NOT_PLACED_TEXT = (reason) =>
   `The panel cannot be seated here (${reason}), so the cards follow as text.`;
+
+// ── Answering from the sheet ───────────────────────────────────────────────
+
+/** The verb the sheet answers through, on the workspace the decision lives in. */
+export const ANSWER_VERB = "decision_answer";
+
+/** The elements of the answer bar, by key: what a press, a typing and a focus name. */
+export const ANSWER_KEYS = {
+  option: (id) => `option-${id}`,
+  choose: (id) => `choose-${id}`,
+  confirm: "confirm",
+  disarm: "disarm",
+  text: "answer-text",
+  effect: "effect",
+  send: "send-text",
+};
+
+/** The effects a written answer may have, by subject: the sheet's own rule (`EffectsAllowedFor`, without `none`). */
+export const NARROW_EFFECT_SUBJECTS = new Set(["followup_run", "maturity_question", "knowledge_review_issue"]);
+export const ALL_EFFECTS = ["continue", "take_over", "close"];
+export const NARROW_EFFECTS = ["continue", "close"];
+
+/** What each effect reads as in the bar: the sheet's own words. */
+export const EFFECT_CHOICES = {
+  continue: "Le robot continue avec ma consigne",
+  take_over: "Je reprends",
+  close: "Clore",
+};
+
+/** An approval's two options carry English titles; the sheet reads them in French. */
+export const APPROVAL_TITLES = { Yes: "Oui", No: "Non" };
+
+export const CHOOSE_TEXT = "Choisir";
+export const DISARM_TEXT = "annuler le choix";
+export const ANSWER_HEADING = "Votre réponse";
+export const TEXT_LABEL_FREE = "Votre réponse :";
+export const TEXT_LABEL_OTHER = "Répondre autrement ou ajuster :";
+export const TEXT_LABEL_ADJUST = (title) => `Ajuster « ${title} » (facultatif) :`;
+export const TEXT_LABEL_REASON = (title) => `Pourquoi « ${title} » :`;
+export const TEXT_PLACEHOLDER = "Écrivez votre réponse";
+export const TEXT_SUBMIT = "répondre";
+export const EFFECT_LABEL = "Si vous répondez par écrit :";
+export const SEND_TEXT = "Répondre avec ce texte";
+export const CONFIRM_TEXT = (title) => `Répondre « ${title} »`;
+export const ARMED_HINT = (title) => `« ${title} » choisi : Entrée répond, un autre chiffre change de choix.`;
+export const REASON_HINT = (title) => `« ${title} » demande sa raison : écrivez-la, puis Entrée.`;
+export const SENDING_TEXT = "Envoi de la réponse…";
+export const NO_FIELD_TEXT = "Pour répondre par écrit, ouvrez la décision dans Castalie.";
+export const REFUSED_TEXT = (fix) => `Réponse refusée par Castalie : ${fix}`;
+export const UNSENT_TEXT = (reason) => `La réponse n'est pas partie : ${reason}`;
+export const ANSWERED_TEXT = (id, left) =>
+  left > 0 ? `✓ Réponse enregistrée sur n° ${id}. ${left} à répondre.` : `✓ Réponse enregistrée sur n° ${id}. Plus rien à répondre sur cet objectif.`;
+
+/** What the bar refuses before anything leaves: the server's rules, in the sheet's words. */
+export const LOCAL_REFUSALS = {
+  reason_required: "Dites pourquoi : un refus sans sa raison ne relance rien.",
+  text_required_free: "Cette décision se tranche par écrit : écrivez la réponse.",
+  text_required: "Choisissez une option, ou écrivez la réponse et dites ce qu'elle fait.",
+};

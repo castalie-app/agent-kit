@@ -345,8 +345,40 @@ once the panel holds the keyboard opens `decision_get(id)` in a pane of its own:
 its risk, cost, effect, what it gives up, what it removes and its exhibit (a Mermaid block stays
 a diagram), the recommendation, what waits, what goes on meanwhile, the context, the readers'
 comments and questions, and the answer once there is one. Escape or « ← cartes » closes it, and
-« ouvrir dans Castalie » opens the decision's own page, where you answer it. `/cs:decisions-panel 42`
+« ouvrir dans Castalie » opens the decision's own page. `/cs:decisions-panel 42`
 opens decision 42 the same way. The resume state an agent left itself is never shown.
+
+**And it answers there.** Under a pending sheet sits Castalie's own answer bar:
+
+```
+╭ Votre réponse ─────────────────────────────╮
+│ 1: The owner's phone, where they  [Choisir]│
+│ 2: ★ A relay number, always       [Choisir]│
+│ 3: No phone, and say so           [Choisir]│
+│ Répondre autrement ou ajuster : ▏          │
+│ Si vous répondez par écrit : Le robot …    │
+│ [ Répondre avec ce texte ]                 │
+╰────────────────────────────────────────────╯
+```
+
+- **An option** answers with one deliberate gesture: a click on its « Choisir », or its digit —
+  which only marks it, never answers — then Enter on « Répondre « … » », where the ring goes. Two
+  quick digits (one opening the card, one picking) therefore never answer by accident; nothing
+  answers on hover.
+- **Your own words** go in the field: with an option marked they adjust it, without one they are
+  the answer, and the effect beside them says what then — the robot carries on with your
+  instruction, you take it over, or it closes (no take-over on a follow-up run, a maturity
+  question or a knowledge review, as on the sheet). Enter, or « Répondre avec ce texte », sends.
+- **An approval's « Non » needs its reason**, as on the sheet: without words nothing leaves, the
+  bar says so, and the ring goes to the field.
+
+It goes out as `decision_answer` on the workspace the decision lives in, with the session's own
+credentials — `channel: "click"` for an option alone, `"text"` once words are typed. The server
+holds the rights: a viewer or a service token is refused there, and the bar draws its `fix` in red
+(« Réponse refusée par Castalie : … ») with your words still in the field. Accepted, the card
+leaves the list at once and the next one opens, under « ✓ Réponse enregistrée sur n° 77. 2 à
+répondre. »; with none left the sheet closes. The mobile app draws no field: there, the options
+answer and the bar points at Castalie for words.
 
 **A decision this session files opens by itself.** When `decision_create` answers, the panel
 opens on that decision's sheet without a command, even where the cards were closed, and without
@@ -359,7 +391,8 @@ words and `decision-resume <id>` to pick the work up. Nothing is read while noth
 and the prompt never waits more than four seconds on it.
 
 It reads through the workspace's own MCP connection, with the strategy pane's reader — the same
-cache in the plugin's store, the same deadline, the same spelling per server — and writes nothing.
+cache in the plugin's store, the same deadline, the same spelling per server — and writes only the
+answer you give it.
 Nothing polls: the inbox is read when the panel opens, after a `decision_*` write of this session,
 at the end of a turn and when the panel is drawn, each only once the last read is thirty seconds
 old, and on « rafraîchir ». The cache is scoped to the working copy, because one server alias
@@ -526,7 +559,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `feature-implement` | Implement a spec autonomously in your repo, phase by phase, ending at "PR ready". |
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
-| `decisions-panel` | The decisions waiting for you on this working copy's objective, beside the conversation, as cards grouped by the agent that asked, each opening whole in a pane of its own — in the terminal and in the desktop app. Reads only. |
+| `decisions-panel` | The decisions waiting for you on this working copy's objective, beside the conversation, as cards grouped by the agent that asked, each opening whole in a pane of its own, where you answer it — an option, or your own words — in the terminal and in the desktop app. |
 | `decision-resume` | Pick the work back up once a person has answered an agent's decision: play a robot's resume, answer a reader who asked for more context, or resume one decision by its id. Never answers in a person's place. |
 | `scheduled-run` | Play one run of a scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |

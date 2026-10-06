@@ -9,12 +9,18 @@
 
 import type { ElementConstructor, RenderElement } from 'claude-code'
 
-import type { BoxProps, ButtonProps, LinkProps, MarkdownProps, TextProps } from 'claude-code'
+import type { BoxProps, ButtonProps, InputProps, LinkProps, MarkdownProps, SelectProps, TextProps } from 'claude-code'
 
 import { cardMarkdown } from './render.mjs'
 import {
   ALL_IN_CASTALIE_TEXT,
+  ANSWER_HEADING,
+  ANSWER_KEYS,
   BACK_TEXT,
+  CHOOSE_TEXT,
+  DISARM_TEXT,
+  SEND_TEXT,
+  SENDING_TEXT,
   CARDS_PANE_TITLE,
   IN_CASTALIE_TEXT,
   OPEN_TEXT,
@@ -33,6 +39,9 @@ export type Kit = {
   Button: ElementConstructor<ButtonProps>
   Link: ElementConstructor<LinkProps>
   Markdown?: ElementConstructor<MarkdownProps>
+  /** Every surface but mobile: where it is missing, the bar keeps its options and drops the field. */
+  Input?: ElementConstructor<InputProps>
+  Select?: ElementConstructor<SelectProps>
 }
 
 export type CardView = {
@@ -220,16 +229,144 @@ export type SheetView = {
   /** The sheet as markdown, or the line that says why it is not here yet. */
   text: string
   isLoading: boolean
+  /** What the last answer left to say — « ✓ Réponse enregistrée sur n° 77. 2 à répondre. » */
+  notice?: string | null
+}
+
+/** What `answerBarOf` answers: the bar under a pending sheet. */
+export type AnswerBarView = {
+  error: string | null
+  isSending: boolean
+  options: { id: number; title: string; label: string; hotkey: string | undefined; isRecommended: boolean; isArmed: boolean }[]
+  armed: { id: number; title: string; needsReason: boolean; hint: string; confirm: string } | null
+  field: { label: string; placeholder: string; value: string; submitLabel: string } | null
+  effects: { label: string; value: string; options: { value: string; label: string }[] } | null
+  canSendText: boolean
+  fallback: string | null
+}
+
+export type AnswerHandlers = {
+  /** A digit, or a press on the option's own title: marks it, answers nothing. */
+  arm: (optionId: number) => void
+  /** « Choisir »: answers with that option at once. */
+  choose: (optionId: number) => void
+  /** « Répondre « … » », the marked option's Enter. */
+  confirm: () => void
+  disarm: () => void
+  /** Every change of the field: the draft keeps it across redraws. */
+  type: (text: string) => void
+  /** Enter in the field, or « Répondre avec ce texte ». */
+  send: (text?: string) => void
+  effect: (value: string) => void
 }
 
 /**
- * The pane one card opens into: a way back, the decision's own page, and the whole sheet.
+ * The bar under a pending sheet, as Castalie's own: a row per option — its title, which a digit
+ * marks, and « Choisir », which answers — then the marked option's « Répondre », the field to
+ * answer otherwise or adjust, and the effect a written answer has.
+ */
+function answerBar(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderElement {
+  const { Box, Text, Button, Input, Select } = kit
+
+  return (
+    <Box key="answer" flexDirection="column" marginTop={1} borderStyle="round" borderDimColor paddingX={1}>
+      <Text key="heading" bold>
+        {ANSWER_HEADING}
+      </Text>
+      {bar.error === null ? null : (
+        <Box key="error">
+          <Text color="red" wrap="wrap">
+            {bar.error}
+          </Text>
+        </Box>
+      )}
+      {bar.isSending ? (
+        <Box key="sending">
+          <Text dimColor wrap="wrap">
+            {SENDING_TEXT}
+          </Text>
+        </Box>
+      ) : null}
+      {bar.options.map(option => (
+        <Box key={`row-${option.id}`} flexDirection="row" justifyContent="space-between">
+          <Button
+            key={ANSWER_KEYS.option(option.id)}
+            plain
+            hotkey={option.hotkey}
+            dimColor={!option.isArmed}
+            label={option.isArmed ? `› ${option.label}` : option.label}
+            onPress={() => on.arm(option.id)}
+          />
+          <Button
+            key={ANSWER_KEYS.choose(option.id)}
+            variant={option.isRecommended ? 'primary' : 'secondary'}
+            label={CHOOSE_TEXT}
+            onPress={() => on.choose(option.id)}
+          />
+        </Box>
+      ))}
+      {bar.armed === null ? null : (
+        <Box key="armed" flexDirection="column">
+          <Box key="hint">
+            <Text dimColor wrap="wrap">
+              {bar.armed.hint}
+            </Text>
+          </Box>
+          <Box key="armed-actions" flexDirection="row">
+            <Button key={ANSWER_KEYS.confirm} variant="primary" label={bar.armed.confirm} onPress={() => on.confirm()} />
+            <Button key={ANSWER_KEYS.disarm} plain dimColor label={DISARM_TEXT} onPress={() => on.disarm()} />
+          </Box>
+        </Box>
+      )}
+      {bar.field === null || Input === undefined ? null : (
+        <Input
+          key={ANSWER_KEYS.text}
+          label={bar.field.label}
+          placeholder={bar.field.placeholder}
+          value={bar.field.value}
+          submitLabel={bar.field.submitLabel}
+          onInput={value => on.type(value)}
+          onSubmit={value => on.send(value)}
+        />
+      )}
+      {bar.effects === null || Select === undefined ? null : (
+        <Select
+          key={ANSWER_KEYS.effect}
+          label={bar.effects.label}
+          options={bar.effects.options}
+          value={bar.effects.value}
+          onSelect={value => on.effect(value)}
+        />
+      )}
+      {bar.canSendText && Input !== undefined ? (
+        <Button key={ANSWER_KEYS.send} variant="secondary" label={SEND_TEXT} onPress={() => on.send()} />
+      ) : null}
+      {bar.fallback === null ? null : (
+        <Box key="fallback">
+          <Text dimColor wrap="wrap">
+            {bar.fallback}
+          </Text>
+        </Box>
+      )}
+    </Box>
+  )
+}
+
+/**
+ * The pane one card opens into: a way back, the decision's own page, the whole sheet, and — while
+ * it waits — the bar that answers it.
  *
  * @param kit the elements `$.ui.resolve(e)` handed out
  * @param sheet what the pane holds
  * @param back what « ← cartes » runs: the sheet closes, the cards stay
+ * @param answer the bar and what it runs; absent while the sheet loads or once nothing waits
  */
-export function sheetView(kit: Kit, sheet: SheetView, back: () => void): RenderElement {
+export function sheetView(
+  kit: Kit,
+  sheet: SheetView,
+  back: () => void,
+  answer?: { bar: AnswerBarView; on: AnswerHandlers } | null,
+): RenderElement {
   const { Box, Text, Button, Link } = kit
 
   return (
@@ -242,6 +379,13 @@ export function sheetView(kit: Kit, sheet: SheetView, back: () => void): RenderE
           </Link>
         )}
       </Box>
+      {sheet.notice === null || sheet.notice === undefined ? null : (
+        <Box key="answered">
+          <Text color="green" wrap="wrap">
+            {sheet.notice}
+          </Text>
+        </Box>
+      )}
       <Box key="body" flexDirection="column" marginTop={1}>
         {sheet.isLoading ? (
           <Text key="loading" dimColor wrap="wrap">
@@ -251,6 +395,7 @@ export function sheetView(kit: Kit, sheet: SheetView, back: () => void): RenderE
           markdownOf(kit, `sheet-${sheet.id}`, sheet.text)
         )}
       </Box>
+      {answer === null || answer === undefined || sheet.isLoading ? null : answerBar(kit, answer.bar, answer.on)}
     </Box>
   )
 }

@@ -1,6 +1,6 @@
 ---
 name: decisions-panel
-description: Show or hide, beside the transcript, the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — and open one card whole with "/cs:decisions-panel <number>". A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
+description: Show or hide, beside the transcript, the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — open one card whole with "/cs:decisions-panel <number>", and answer it there, by an option or in your own words. A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
 ---
 
 # decisions-panel — what your agents are waiting on, as cards
@@ -32,8 +32,20 @@ A decision this session filed comes back once it is settled, wherever it was ans
 person's next prompt, the model reads the answer beside it (the option, the person's words, and
 `decision-resume <id>` to pick the work up).
 
-It reads through the workspace's own MCP server and writes nothing. You answer a decision on its
-page in Castalie — every card and sheet links to it — or by saying the answer in the conversation.
+**A pending sheet answers.** Under it, Castalie's own answer bar: each option has its digit and
+« Choisir ». A click on « Choisir » answers with that option; a digit only marks it, and Enter on
+« Répondre « … » » answers — nothing answers on hover or on one stray key. The field takes the
+person's own words: with an option marked they adjust it; without one they are the answer, with
+the effect picked beside them (the robot carries on, I take it over, close it). An approval's
+« Non » needs its reason, as on the sheet. The answer goes out as `decision_answer` on the
+decision's workspace, with the session's own credentials (`channel` `click` for an option alone,
+`text` once words are typed); a refusal of the server — a viewer, a service token — is shown as its
+`fix`, the words kept. Accepted, the card leaves the list and the next one opens, with what is left
+to answer. The mobile app draws no field: there the options answer, and words go through Castalie.
+
+It reads through the workspace's own MCP server and writes only the answer the person gives it.
+A decision can also be answered on its page in Castalie — every card and sheet links to it — or
+by saying the answer in the conversation.
 
 ## When this text reaches you
 
@@ -43,7 +55,10 @@ of saying nothing can be done:
 
 1. With a number in the arguments: `decision_get(id)`, and write the sheet as described above,
    in the person's language, headings per section, options numbered, the recommended one marked.
-   Never show `resume_state_md` or `resume_prompt_md`: the sheet a person reads never does.
+   Never show `resume_state_md` or `resume_prompt_md`: the sheet a person reads never does. End
+   on how to answer: the option's number, or their own words. When they then answer in the
+   conversation, record it with `decision_answer` (their option, their words, `channel: "mcp"`),
+   and show the server's `fix` as written when it refuses.
 2. Without: find this copy's objective — the latest entry of `.cs/work.json`, its spec's brief
    (`feature_spec_get`), the brief's `objective_id` (`feature_brief_get`). None: say in one line
    that this copy works on no objective, and show no decision. Else

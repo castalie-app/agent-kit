@@ -464,3 +464,191 @@ test('a decision this session filed comes back with its answer at the next promp
   const again = await $.prompt.submit({ text: 'et ensuite ?', wait: false } as never)
   expect(again.context ?? []).toHaveLength(0)
 })
+
+// ── Answering from the sheet ──────────────────────────────────────────────
+
+/** Decision 81 whole: an approval, still waiting — « Non » needs its reason. */
+const APPROVAL = {
+  success: true,
+  decision: {
+    id: 81,
+    url: 'https://acme.castalie.app/decisions/81',
+    title: 'Merge the VAT fix on credit notes and ship it to production?',
+    status: 'pending',
+    answer_shape: 'approve',
+    escalation_reason: 'authorization',
+    subject_kind: 'feature_spec_phase',
+    subject_id: 501,
+    asked_by_agent: 'bug-fix',
+    date_created: '2026-10-04T09:12:00',
+    options: [
+      { id: 501, title: 'Yes', is_recommended: true, effect: 'continue', display_order: 0 },
+      { id: 502, title: 'No', is_recommended: false, effect: 'take_over', display_order: 1 },
+    ],
+    comments: [],
+    context_asks: [],
+  },
+}
+
+/**
+ * A session whose sheet of decision `id` is open, on `surface`, and whose workspace answers
+ * `decision_answer` with `reply`: what was asked of it, which panes opened, and the sheet drawn
+ * again on demand. Where the focus ring goes is not seen here: the test host seats no ring.
+ */
+async function answering(
+  $: Parameters<TestBody>[0],
+  on: Parameters<TestBody>[1],
+  options: { id: number; surface?: 'terminal' | 'desktop'; reply?: (args: Record<string, unknown>) => unknown },
+) {
+  const { id, surface = 'terminal', reply = () => ({ success: true, decision_id: id, status: 'answered' }) } = options
+  const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
+  mock.store(on)
+
+  const answers: Record<string, unknown>[] = []
+  const opened: string[] = []
+  on('tool.list', () => ({
+    value: [
+      { name: 'mcp__castalie__decision_list', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_get', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_answer', description: '', isMcp: true },
+    ],
+  }) as never)
+  on('fs.exists', ($, e) => ({ value: slashed(e.path) === 'C:/repo/.git' }))
+  on('fs.read', ($, e) => {
+    if (slashed(e.path) === 'C:/repo/.cs/work.json') return { value: WORK }
+    throw new Error('no such file')
+  })
+  on('fs.stat', () => {
+    throw new Error('no such file')
+  })
+  on('mcp.call', ($, e) => {
+    if (e.tool === 'decision_answer') answers.push(e.args)
+    const body =
+      e.tool === 'decision_list'
+        ? { ...INBOX, objective_id: e.args.objective_id }
+        : e.tool === 'decision_get'
+          ? e.args.id === 81
+            ? APPROVAL
+            : SHEET
+          : e.tool === 'decision_answer'
+            ? reply(e.args)
+            : NAMES[e.tool]
+    if (body === undefined) throw new Error(`${e.tool} is not served here`)
+
+    return { value: { content: [{ type: 'text', text: JSON.stringify(body) }] } } as never
+  })
+  on('command.list', () => ({ value: [{ name: 'cs:decisions-panel' }, { name: 'cs:okr-panel' }] }) as never)
+  on('session.cwd', () => ({ value: 'C:/repo' }))
+  on('session.surfaces', () => ({ value: [surface] as const }) as never)
+  on('ui.open', ($, e) => {
+    opened.push(e.id)
+
+    return { value: { isPlaced: true } } as never
+  })
+  on('ui.close', () => ({ value: undefined }))
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.log', () => ({ value: undefined }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+
+  await $.session.start({ cwd: 'C:/repo', surface, isInteractive: true })
+  await clock.advance(2_000)
+
+  const cards = await $.ui.mount({ plugin: 'cs', surface, component: 'Pane', requestId: 'cs-decisions', props: PANE_PROPS('Décisions') })
+  await cards.press({ key: `open-castalie:${id}` })
+  await clock.advance(200)
+
+  await cards.unmount()
+
+  // The sheet as it is drawn now: the drawing before it is taken down first.
+  let drawn: { unmount: () => Promise<void> } | null = null
+  const sheet = async (shown = id) => {
+    await clock.advance(200)
+    await drawn?.unmount()
+    const mounted = await $.ui.mount({ plugin: 'cs', surface, component: 'Pane', requestId: 'cs-decision', props: PANE_PROPS(`Décision n° ${shown}`) })
+    drawn = mounted
+
+    return mounted
+  }
+  const done = async () => {
+    await drawn?.unmount()
+    drawn = null
+  }
+
+  return { answers, opened, sheet, done }
+}
+
+for (const surface of SURFACES) {
+  test(`an option is answered by « Choisir », or by its digit then « Répondre », and the next card opens — ${surface}`, async ($, on) => {
+    const { answers, opened, sheet } = await answering($, on, { id: 77, surface })
+
+    const bar = await sheet()
+    expect((await bar.find({ key: 'option-302' }))?.props.hotkey).toBe('1')
+    expect((await bar.find({ key: 'option-302' }))?.props.label).toBe('★ A relay number, always')
+
+    // The digit only marks: nothing leaves, and « Répondre » names what Enter will send.
+    await bar.press({ key: 'option-302' })
+    const marked = await sheet()
+    expect(answers).toHaveLength(0)
+    expect((await marked.find({ key: 'confirm' }))?.props.label).toBe('Répondre « A relay number, always »')
+
+    await marked.press({ key: 'confirm' })
+    const next = await sheet(81)
+    expect(answers.at(-1)).toEqual({ id: 77, option_id: 302, channel: 'click' })
+    expect(opened.at(-1)).toBe('cs-decision')
+    expect((await next.find({ key: 'answered' }))?.text).toBe('✓ Réponse enregistrée sur n° 77. 1 à répondre.')
+    expect((await next.find({ key: 'sheet-81' }))?.text).toMatch(/Merge the VAT fix/)
+
+    // « Choisir » answers at once.
+    await next.press({ key: 'choose-501' })
+    await sheet(81)
+    expect(answers.at(-1)).toEqual({ id: 81, option_id: 501, channel: 'click' })
+  })
+}
+
+test('typed words with the effect picked are the answer, channel text', async ($, on) => {
+  const { answers, sheet } = await answering($, on, { id: 77 })
+
+  const bar = await sheet()
+  expect((await bar.find({ key: 'answer-text' }))?.props.label).toBe('Répondre autrement ou ajuster :')
+  await bar.select({ key: 'effect', value: 'take_over' })
+  await bar.input({ key: 'answer-text', text: 'Ask Northwind first.' })
+  await sheet()
+
+  expect(answers).toEqual([{ id: 77, text_md: 'Ask Northwind first.', effect: 'take_over', channel: 'text' }])
+})
+
+test("a refusal shows the server's fix, keeps the typed words, and the card stays", async ($, on) => {
+  const fix = 'A service token files decisions and plays resumes; it never answers one.'
+  const { answers, opened, sheet } = await answering($, on, {
+    id: 77,
+    reply: () => ({ success: false, error: 'answer_requires_person', fix }),
+  })
+
+  const bar = await sheet()
+  await bar.input({ key: 'answer-text', text: 'Relay, but only for Northwind.', kind: 'change' })
+  await bar.press({ key: 'send-text' })
+  const refused = await sheet()
+
+  expect(answers).toHaveLength(1)
+  expect((await refused.find({ key: 'error' }))?.text).toBe(`Réponse refusée par Castalie : ${fix}`)
+  expect((await refused.find({ key: 'answer-text' }))?.props.value).toBe('Relay, but only for Northwind.')
+  expect((await refused.find({ key: 'sheet-77' }))?.text).toMatch(/Which phone number/)
+  expect(opened.filter(pane => pane === 'cs-decision')).toHaveLength(1)
+})
+
+test("an approval's « Non » without its reason is refused before anything leaves, and leaves with it", async ($, on) => {
+  const { answers, sheet } = await answering($, on, { id: 81, surface: 'desktop' })
+
+  const bar = await sheet()
+  expect((await bar.find({ key: 'option-502' }))?.props.label).toBe('Non')
+  await bar.press({ key: 'choose-502' })
+  const refused = await sheet()
+
+  expect(answers).toHaveLength(0)
+  expect((await refused.find({ key: 'error' }))?.text).toBe('Dites pourquoi : un refus sans sa raison ne relance rien.')
+  expect((await refused.find({ key: 'answer-text' }))?.props.label).toBe('Pourquoi « Non » :')
+
+  await refused.input({ key: 'answer-text', text: 'Not before the audit.' })
+  await sheet(77)
+  expect(answers).toEqual([{ id: 81, option_id: 502, text_md: 'Not before the audit.', channel: 'text' }])
+})

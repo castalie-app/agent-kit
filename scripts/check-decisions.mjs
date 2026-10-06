@@ -14,6 +14,16 @@
 // No network, no Claude Code, no filesystem: the workspace answers are `decisions-fixtures.mjs`,
 // in the server's own shape, and the store is a Map.
 
+import {
+  answerBarOf,
+  answerOutcomeOf,
+  answerRequestOf,
+  effectsFor,
+  emptyDraft,
+  isRefusalOption,
+  nextAfter,
+  withoutCard,
+} from "../cs/hooks/decisions/answer.mjs";
 import { answeredSheetAnswer, inboxAnswer, pascalInboxAnswer, sheetAnswer } from "./decisions-fixtures.mjs";
 
 import {
@@ -29,6 +39,7 @@ import {
   inboxOf,
 } from "../cs/hooks/decisions/inbox.mjs";
 import {
+  ANSWERED_TEXT,
   APPROXIMATE_TEXT,
   EMPTY_TEXT,
   HOTKEY_CARDS,
@@ -36,9 +47,11 @@ import {
   INBOX_TTL_MS,
   LOADING_TEXT,
   MIGRATED_GROUP,
+  NO_FIELD_TEXT,
   NO_OBJECTIVE_TEXT,
   NO_SERVER_TEXT,
   RECOMMENDED_MARK,
+  REFUSED_TEXT,
   UNOPENED_MARK,
 } from "../cs/hooks/decisions/names.mjs";
 import { copyObjectiveOf, inboxForObjective, subjectsOf } from "../cs/hooks/decisions/objective.mjs";
@@ -498,8 +511,107 @@ check("one waiting decision reads in the singular",
   check("a cancelled decision is read again, never resumed", cancelled.includes("is now cancelled") && cancelled.includes("decision_get(77)"));
 }
 
+// ── Answering from the sheet ──────────────────────────────────────────────
+{
+  const pending = decisionOf(sheetAnswer);
+  const field = { hasField: true };
+
+  const bar = answerBarOf(pending, emptyDraft(), field);
+  check("a pending sheet carries a bar: one row per option, in display order, each with its digit",
+    bar !== null && bar.options.map((option) => `${option.hotkey}:${option.id}`).join() === "1:301,2:302,3:303",
+    JSON.stringify(bar?.options));
+  check("the recommended option is marked in the bar as on the sheet",
+    bar?.options.find((option) => option.id === 302)?.label === `${RECOMMENDED_MARK} A relay number, always`);
+  check("nothing is marked yet, and the field answers otherwise or adjusts",
+    bar?.armed === null && bar?.field?.label === "Répondre autrement ou ajuster :" && bar?.canSendText === true);
+  check("a written answer offers the sheet's three effects on a spec, continue first",
+    bar?.effects?.options.map((option) => option.value).join() === "continue,take_over,close" && bar?.effects?.value === "continue");
+  check("a follow-up run offers no take-over, as the sheet",
+    effectsFor("followup_run").join() === "continue,close" && effectsFor("maturity_question").join() === "continue,close");
+  check("a decision that no longer waits has no bar", answerBarOf(decisionOf(answeredSheetAnswer), emptyDraft(), field) === null);
+  const mobile = answerBarOf(pending, emptyDraft(), { hasField: false });
+  check("where the surface draws no field, the options stay and the bar says where to write",
+    mobile?.options.length === 3 && mobile.field === null && mobile.effects === null && mobile.fallback === NO_FIELD_TEXT);
+
+  const marked = answerBarOf(pending, { ...emptyDraft(), optionId: 302 }, field);
+  check("a digit marks its option and answers nothing: the bar says Enter answers, and drops the effect",
+    marked?.armed?.id === 302 && marked.armed.hint.includes("Entrée répond") && marked.effects === null &&
+      marked.field?.label === "Ajuster « A relay number, always » (facultatif) :");
+
+  const click = answerRequestOf(pending, emptyDraft(), { optionId: 302 });
+  check("« Choisir » without words answers with the option, channel click",
+    click.ok && JSON.stringify(click.args) === '{"id":77,"option_id":302,"channel":"click"}', JSON.stringify(click));
+  const adjusted = answerRequestOf(pending, { ...emptyDraft(), optionId: 302, text: "  Only for Northwind. " });
+  check("an option with words adjusts it, channel text, the words trimmed",
+    adjusted.ok && JSON.stringify(adjusted.args) === '{"id":77,"option_id":302,"text_md":"Only for Northwind.","channel":"text"}',
+    JSON.stringify(adjusted));
+  const written = answerRequestOf(pending, { ...emptyDraft(), text: "Ask Northwind first.", effect: "take_over" });
+  check("words without an option are the answer, with the effect picked, channel text",
+    written.ok && JSON.stringify(written.args) === '{"id":77,"text_md":"Ask Northwind first.","effect":"take_over","channel":"text"}',
+    JSON.stringify(written));
+  const narrowed = answerRequestOf({ ...pending, subjectKind: "followup_run" }, { ...emptyDraft(), text: "ok", effect: "take_over" });
+  check("an effect the subject does not know falls back to its first", narrowed.ok && narrowed.args.effect === "continue");
+  const empty = answerRequestOf(pending, emptyDraft());
+  check("nothing chosen and nothing written leaves nothing, and says what to do",
+    !empty.ok && empty.code === "answer_text_required" && empty.fix.startsWith("Choisissez une option"));
+  const free = answerRequestOf({ ...pending, shape: "free_text" }, emptyDraft());
+  check("a free-text decision asks for its words", !free.ok && free.fix.startsWith("Cette décision se tranche par écrit"));
+  check("a free-text decision draws no option, only the field",
+    answerBarOf({ ...pending, shape: "free_text" }, emptyDraft(), field)?.options.length === 0);
+
+  const settled = decisionOf(answeredSheetAnswer);
+  const approval = {
+    ...settled,
+    status: "pending",
+    answer: null,
+    options: [
+      { ...settled.options[0], id: 501, title: "Yes" },
+      { ...settled.options[1], id: 502, title: "No" },
+    ],
+  };
+  check("an approval reads « Oui » and « Non »",
+    answerBarOf(approval, emptyDraft(), field)?.options.map((option) => option.title).join() === "Oui,Non");
+  check("an approval's second option is its « Non »",
+    isRefusalOption(approval, 502) && !isRefusalOption(approval, 501) && !isRefusalOption(pending, 302));
+  const bareNo = answerRequestOf(approval, emptyDraft(), { optionId: 502 });
+  check("« Non » without its reason leaves nothing, in the sheet's words",
+    !bareNo.ok && bareNo.code === "answer_text_required" && bareNo.fix === "Dites pourquoi : un refus sans sa raison ne relance rien.");
+  const reasoned = answerRequestOf(approval, { ...emptyDraft(), text: "Not before the audit." }, { optionId: 502 });
+  check("« Non » with its reason leaves, channel text",
+    reasoned.ok && reasoned.args.option_id === 502 && reasoned.args.text_md === "Not before the audit." && reasoned.args.channel === "text");
+  const markedNo = answerBarOf(approval, { ...emptyDraft(), optionId: 502 }, field);
+  check("« Non » marked asks for its reason in the field",
+    markedNo?.armed?.needsReason === true && markedNo.field?.label === "Pourquoi « Non » :" && markedNo.armed.hint.includes("demande sa raison"));
+  check("« Oui » needs no words", answerRequestOf(approval, emptyDraft(), { optionId: 501 }).ok);
+
+  const accepted = answerOutcomeOf(resultOf({ success: true, decision_id: 77, status: "answered" }));
+  check("an accepted answer reads its status", accepted.ok && accepted.status === "answered");
+  const fix = "A service token files decisions and plays resumes; it never answers one.";
+  const refused = answerOutcomeOf(resultOf({ success: false, error: "answer_requires_person", fix }));
+  check("a refusal carries the server's code and its fix as written",
+    !refused.ok && refused.code === "answer_requires_person" && refused.fix === fix, JSON.stringify(refused));
+  const errored = answerOutcomeOf({ isError: true, content: [{ type: "text", text: "MCP error -32001: forbidden" }] });
+  check("a transport error is a refusal that says what came back", !errored.ok && errored.fix === "MCP error -32001: forbidden");
+  check("the refusal is drawn in French around the server's words", REFUSED_TEXT(fix) === `Réponse refusée par Castalie : ${fix}`);
+
+  const workspaces = [{ server: "castalie", inbox: inboxOf(payloadOf(resultOf(inboxAnswer))), error: null }];
+  const before = workspaces[0].inbox;
+  const after = withoutCard(workspaces, "castalie", 81);
+  check("an answered card leaves the list at once, and the figures count one less",
+    !after[0].inbox.cards.some((card) => card.id === 81) && after[0].inbox.waiting === before.waiting - 1 &&
+      after[0].inbox.total === before.total - 1 && workspaces[0].inbox.cards.some((card) => card.id === 81));
+  const { next, left } = nextAfter(after);
+  check("the next card is the first one the panel draws, and the count is what is left",
+    next?.id === groupsOf(after[0].inbox.cards)[0].cards[0].id && next.server === "castalie" && left === before.waiting - 1,
+    JSON.stringify({ next, left }));
+  const last = { server: "castalie", inbox: { ...before, cards: [before.cards[0]], waiting: 1, total: 1 }, error: null };
+  check("with nothing left, nothing opens", nextAfter(withoutCard([last], "castalie", before.cards[0].id)).next === null);
+  check("the line over the next sheet says what is left",
+    ANSWERED_TEXT(77, 2) === "✓ Réponse enregistrée sur n° 77. 2 à répondre." && ANSWERED_TEXT(77, 0).includes("Plus rien à répondre"));
+}
+
 if (failed) {
   console.error(`\n${failed} check(s) failed.`);
   process.exit(1);
 }
-console.log("✓ the decisions panel draws the reader's inbox on the copy's objective as cards, one group per agent, and one card whole.");
+console.log("✓ the decisions panel draws the reader's inbox on the copy's objective as cards, one group per agent, and one card whole, and answers it from the sheet.");

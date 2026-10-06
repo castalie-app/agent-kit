@@ -6,6 +6,16 @@ import { hrefOf } from '../where/render.mjs'
 import { heldOf, workFileOf, workingCopyRootOf } from '../where/work-file.mjs'
 import { burstOf } from '../where/writes.mjs'
 import {
+  answerBarOf,
+  answerOutcomeOf,
+  answerRequestOf,
+  emptyDraft,
+  isRefusalOption,
+  nextAfter,
+  withoutCard,
+  type Draft,
+} from './answer.mjs'
+import {
   DECISION_READS,
   INBOX_ID,
   SETTLED_STATUSES,
@@ -17,7 +27,7 @@ import {
 import * as Names from './names.mjs'
 import { copyObjectiveOf, inboxForObjective } from './objective.mjs'
 import { cardsOf, inboxMarkdown, settledNotice, sheetMarkdown } from './render.mjs'
-import { cardsView, sheetView, type CardView, type Kit } from './views.jsx'
+import { cardsView, sheetView, type AnswerHandlers, type CardView, type Kit } from './views.jsx'
 
 type Reader = ReturnType<typeof readerOf>
 type Burst = ReturnType<typeof burstOf>
@@ -31,7 +41,16 @@ type Model = {
   error?: string | null
   workspaces: Workspace[]
 }
-type Sheet = { id: number; server: string; decision: Decision | null; error: string | null }
+type Sheet = {
+  id: number
+  server: string
+  decision: Decision | null
+  error: string | null
+  /** What the person is answering: the option marked, the words typed, the effect picked. */
+  draft: Draft
+  /** What the last answer left to say, drawn over the next sheet. */
+  notice: string | null
+}
 
 /**
  * The host, bound from a hook's `$` as the strategy pane binds it. Written out here and not
@@ -58,6 +77,7 @@ function hostOf($: EngineInterface): Host {
     closePane: pane => $.ui.close(pane),
     listCommands: () => $.command.list(),
     registerCommand: spec => $.command.register(spec),
+    focus: (requestId, key) => $.ui.focus({ requestId, key }),
   }
 }
 
@@ -327,13 +347,22 @@ export function register(on: On, companion: Companion): void {
 
   // ── The sheet ───────────────────────────────────────────────────────────
 
-  async function loadSheet(engine: Host, id: number, server: string): Promise<void> {
-    sheet = { id, server, decision: sheet?.id === id ? sheet.decision : null, error: null }
+  async function loadSheet(engine: Host, id: number, server: string, notice: string | null = null): Promise<void> {
+    // The same card read again keeps what the person was typing into it.
+    const kept = sheet?.id === id ? sheet : null
+    sheet = {
+      id,
+      server,
+      decision: kept?.decision ?? null,
+      error: null,
+      draft: kept?.draft ?? emptyDraft(),
+      notice: notice ?? kept?.notice ?? null,
+    }
     redraw(engine)
 
     try {
       const decision = await readerFor(engine).read(server, 'decision', id)
-      if (sheet?.id === id) sheet = { id, server, decision, error: null }
+      if (sheet?.id === id) sheet = { ...sheet, decision, error: null }
     } catch (error) {
       if (sheet?.id === id) sheet = { ...sheet, error: message(error) }
     }
@@ -341,12 +370,100 @@ export function register(on: On, companion: Companion): void {
   }
 
   /** Opens one decision whole: the pane takes the keyboard, and Escape gives it back. */
-  async function openSheet(engine: Host, id: number, server: string, focus = true) {
-    void loadSheet(engine, id, server)
+  async function openSheet(engine: Host, id: number, server: string, focus = true, notice: string | null = null) {
+    void loadSheet(engine, id, server, notice)
 
     const pane = { id: Names.SHEET_PANE_ID, title: Names.SHEET_PANE_TITLE(id), closeOnEscape: true } as const
 
     return engine.openPane(focus ? { ...pane, focus: true } : pane)
+  }
+
+  // ── Answering from the sheet ────────────────────────────────────────────
+
+  /** The draft of the sheet on show, changed; nothing when the sheet moved on meanwhile. */
+  function setDraft(engine: Host, id: number, change: Partial<Draft>, isDrawn = true) {
+    if (sheet?.id !== id) return
+    sheet = { ...sheet, draft: { ...sheet.draft, ...change } }
+    if (isDrawn) redraw(engine)
+  }
+
+  /**
+   * Sends the answer the draft holds — or the option pressed now — through `decision_answer` on
+   * the decision's own workspace, with the session's credentials. The server holds the rights:
+   * a refusal is drawn as its `fix`, and the typed words stay in the field. Accepted, the card
+   * leaves the list at once and the next one opens, the count of what is left above it.
+   */
+  async function answer(engine: Host, chosen: { optionId?: number | null } = {}): Promise<void> {
+    const shown = sheet
+    if (shown === null || shown.decision === null || shown.draft.isSending) return
+    const { id, server, decision } = shown
+
+    const request = answerRequestOf(decision, shown.draft, chosen)
+    if (!request.ok) {
+      setDraft(engine, id, { error: request.fix, optionId: chosen.optionId ?? shown.draft.optionId })
+      // What is missing is words: the ring goes to the field.
+      void engine.focus(Names.SHEET_PANE_ID, Names.ANSWER_KEYS.text).catch(() => undefined)
+
+      return
+    }
+
+    setDraft(engine, id, { error: null, isSending: true })
+    let outcome: ReturnType<typeof answerOutcomeOf>
+    try {
+      outcome = answerOutcomeOf(await engine.mcpCall(server, Names.ANSWER_VERB, request.args))
+    } catch (error) {
+      setDraft(engine, id, { isSending: false, error: Names.UNSENT_TEXT(message(error)) })
+
+      return
+    }
+    if (!outcome.ok) {
+      setDraft(engine, id, { isSending: false, error: Names.REFUSED_TEXT(outcome.fix) })
+
+      return
+    }
+
+    const known = readerFor(engine)
+    await known.forget([...inboxKeysOf(known, server), known.cacheKeyOf(server, 'decision', id)]).catch(() => undefined)
+    model = { ...model, workspaces: withoutCard(model.workspaces, server, id) }
+    const { next, left } = nextAfter(model.workspaces)
+    const notice = Names.ANSWERED_TEXT(id, left)
+
+    if (next === null) {
+      await closeSheet(engine)
+      engine.uiLog(`décisions : ${notice}`)
+    } else {
+      await openSheet(engine, next.id, next.server, true, notice)
+    }
+    scheduleRefresh(engine, Names.REFRESH_AFTER_WRITE_MS)
+  }
+
+  /** What the bar of decision `id` runs. */
+  function answerHandlersFor(engine: Host, id: number): AnswerHandlers {
+    const safely = (run: () => Promise<void>) =>
+      void run().catch(error => setDraft(engine, id, { isSending: false, error: Names.UNSENT_TEXT(message(error)) }))
+
+    return {
+      arm: optionId => {
+        setDraft(engine, id, { optionId, error: null })
+        // A digit only marks: Enter on « Répondre » answers. The ring goes there — or to the
+        // field, where the option is an approval's « Non » and needs its reason.
+        const decision = sheet?.id === id ? sheet.decision : null
+        const needsReason = decision !== null && isRefusalOption(decision, optionId)
+        void engine
+          .focus(Names.SHEET_PANE_ID, needsReason ? Names.ANSWER_KEYS.text : Names.ANSWER_KEYS.confirm)
+          .catch(() => undefined)
+      },
+      choose: optionId => safely(() => answer(engine, { optionId })),
+      confirm: () => safely(() => answer(engine)),
+      disarm: () => setDraft(engine, id, { optionId: null, error: null }),
+      // Every keystroke is kept without a redraw: the field draws its own typing.
+      type: text => setDraft(engine, id, { text }, false),
+      send: text => {
+        if (text !== undefined) setDraft(engine, id, { text }, false)
+        safely(() => answer(engine))
+      },
+      effect: value => setDraft(engine, id, { effect: value }),
+    }
   }
 
   // ── What this session filed ─────────────────────────────────────────────
@@ -554,11 +671,22 @@ export function register(on: On, companion: Companion): void {
           shown.decision !== null
             ? sheetMarkdown(shown.decision, { now })
             : (shown.error ?? Names.SHEET_LOADING_TEXT)
+        const bar =
+          shown.decision === null
+            ? null
+            : answerBarOf(shown.decision, shown.draft, { hasField: kit.Input !== undefined && kit.Select !== undefined })
 
         return sheetView(
           kit,
-          { id: shown.id, url: hrefOf(shown.decision?.url ?? null), text, isLoading: shown.decision === null },
+          {
+            id: shown.id,
+            url: hrefOf(shown.decision?.url ?? null),
+            text,
+            isLoading: shown.decision === null,
+            notice: shown.notice,
+          },
           () => void closeSheet(engine).catch(() => undefined),
+          bar === null ? null : { bar, on: answerHandlersFor(engine, shown.id) },
         )
       }
 
