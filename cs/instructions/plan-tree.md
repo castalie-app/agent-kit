@@ -56,12 +56,12 @@ the same outcome) is yours: decide it and write the option you rejected in `solu
   settle.
 - **The recommended option is the one the tree draws.** "I change nothing" is then a full answer.
 - **Each option says what it does to the tree**: "the point 1.3 changes", "the point 4 goes".
-- **The sheet carries the claim**, so the person answers on the picture without opening the spec.
-  When this session's `decision_create` schema exposes them, the claim's number goes in
-  `plan_point` ("1.2"), each option's picture in its `exhibit_md` and what it removes from the tree
-  in its `removes_md`. When it does not, the claim's number and sentence open `context_md` with its
-  exhibit, and what an option removes ends its `body_md`. Read the schema from `tools/list`, never
-  from memory.
+- **The sheet carries the claim**, so the person answers on the picture without opening the spec:
+  the claim's number in `plan_point` ("1.2"), its sentence opening `executive_md`, each option's
+  picture in its `exhibit_md` and what it removes from the tree in its `removes_md`.
+- **An answer taken without reading is not yet an answer.** `decision_get` says how the person
+  answered (`answer.read`); when `answer.confirmed` is false, confirm with them before redrawing
+  the tree (`decision-resume`).
 - **The tree carries the decision**: on the claim it changes, a box with the decision's number, the
   question, the options with the recommendation marked, and « à trancher dans Décisions ». Push the
   spec again when an answer lands: the box shows the answer, and the tree is redrawn when the answer

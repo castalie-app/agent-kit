@@ -322,3 +322,16 @@ with ids of your workspace.
 This one is filed on the brief that owns the scheduled task. Where the workspace knows
 `scheduled_task_run`, file it on the run instead; where `decisions`/`robot_resume` is `on`, a robot
 can play the resume: `resume_mode` `robot_prompt` with a `resume_prompt_md` in place of the state.
+
+## On a plan, and after the answer
+
+- **A decision about a plan names its point.** `plan_point` ("2.1", 40 characters at most) is the
+  point of the subject's plan the answer changes; it shows on the sheet. Each option may carry its
+  picture (`exhibit_md`: a Mermaid block or a few lines of code) and what it removes from the plan
+  (`removes_md`: "point 4 goes"). How a spec places its choices: `plan-tree.md`.
+- **Readers comment before they answer.** `decision_comment` leaves a remark on an option or on a
+  line of `context_md`; `decision_get` returns them in `comments[]`. A comment that asks something
+  is answered with `decision_add_context`, one that changes the sheet with `decision_supersede`.
+- **Read how the answer was given.** `answer.read` says whether the context was opened before the
+  answer. `answer.confirmed` false means a decision that matters was settled on its recommendation
+  without opening it: confirm with the person before acting (`decision-resume`).

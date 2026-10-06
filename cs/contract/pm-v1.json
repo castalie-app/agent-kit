@@ -2947,7 +2947,7 @@
           "name": "options",
           "type": "object[]",
           "required": false,
-          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text."
+          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text. Each option may also carry exhibit_md (the picture that proves it — Markdown with a ```mermaid block or code, at most 8,000 characters, else exhibit_too_long) and removes_md (what it removes from the plan — \"point 4 goes\", at most 500 characters, else option_removes_too_long)."
         },
         {
           "name": "recommendation_md",
@@ -3029,6 +3029,12 @@
           "description": "Which agent is asking: used to route the answer and the reader's questions back."
         },
         {
+          "name": "plan_point",
+          "type": "string",
+          "required": false,
+          "description": "The point of the subject's plan this decision changes, at most 40 characters — \"2.1\". Shown on the sheet. Beyond 40: plan_point_too_long."
+        },
+        {
           "name": "author_kind",
           "type": "string",
           "required": false,
@@ -3058,7 +3064,7 @@
     {
       "name": "decision_get",
       "kind": "read",
-      "description": "Read one decision: the sheet, its options and their effects, the answer and who gave it (answer: option_id, option_title, text_md, effect, channel, adjusted), the resume state you left yourself, the reader's questions (context_asks), and the journal of what happened to it (events).",
+      "description": "Read one decision: the sheet, its options and their effects (with exhibit_md and removes_md), the point of the plan it changes (plan_point), the answer and who gave it, whether the context was opened before answering (answer.read: after_reading | without_opening | read_after_answering | no_context | not_tracked; answer.confirmed false = an important decision whose recommendation was taken without opening the context: confirm with the person before acting), the readers' comments (comments[]), the resume state you left yourself, the reader's questions (context_asks), and the journal of what happened to it (events).",
       "params": [
         {
           "name": "id",
@@ -3069,13 +3075,47 @@
       ],
       "returns": {
         "success": "bool",
-        "decision": "object — with url, options[], answer, resume_state_md, resume_prompt_md, resume_job_state, context_asks[], events[]"
+        "decision": "object — with url, plan_point, context_opened_at, options[] (exhibit_md, removes_md), answer (read, confirmed), comments[] (id, option_id, quote, body_md, author_user_id, date_created), resume_state_md, resume_prompt_md, resume_job_state, context_asks[], events[]"
+      }
+    },
+    {
+      "name": "decision_comment",
+      "kind": "write",
+      "description": "Comment on an option or on a line of a decision's detailed context without settling it — what the sheet's « Commenter » does. The asker reads comments in decision_get. Refused to a viewer, to a service token, and on a decision already settled.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The decision id."
+        },
+        {
+          "name": "body_md",
+          "type": "string",
+          "required": true,
+          "description": "The comment, at most 2000 characters."
+        },
+        {
+          "name": "option_id",
+          "type": "int",
+          "required": false,
+          "description": "The option commented on, from decision_get. Omit for a line of the context or the sheet as a whole."
+        },
+        {
+          "name": "quote",
+          "type": "string",
+          "required": false,
+          "description": "The line of the detailed context commented on, as written there, at most 300 characters."
+        }
+      ],
+      "returns": {
+        "success": "bool"
       }
     },
     {
       "name": "decision_list",
       "kind": "read",
-      "description": "List decisions, ordered as the inbox orders them: failed resumes first, then missed deadlines, then the most work frozen, then the oldest. decision_list(scope=mine, status=pending) IS a person's inbox. Returns rows plus waiting, oldest_days, minutes (what answering every pending one costs) and never_opened.",
+      "description": "List decisions, ordered as the inbox orders them: failed resumes first, then missed deadlines, then the most work frozen, then the oldest. decision_list(scope=mine, status=pending) IS a person's inbox. Returns rows plus waiting, oldest_days, minutes (what answering every pending one costs) and never_opened. Each row carries plan_point and answer_read.",
       "params": [
         {
           "name": "scope",
@@ -3407,7 +3447,7 @@
           "name": "options",
           "type": "object[]",
           "required": false,
-          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text."
+          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text. Each option may also carry exhibit_md (the picture that proves it — Markdown with a ```mermaid block or code, at most 8,000 characters, else exhibit_too_long) and removes_md (what it removes from the plan — \"point 4 goes\", at most 500 characters, else option_removes_too_long)."
         },
         {
           "name": "recommendation_md",
@@ -3487,6 +3527,12 @@
           "type": "string",
           "required": false,
           "description": "Which agent is asking: used to route the answer and the reader's questions back."
+        },
+        {
+          "name": "plan_point",
+          "type": "string",
+          "required": false,
+          "description": "The point of the subject's plan this decision changes, at most 40 characters — \"2.1\". Shown on the sheet. Beyond 40: plan_point_too_long."
         },
         {
           "name": "author_kind",
