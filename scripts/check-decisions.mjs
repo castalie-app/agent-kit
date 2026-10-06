@@ -24,6 +24,7 @@ import {
   decisionServersOf,
   decisionTouchedBy,
   decisionWriteOf,
+  filedOf,
   groupsOf,
   inboxOf,
 } from "../cs/hooks/decisions/inbox.mjs";
@@ -43,11 +44,13 @@ import {
 import { copyObjectiveOf, inboxForObjective, subjectsOf } from "../cs/hooks/decisions/objective.mjs";
 import {
   ageText,
+  cardMarkdown,
   cardTitleMarkdown,
   cardsOf,
   dayText,
   inboxMarkdown,
   metaText,
+  settledNotice,
   sheetMarkdown,
   summaryText,
 } from "../cs/hooks/decisions/render.mjs";
@@ -454,6 +457,45 @@ check("one waiting decision reads in the singular",
     text.startsWith(`**[Objectif : Ten partners a month](https://acme.castalie.app/strategy/5)**\n\n_${APPROXIMATE_TEXT}_`), text.split("\n").slice(0, 3).join(" | "));
   check("the printed inbox of a copy on no objective is that one line",
     inboxMarkdown({ status: "no-objective", workspaces: [] }, { now: NOW }) === NO_OBJECTIVE_TEXT);
+}
+
+// ── The whole card is one press ───────────────────────────────────────────
+{
+  const cards = cardsOf(ready(inboxOf(inboxAnswer)), { now: NOW }).workspaces[0].groups.flatMap((group) => group.cards);
+  const text = cardMarkdown(cards[0]);
+  const url = "https://acme.castalie.app/decisions/81";
+  const links = text.match(/\]\(([^)]+)\)/g) ?? [];
+  check("every line of a card is a link to its decision, so a press anywhere on it opens the sheet",
+    text.split("\n\n").length === 3 && links.length === 3 && links.every((link) => link === `](${url})`), text);
+  check("the card's line keeps its words inside the link",
+    text.includes(`_[autorisation · ~1 min · bloque 1 · avant le 09/10 · il y a 2 j](${url})_`), text);
+  const bare = cardMarkdown({ ...cards[0], url: null });
+  check("a card with no address is the same text, linking nowhere", !bare.includes("](") && bare.includes("Merge and ship it"));
+}
+
+// ── What this session files, and what comes back ─────────────────────────
+{
+  const said = (body) => ({ text: JSON.stringify(body) });
+  check("a filing names its server, its decision and its page",
+    JSON.stringify(filedOf("mcp__castalie__decision_create", said({ success: true, decision_id: 90, url: "https://acme.castalie.app/decisions/90" }))) ===
+      '{"server":"castalie","id":90,"url":"https://acme.castalie.app/decisions/90"}');
+  check("a filing read from a decision record is read the same way",
+    filedOf("mcp__benedic__decision_create", said({ success: true, decision: { id: 7 } }))?.id === 7);
+  check("a refusal, an error, another verb or an unreadable answer files nothing",
+    filedOf("mcp__castalie__decision_create", said({ success: false, error: "title_not_a_question" })) === null &&
+      filedOf("mcp__castalie__decision_create", { text: '{"decision_id":3}', isError: true }) === null &&
+      filedOf("mcp__castalie__decision_answer", said({ success: true, decision_id: 3 })) === null &&
+      filedOf("mcp__castalie__decision_create", { text: "not json" }) === null &&
+      filedOf("mcp__castalie__decision_create", undefined) === null);
+
+  const answered = settledNotice(decisionOf(answeredSheetAnswer));
+  check("a settled decision comes back with the option, the person's words and how to resume",
+    answered.includes("is now answered") && answered.includes("Option chosen: « Merge and ship it »") &&
+      /decision-resume \d+/.test(answered), answered);
+  check("an answer taken without reading the context is confirmed before acting",
+    answered.includes("confirm it with them in this turn before acting"));
+  const cancelled = settledNotice({ ...decisionOf(sheetAnswer), status: "cancelled", answer: null });
+  check("a cancelled decision is read again, never resumed", cancelled.includes("is now cancelled") && cancelled.includes("decision_get(77)"));
 }
 
 if (failed) {

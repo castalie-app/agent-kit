@@ -67,6 +67,10 @@ A reader who asks for more context has not answered yet, and waits on you.
 
 ## <id>
 
+The kit hands a session this id by itself: a decision the session filed and the person has since
+settled is named beside their next prompt (« Castalie: the decision this session filed … is now
+answered »). Resume it here, with that answer.
+
 `decision_get(id)`, then by `status`:
 
 - `pending` — it waits on its addressee. Answer its open context questions as `--context` does,

@@ -8,13 +8,15 @@ import { burstOf } from '../where/writes.mjs'
 import {
   DECISION_READS,
   INBOX_ID,
+  SETTLED_STATUSES,
   decisionServersOf,
   decisionTouchedBy,
   decisionWriteOf,
+  filedOf,
 } from './inbox.mjs'
 import * as Names from './names.mjs'
 import { copyObjectiveOf, inboxForObjective } from './objective.mjs'
-import { cardsOf, inboxMarkdown, sheetMarkdown } from './render.mjs'
+import { cardsOf, inboxMarkdown, settledNotice, sheetMarkdown } from './render.mjs'
 import { cardsView, sheetView, type CardView, type Kit } from './views.jsx'
 
 type Reader = ReturnType<typeof readerOf>
@@ -339,14 +341,86 @@ export function register(on: On, companion: Companion): void {
   }
 
   /** Opens one decision whole: the pane takes the keyboard, and Escape gives it back. */
-  async function openSheet(engine: Host, id: number, server: string) {
+  async function openSheet(engine: Host, id: number, server: string, focus = true) {
     void loadSheet(engine, id, server)
 
-    return engine.openPane({
-      id: Names.SHEET_PANE_ID,
-      title: Names.SHEET_PANE_TITLE(id),
-      focus: true,
-      closeOnEscape: true,
+    const pane = { id: Names.SHEET_PANE_ID, title: Names.SHEET_PANE_TITLE(id), closeOnEscape: true } as const
+
+    return engine.openPane(focus ? { ...pane, focus: true } : pane)
+  }
+
+  // ── What this session filed ─────────────────────────────────────────────
+
+  type Filed = { server: string; id: number; at: number }
+
+  /** The decisions this copy's sessions filed and have not yet been told the outcome of. */
+  async function filedNow(engine: Host): Promise<Filed[]> {
+    const stored = await engine.storeGet(Names.STORE_FILED_KEY(root ?? 'nowhere')).catch(() => undefined)
+    const now = await engine.now()
+
+    return (Array.isArray(stored) ? (stored as Filed[]) : []).filter(
+      entry => Number.isInteger(entry?.id) && typeof entry?.server === 'string' && now - Number(entry.at) < Names.FILED_HORIZON_MS,
+    )
+  }
+
+  async function keepFiled(engine: Host, filed: Filed[]): Promise<void> {
+    await engine.storeSet(Names.STORE_FILED_KEY(root ?? 'nowhere'), filed).catch(() => undefined)
+  }
+
+  /**
+   * A decision this session just filed: the panel opens by itself on its sheet, without a
+   * command, even where the person closed the cards last time — the agent is now waiting on it.
+   * The sheet does not take the keyboard: the turn is still running, and the composer keeps it.
+   */
+  async function openFiled(engine: Host, filed: { server: string; id: number }): Promise<void> {
+    const known = await filedNow(engine)
+    if (!known.some(entry => entry.id === filed.id && entry.server === filed.server)) {
+      await keepFiled(engine, [...known, { ...filed, at: await engine.now() }])
+    }
+
+    if (!isCardsOpen) await openCards(engine)
+    await openSheet(engine, filed.id, filed.server, false)
+  }
+
+  /**
+   * What the model reads beside the person's next prompt: one notice per decision this copy filed
+   * that has since been answered, cancelled or superseded — in the panel's sheet, in Castalie, or
+   * anywhere else. Read fresh, never from the cache; the ones still pending are kept for the next
+   * prompt. A read that fails keeps its decision, and costs this prompt nothing.
+   */
+  async function settledNotices(engine: Host): Promise<string[]> {
+    const filed = await filedNow(engine)
+    if (filed.length === 0) return []
+
+    const known = readerFor(engine)
+    const notices: string[] = []
+    const pending: Filed[] = []
+    for (const entry of filed) {
+      try {
+        await known.forget([known.cacheKeyOf(entry.server, 'decision', entry.id)])
+        const decision = await known.read(entry.server, 'decision', entry.id)
+        if (SETTLED_STATUSES.has(decision.status ?? '')) notices.push(settledNotice(decision))
+        else pending.push(entry)
+      } catch {
+        pending.push(entry)
+      }
+    }
+    await keepFiled(engine, pending)
+    if (notices.length > 0) scheduleRefresh(engine)
+
+    return notices
+  }
+
+  /** The notices, or none once `NOTICE_DEADLINE_MS` has passed: a prompt never waits on them. */
+  function settledNoticesWithin(engine: Host): Promise<string[]> {
+    return new Promise(resolve => {
+      const timer = engine.after(Names.NOTICE_DEADLINE_MS, () => resolve([]))
+      settledNotices(engine)
+        .then(notices => {
+          timer.cancel()
+          resolve(notices)
+        })
+        .catch(() => resolve([]))
     })
   }
 
@@ -430,6 +504,20 @@ export function register(on: On, companion: Companion): void {
 
   // The desktop app and the editor host a session that starts with nothing drawing: the panel
   // binds when their surface joins, and a pane opened before that is seated as it does.
+  /**
+   * A decision this session filed and the person has since settled comes back to the session at
+   * its next prompt, as context the model reads: the answer restarts the work without anyone
+   * having to paste it. Nothing is read while nothing was filed.
+   */
+  on('prompt.submit', async ($, e, next) => {
+    if (host === null) return next(e)
+
+    const notices = await settledNoticesWithin(host)
+    if (notices.length === 0) return next(e)
+
+    return next({ ...e, context: [...(e.context ?? []), ...notices] })
+  }).catch(($, e, next) => next(e))
+
   on('session.attach', async ($, e, next) => {
     const result = await next(e)
     if (host === null) await bind(hostOf($), await $.session.cwd()).catch(() => undefined)
@@ -571,8 +659,12 @@ export function register(on: On, companion: Companion): void {
   // the engine refuses a second one — so that pane hands them on, through this.
   companion.started = (engine, cwd) => bind(engine, cwd)
 
-  companion.called = (tool, args) => {
-    if (host !== null) burstFor(host).wrote(tool, args)
+  companion.called = (tool, args, said) => {
+    if (host === null) return
+    burstFor(host).wrote(tool, args)
+
+    const filed = filedOf(tool, said)
+    if (filed !== null) void openFiled(host, filed).catch(error => host?.uiLog(`décisions : ${message(error)}`))
   }
 
   companion.turnEnded = () => {

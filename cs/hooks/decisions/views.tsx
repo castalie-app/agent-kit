@@ -11,7 +11,7 @@ import type { ElementConstructor, RenderElement } from 'claude-code'
 
 import type { BoxProps, ButtonProps, LinkProps, MarkdownProps, TextProps } from 'claude-code'
 
-import { cardTitleMarkdown } from './render.mjs'
+import { cardMarkdown } from './render.mjs'
 import {
   ALL_IN_CASTALIE_TEXT,
   BACK_TEXT,
@@ -80,9 +80,9 @@ function markdownOf(kit: Kit, key: string, text: string, onLink?: { hrefs: strin
 /**
  * The cards pane: the inbox's figures, then a group per agent, then a framed card per decision.
  *
- * A card opens whole three ways, whichever the surface offers: its title (a link the pane takes
- * over where the surface reports clicks), its « voir en grand » button, and the digit that button
- * carries while the pane holds the keyboard.
+ * A card opens whole three ways, whichever the surface offers: a press anywhere on its text (every
+ * line is a link the pane takes over where the surface reports clicks), its « voir en grand »
+ * button, and the digit that button carries while the pane holds the keyboard.
  *
  * @param kit the elements `$.ui.resolve(e)` handed out
  * @param panel what `cardsOf` answered
@@ -91,28 +91,44 @@ function markdownOf(kit: Kit, key: string, text: string, onLink?: { hrefs: strin
 export function cardsView(kit: Kit, panel: PanelView, on: CardsHandlers): RenderElement {
   const { Box, Text, Button, Link } = kit
 
+  // The whole card is one markdown block whose every line links to the decision: a press anywhere
+  // on its text opens the sheet, and the frame lights under the pointer, so the card reads as one
+  // control. Where the surface draws no `Markdown`, the same lines are text and the button opens.
   const card = (view: CardView) => {
-    const title =
-      view.url === null
-        ? markdownOf(kit, `title-${view.key}`, cardTitleMarkdown(view))
-        : markdownOf(kit, `title-${view.key}`, cardTitleMarkdown(view), {
-            hrefs: [view.url],
-            press: () => on.open(view),
-          })
+    const body =
+      kit.Markdown === undefined
+        ? [
+            <Text key={`title-${view.key}`} bold wrap="wrap">
+              {view.title}
+            </Text>,
+            view.meta === '' ? null : (
+              <Text key={`meta-${view.key}`} dimColor wrap="wrap">
+                {view.meta}
+              </Text>
+            ),
+            view.recommended === null ? null : (
+              <Text key={`rec-${view.key}`} wrap="wrap">
+                {`${RECOMMENDED_MARK} ${view.recommended}`}
+              </Text>
+            ),
+          ]
+        : view.url === null
+          ? markdownOf(kit, `card-${view.key}`, cardMarkdown(view))
+          : markdownOf(kit, `card-${view.key}`, cardMarkdown(view), {
+              hrefs: [view.url],
+              press: () => on.open(view),
+            })
 
     return (
-      <Box key={view.key} flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
-        {title}
-        {view.meta === '' ? null : (
-          <Text key={`meta-${view.key}`} dimColor wrap="wrap">
-            {view.meta}
-          </Text>
-        )}
-        {view.recommended === null ? null : (
-          <Text key={`rec-${view.key}`} wrap="wrap">
-            {`${RECOMMENDED_MARK} ${view.recommended}`}
-          </Text>
-        )}
+      <Box
+        key={view.key}
+        flexDirection="column"
+        borderStyle="round"
+        borderDimColor
+        paddingX={1}
+        hover={{ borderColor: 'blue', borderDimColor: false }}
+      >
+        {body}
         <Button
           key={`open-${view.key}`}
           plain

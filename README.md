@@ -339,13 +339,24 @@ The inbox comes in the order the server ranks it; a
 group is `asked_by_agent`, else the person who asked, else the former arbitration queue, and groups
 follow their most urgent card. `●` marks a card never opened, `★` the recommended option.
 
-**A card opens whole.** Its title, its « voir en grand », or its digit once the panel holds the
-keyboard opens `decision_get(id)` in a pane of its own: why you, the summary, every option with
+**A card opens whole, at once.** A click anywhere on its text (every line of a card is a link
+the pane takes over, and its frame lights under the pointer), its « voir en grand », or its digit
+once the panel holds the keyboard opens `decision_get(id)` in a pane of its own: why you, the summary, every option with
 its risk, cost, effect, what it gives up, what it removes and its exhibit (a Mermaid block stays
 a diagram), the recommendation, what waits, what goes on meanwhile, the context, the readers'
 comments and questions, and the answer once there is one. Escape or « ← cartes » closes it, and
 « ouvrir dans Castalie » opens the decision's own page, where you answer it. `/cs:decisions-panel 42`
 opens decision 42 the same way. The resume state an agent left itself is never shown.
+
+**A decision this session files opens by itself.** When `decision_create` answers, the panel
+opens on that decision's sheet without a command, even where the cards were closed, and without
+taking the keyboard from the composer. The shared conventions have an agent waiting on a person
+on a tracked item file its « J'ai besoin de vous » that way too, so the question is on screen and
+in Castalie. **And the answer comes back:** the decisions a copy filed are kept in the plugin's
+store; at the person's next prompt each one settled since (answered in the panel's page, in
+Castalie, anywhere) is handed to the model beside the prompt, with the option, the person's
+words and `decision-resume <id>` to pick the work up. Nothing is read while nothing was filed,
+and the prompt never waits more than four seconds on it.
 
 It reads through the workspace's own MCP connection, with the strategy pane's reader — the same
 cache in the plugin's store, the same deadline, the same spelling per server — and writes nothing.

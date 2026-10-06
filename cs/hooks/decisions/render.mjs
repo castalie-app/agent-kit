@@ -379,3 +379,48 @@ export function sheetMarkdown(decision, view) {
 
   return lines.join("\n").trim();
 }
+
+/** A line of a card as a link to its page, so a press anywhere on its text opens the card. */
+const linkedLine = (text, url) => (url === null ? text : `[${linkText(text)}](${url})`);
+
+/**
+ * The whole card as ONE markdown block: the title, the line under it and the recommended option.
+ * Every line is a link to the decision's page, so a press anywhere on the card's text opens it
+ * whole — the pane takes the press where the surface reports clicks — and not only its title.
+ *
+ * @param {CardView} card
+ * @returns {string}
+ */
+export function cardMarkdown(card) {
+  const lines = [cardTitleMarkdown(card)];
+  if (card.meta !== "") lines.push(`_${linkedLine(card.meta, card.url)}_`);
+  if (card.recommended !== null) lines.push(linkedLine(`${RECOMMENDED_MARK} ${card.recommended}`, card.url));
+  return lines.join("\n\n");
+}
+
+/**
+ * What the model reads, beside the person's next prompt, once a decision this session filed has
+ * left the inbox: the answer, in the person's own words where they wrote some, and what to do
+ * with it. Written for the model, so in English, whatever the person's language.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @returns {string}
+ */
+export function settledNotice(decision) {
+  const name = `« ${decision.title ?? `decision ${decision.id}`} » (decision ${decision.id}${decision.url ? `, ${decision.url}` : ""})`;
+  const lines = [`Castalie: the decision this session filed, ${name}, is now ${decision.status ?? "settled"}.`];
+  const answer = decision.answer;
+  if (answer !== null) {
+    if (answer.optionTitle) lines.push(`Option chosen: « ${answer.optionTitle} »${answer.effect ? ` (effect: ${answer.effect})` : ""}.`);
+    if (answer.text) lines.push(`The person's words, which count over the option: ${answer.text}`);
+    if (answer.confirmed === false) {
+      lines.push("They took the recommendation without opening the context: confirm it with them in this turn before acting on it.");
+    }
+  }
+  lines.push(
+    decision.status === "answered"
+      ? `Pick the work back up with this answer as the instruction, as \`decision-resume ${decision.id}\` says, then \`decision_mark_applied\`.`
+      : `Read it with \`decision_get(${decision.id})\` before going on.`,
+  );
+  return lines.join("\n");
+}

@@ -309,3 +309,30 @@ export function decisionTouchedBy(tool, args) {
   if (!match || !match[1] || decisionWriteOf(tool) === null) return null;
   return { server: match[1], decisionId: idOf(fieldOf(args, "id", "decision_id", "decisionId")) };
 }
+
+/**
+ * The decision a `decision_create` of this session filed, from what it answered: its server, its
+ * id and its page. Null for any other call, a refusal, or an answer that names no decision.
+ *
+ * @param {string} tool the tool's full name, `mcp__<server>__<verb>`
+ * @param {{ text?: string, isError?: boolean } | undefined} said what the call answered
+ * @returns {{ server: string, id: number, url: string | null } | null}
+ */
+export function filedOf(tool, said) {
+  const match = /^mcp__(.+?)__decision_create$/.exec(String(tool ?? ""));
+  if (!match || !match[1] || !said || said.isError === true || typeof said.text !== "string") return null;
+  let body;
+  try {
+    body = JSON.parse(said.text);
+  } catch {
+    return null;
+  }
+  if (!body || typeof body !== "object" || body.success === false) return null;
+  const record = fieldOf(body, "decision", "Decision");
+  const id = idOf(fieldOf(body, "decision_id", "DecisionId", "id", "Id") ?? fieldOf(record, "id", "Id"));
+  if (id === null) return null;
+  return { server: match[1], id, url: textOf(fieldOf(body, "url", "Url") ?? fieldOf(record, "url", "Url")) };
+}
+
+/** The statuses a filed decision has left the inbox for: its asker has something to read. */
+export const SETTLED_STATUSES = new Set(["answered", "applied", "cancelled", "superseded"]);

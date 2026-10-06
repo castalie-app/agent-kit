@@ -78,12 +78,18 @@ export type Host = {
  * hook them itself: this pane's hooks hand them on, each call wrapped so the other pane's
  * failure never becomes this one's.
  */
+/** What a settled tool call answered: the text the model read, and whether it was an error. */
+export type Said = { text?: string; isError?: boolean }
+
 export type Companion = {
   /** `session.start`, in an interactive session that draws: the host this pane bound. */
   started: (engine: Host, cwd: string) => Promise<void>
 
-  /** `tool.call`, once the call settled: the tool's full name and its own arguments. */
-  called: (tool: string, args: Record<string, unknown>) => void
+  /**
+   * `tool.call`, once the call settled: the tool's full name, its own arguments, and what it
+   * answered as the model read it — absent where the call was refused or threw.
+   */
+  called: (tool: string, args: Record<string, unknown>, said?: Said) => void
 
   /** `turn.complete`. */
   turnEnded: () => void

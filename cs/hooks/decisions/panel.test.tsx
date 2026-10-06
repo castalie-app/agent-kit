@@ -180,8 +180,12 @@ test('the inbox is drawn as cards per agent, and a card opens whole, on the term
     expect(await cards.find({ key: 'caveat' })).toBeUndefined()
     expect(await cards.find({ type: 'Text', text: 'bug-fix' })).toBeDefined()
     expect(await cards.find({ type: 'Text', text: 'feature-implement' })).toBeDefined()
-    expect(await cards.find({ key: 'title-castalie:81', text: /Merge the VAT fix/ })).toBeDefined()
-    expect(await cards.find({ type: 'Text', text: /Merge and ship it/ })).toBeDefined()
+    // The whole card is one block, every line a link to the decision: its title, its line, its
+    // recommended option.
+    const whole = await cards.find({ key: 'card-castalie:81' })
+    expect(whole?.text).toMatch(/Merge the VAT fix/)
+    expect(whole?.text).toMatch(/_\[autorisation · ~1 min.*\]\(https:\/\/acme\.castalie\.app\/decisions\/81\)_/)
+    expect(whole?.text).toMatch(/\[★ Merge and ship it\]\(https:\/\/acme\.castalie\.app\/decisions\/81\)/)
     expect((await cards.find({ key: 'open-castalie:81' }))?.props.hotkey).toBe('1')
 
     await cards.press({ key: 'open-castalie:77' })
@@ -209,7 +213,7 @@ test('the inbox is drawn as cards per agent, and a card opens whole, on the term
   }
 })
 
-test('a card title pressed as a link opens the sheet instead of the browser', async ($, on) => {
+test('a press anywhere on a card opens its sheet at once, instead of the browser', async ($, on) => {
   const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
   mock.store(on)
 
@@ -237,10 +241,18 @@ test('a card title pressed as a link opens the sheet instead of the browser', as
     requestId: 'cs-decisions',
     props: PANE_PROPS('Décisions'),
   })
-  await cards.press({ key: 'title-castalie:77', link: { href: 'https://acme.castalie.app/decisions/77' } as never })
+  await cards.press({ key: 'card-castalie:77', link: { href: 'https://acme.castalie.app/decisions/77' } as never })
   await clock.advance(200)
 
   expect(opened.at(-1)).toBe('cs-decision')
+  const sheet = await $.ui.mount({
+    plugin: 'cs',
+    surface: 'terminal',
+    component: 'Pane',
+    requestId: 'cs-decision',
+    props: PANE_PROPS('Décision n° 77'),
+  })
+  expect((await sheet.find({ key: 'sheet-77' }))?.text).toMatch(/Pourquoi vous/)
 })
 
 test('a session the desktop app hosts binds when the desktop attaches, and a headless one never reads', async ($, on) => {
@@ -355,4 +367,100 @@ test('a server that ignores objective_id is filtered here, on what the copy know
   expect(text).toMatch(/_filtre approximatif : ce serveur ne filtre pas encore par objectif_/)
   expect(text).toMatch(/Merge the VAT fix/)
   expect(text).not.toMatch(/Which phone number/)
+})
+
+test('a decision this session files opens the panel on its sheet, unasked, even after the person closed it', async ($, on) => {
+  const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
+  mock.store(on, { 'decisions/open': false })
+
+  const opened: { id: string; focus?: boolean }[] = []
+  on('tool.list', () => ({
+    value: [
+      { name: 'mcp__castalie__decision_list', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_get', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_create', description: '', isMcp: true },
+    ],
+  }) as never)
+  workspaceOf(on)
+  on('command.list', () => ({ value: [{ name: 'cs:decisions-panel' }, { name: 'cs:okr-panel' }] }) as never)
+  on('session.cwd', () => ({ value: 'C:/repo' }))
+  on('session.surfaces', () => ({ value: ['terminal'] as const }))
+  on('ui.open', ($, e) => {
+    opened.push({ id: e.id, focus: (e as { focus?: boolean }).focus })
+
+    return { value: { isPlaced: true } } as never
+  })
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.log', () => ({ value: undefined }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('tool.call', () => ({
+    result: { content: [{ type: 'text', text: '{"success":true,"decision_id":77}' }] },
+    text: JSON.stringify({ success: true, decision_id: 77, url: 'https://acme.castalie.app/decisions/77' }),
+  }) as never)
+
+  await $.session.start({ cwd: 'C:/repo', surface: 'terminal', isInteractive: true })
+  await clock.advance(2_000)
+  expect(opened.some(pane => pane.id === 'cs-decisions')).toBe(false)
+
+  await $.tool.call({ tool: 'mcp__castalie__decision_create', title: 'Which phone number goes to the partner portals?' } as never)
+  await clock.advance(200)
+
+  expect(opened.map(pane => pane.id)).toContain('cs-decisions')
+  expect(opened.at(-1)).toEqual({ id: 'cs-decision', focus: undefined })
+})
+
+test('a decision this session filed comes back with its answer at the next prompt, once settled', async ($, on) => {
+  const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
+  mock.store(on)
+
+  let status = 'pending'
+  on('tool.list', () => ({ value: [{ name: 'mcp__castalie__decision_list', description: '', isMcp: true }] }) as never)
+  on('fs.exists', ($, e) => ({ value: slashed(e.path) === 'C:/repo/.git' }))
+  on('fs.read', () => {
+    throw new Error('no such file')
+  })
+  on('fs.stat', () => {
+    throw new Error('no such file')
+  })
+  on('mcp.call', ($, e) => {
+    const body =
+      e.tool === 'decision_get'
+        ? {
+            ...SHEET,
+            decision: {
+              ...SHEET.decision,
+              status,
+              answer: status === 'answered' ? { option_title: 'A relay number, always', effect: 'continue', text_md: 'Relay, but only for Northwind.' } : null,
+            },
+          }
+        : INBOX
+
+    return { value: { content: [{ type: 'text', text: JSON.stringify(body) }] } } as never
+  })
+  on('command.list', () => ({ value: [{ name: 'cs:decisions-panel' }, { name: 'cs:okr-panel' }] }) as never)
+  on('session.cwd', () => ({ value: 'C:/repo' }))
+  on('session.surfaces', () => ({ value: ['terminal'] as const }))
+  on('ui.open', () => ({ value: { isPlaced: true } }) as never)
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.log', () => ({ value: undefined }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('tool.call', () => ({ result: {}, text: '{"success":true,"decision_id":77}' }) as never)
+  on('prompt.submit', ($, e) => ({ text: e.text, context: e.context }))
+
+  await $.session.start({ cwd: 'C:/repo', surface: 'terminal', isInteractive: true })
+  await clock.advance(2_000)
+  await $.tool.call({ tool: 'mcp__castalie__decision_create', title: 'Which phone number?' } as never)
+  await clock.advance(200)
+
+  const before = await $.prompt.submit({ text: 'où en est-on ?', wait: false } as never)
+  expect(before.context ?? []).toHaveLength(0)
+
+  status = 'answered'
+  const after = await $.prompt.submit({ text: "c'est tranché", wait: false } as never)
+  expect(after.context?.join('\n')).toMatch(/is now answered/)
+  expect(after.context?.join('\n')).toMatch(/Relay, but only for Northwind\./)
+  expect(after.context?.join('\n')).toMatch(/decision-resume 77/)
+
+  const again = await $.prompt.submit({ text: 'et ensuite ?', wait: false } as never)
+  expect(again.context ?? []).toHaveLength(0)
 })

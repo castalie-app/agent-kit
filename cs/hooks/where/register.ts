@@ -1,6 +1,6 @@
 import type { On, RenderSurface, ToolInfo } from 'claude-code'
 
-import { NO_COMPANION, type Companion, type Host } from './host'
+import { NO_COMPANION, type Companion, type Host, type Said } from './host'
 import * as Names from './names.mjs'
 import { dockRows, inlineRows } from './render.mjs'
 import { payloadOf, readerOf, serverOf, serversOf } from './reader.mjs'
@@ -514,8 +514,14 @@ export function register(on: On, also: Companion = NO_COMPANION) {
   })
 
   on('tool.call', async ($, e, next) => {
+    // What the call answered, as the model read it: the other pane opens a decision this session
+    // just filed by the id its answer carries. Absent where the call was refused or threw.
+    let said: Said | undefined
     try {
-      return await next(e)
+      const result = await next(e)
+      if (result.deny === undefined) said = { text: result.text, isError: result.isError === true }
+
+      return result
     } finally {
       // The tool's own arguments are spread beside `tool` on the event, and the verb's rule
       // reads them by name. A read arms nothing: the copy's own file is re-read at the end
@@ -535,7 +541,7 @@ export function register(on: On, also: Companion = NO_COMPANION) {
       }
 
       try {
-        also.called(String(e.tool), e as unknown as Record<string, unknown>)
+        also.called(String(e.tool), e as unknown as Record<string, unknown>, said)
       } catch (error) {
         host?.uiLog(`décisions : ${error instanceof Error ? error.message : String(error)}`)
       }

@@ -8,15 +8,16 @@ description: Show or hide, beside the transcript, the decisions waiting for you 
 `/cs:decisions-panel` opens the panel named « Décisions » next to the conversation, and run again it
 closes it. `/cs:decisions-panel 42` opens decision 42 whole. The choice to keep the panel open is
 remembered across sessions of this machine, and the panel opens by itself in a new session where
-decisions wait, unless it was closed.
+decisions wait, unless it was closed. When this session files a decision (`decision_create`), the
+panel opens by itself on that decision's sheet, closed or not.
 
 What it draws: the part of your inbox that belongs to the objective this working copy works on —
 `decision_list(scope=mine, status=pending, objective_id=<it>)` — under a header that names that
 objective, as cards, grouped by the agent that asked (`asked_by_agent`; else the person who asked; else the former arbitration queue),
 groups and cards in the order the inbox ranks them. A card carries the question, why a person is
 asked, the reading time, what waits on it, its deadline, how long it has waited, and the
-recommended option. Clicking the title, pressing « voir en grand », or its digit (1 to 9) once the
-panel holds the keyboard opens the whole sheet in a pane of its own: why you, the summary, every
+recommended option. A click anywhere on a card's text, « voir en grand », or its digit (1 to 9) once
+the panel holds the keyboard opens the whole sheet in a pane of its own, at once: why you, the summary, every
 option with its risk, cost, effect, what it gives up, what it removes and its exhibit, the
 recommendation, what waits, what goes on meanwhile, the context, the readers' comments and
 questions, and the answer once there is one. Escape closes it; the cards stay.
@@ -26,6 +27,10 @@ the latest spec or brief of `.cs/work.json` serves. A copy on no objective gets 
 card, never the whole inbox. A server that does not echo `objective_id` in its answer did not
 filter: the panel then keeps the decisions on the briefs, specs and phases it knows under the
 objective, and says the filter is approximate.
+
+A decision this session filed comes back once it is settled, wherever it was answered: at the
+person's next prompt, the model reads the answer beside it (the option, the person's words, and
+`decision-resume <id>` to pick the work up).
 
 It reads through the workspace's own MCP server and writes nothing. You answer a decision on its
 page in Castalie — every card and sheet links to it — or by saying the answer in the conversation.

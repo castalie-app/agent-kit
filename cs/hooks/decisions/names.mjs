@@ -30,6 +30,18 @@ export const COMMAND_DESCRIPTION =
 /** Where the person's own open/close choice is remembered, across sessions of this machine. */
 export const STORE_OPEN_KEY = "decisions/open";
 
+/**
+ * Where the decisions this copy's sessions filed wait to be told back, once settled. Scoped to the
+ * working copy: one server alias names a different workspace in each repository.
+ */
+export const STORE_FILED_KEY = (root) => `decisions/filed/${root}`;
+
+/** A filed decision nobody settled within this long is no longer watched for. */
+export const FILED_HORIZON_MS = 7 * 86_400_000;
+
+/** What reading the filed decisions may add to a prompt's start; past it, the prompt goes as typed. */
+export const NOTICE_DEADLINE_MS = 4_000;
+
 /** Where a drawing that failed leaves its stack, for the next session to be asked about. */
 export const STORE_DRAW_ERROR_KEY = "decisions/last-draw-error";
 
