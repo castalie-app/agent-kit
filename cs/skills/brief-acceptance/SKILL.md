@@ -43,6 +43,12 @@ it and closes the brief in one call. What the server cannot do is the replay —
    datum you cannot reach is `NotApplicable` with that reason, never a guessed `Pass`. **Anything you
    create to replay (a ticket, an account, a record) is removed in the same turn** and named in the
    report.
+   **A criterion that fails is sorted before it is called a gap**, as `bug-bash` sorts a finding: a
+   key or a service only your environment lacks, seed data, or a capture that misread the screen
+   (a link that opened a new tab, an image still loading) is not a gap in what was delivered. Say
+   which, and replay where that cause is absent. **A criterion seen passing on screen leaves its
+   replay behind** when the repository has an end-to-end harness: the Given, the When and the Then
+   written as a test there, so the next change that breaks it is caught before a customer sees it.
 4. **Judge each gap, without a threshold.** What is missing gets finished when finishing it is in
    proportion to the need. When finishing would build far more than the gap is worth, or when the
    ground contradicts the brief (the story no longer makes sense, the criterion is wrong), do not code

@@ -74,6 +74,11 @@ repairs what the trace showed, which is where the error surfaced and rarely wher
 Write the reproduction down as you get it: the exact input, the exact path, the exact wrong
 output. That sentence becomes the acceptance test later, so write it as one.
 
+**A reproduction test proves the bug only when it fails on the assertion that encodes it.** A
+failure for another reason (an element not found, a timeout, a sign-in that did not hold) says the
+test is wrong, not that the bug is there: fix the test first. A test that passes says the bug did
+not reproduce. A ticket filed by `bug-bash` already carries such a test: start from it.
+
 **Before you spend a day on it, ask whether it is already fixed.** Search the merged pull requests
 that touch the failing path, and read the one the ticket already links to. **A merge is not a
 deployment**: a fix sitting on the default branch and not yet on the build the reporter used

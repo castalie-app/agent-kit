@@ -428,6 +428,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `site` | For a leader who is not a technician, the company's first project: two new home pages built in parallel from a four-question interview (« Sublimer » inside the current brand, « Réinventer » free to rework it), plain HTML and LESS with a three.js hero, each refined by a contrarian review and published free with GitHub Pages in about fifteen minutes; then the chosen one is iterated, and put on the company's own domain only on the leader's explicit yes. |
 | `workflows` | See and change what the skills may do on your behalf — and what your administrator decided for everyone. |
 | `bug-fix` | A bug from report to pull request: reproduce first, fix the cause, prove it on the user's own path, leave a follow-up check. |
+| `bug-bash` | Hunt bugs on a running app before its users do: five to ten explorers at once, one area and one posture each (or one goal, for a quick sweep), every finding sorted against the source and proved by a test that fails for the reason reported; only the proved ones become tickets. |
 | `report` | Receive a bug report or improvement request from an agent, find or create its ticket, and return the link. |
 | `acceptance` | Sit in front of the running product and fire remarks: each is queued the instant it lands, then coded one at a time in the order received — one commit per remark, a single PR. |
 | `strategy` | Explore your objectives tree (read-only) and map work to the objective it serves. |
