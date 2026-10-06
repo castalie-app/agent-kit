@@ -40,6 +40,7 @@ Reports are **written in the user's language**, in full sentences readable by a 
 <status> — PR <link>. Spec: <Castalie link>.
 Phases (all ✅): <P1 … · P2 … · …>
 Acceptance: <N/M tests passed>.
+Tests added: <G gated · O out-of-gate | no out-of-gate location declared by the host>.
 Follow-up: <next check date · title | none>.
 
 👁️ <live link>      ← last line; omit entirely if there is no user-facing page

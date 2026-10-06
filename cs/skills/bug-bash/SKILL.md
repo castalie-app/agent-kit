@@ -111,7 +111,8 @@ One sub-agent per area, with its three to five candidates. For each one:
    reproduce: reject the finding and say so.
 
 A reproduction test stays **out of the suite that gates merges** until its bug is fixed (an
-exclusion tag, or left uncommitted). Turned green by the fix, it stays as the regression test.
+exclusion tag, or left uncommitted). Turned green by the fix, it becomes the regression test and
+lands where the placement rule of `${CLAUDE_PLUGIN_ROOT}/instructions/acceptance-criteria.md` puts it.
 
 ## 7. File only what was proved
 

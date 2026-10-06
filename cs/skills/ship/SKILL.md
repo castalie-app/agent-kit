@@ -22,7 +22,8 @@ executed evidence before PR ready, using the repository's QA process when it has
 do not create a spec or a second test suite for an unlinked change. Give the review panel the case
 expectations and test references alongside the diff, so it can challenge missing or weakened coverage.
 After review fixes, verify the affected cases on the delivered commit. An unverified required case
-prevents PR ready; report local-only coverage separately from actual CI selection. Keep the detailed
+prevents PR ready; report local-only coverage separately from actual CI selection, and check that each
+added test sits where the convention's placement rule puts it. Keep the detailed
 reconciliation in QA/PR evidence and update the linked phase's coverage cells — which no screen
 displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-content.md` says it renders.
 

@@ -205,7 +205,10 @@ Two proofs, both required:
 - **A regression test** observed failing before the change and passing after, or the justified
   alternative for a change that does not warrant an automated test. Reuse the evidence from step 4;
   do not revert solely to repeat it. A resumed fix without red evidence follows the shared convention's
-  baseline replay. Confirm the delivered commit and actual CI selection before claiming durable coverage.
+  baseline replay. It lands by the shared convention's placement rule: one that reproduces a
+  production bug stays in the gated suite; one for a defect production never showed goes to the
+  host's out-of-gate location unless another criterion keeps it gated. Confirm the delivered commit
+  and actual selection before claiming durable coverage.
 - **The user's own path**, replayed. Same input, same screen, same query — the reproduction from
   step 1, now producing the right answer. This is what "verified" means; a green suite is not it.
 
@@ -259,7 +262,8 @@ Four lines, business first:
 1. **What was broken**, in the words of someone who suffered it — not the exception name.
 2. **What it turned out to be**: the nature you settled, and for a real defect the cause, the
    layer it lived in, and the change that brought it in.
-3. **What proves it is fixed**: the test that went red then green, and the replayed path.
+3. **What proves it is fixed**: the test that went red then green and where it landed (gate or
+   out-of-gate location, or none declared by the host), and the replayed path.
 4. **The pull-request link**, and the follow-up check you left behind.
 
 A refused ticket hands back the same four lines with the verdict in place of the fix: the nature

@@ -53,8 +53,9 @@ watchdog never fires — ideal.
    - Read `${CLAUDE_PLUGIN_ROOT}/instructions/acceptance-criteria.md` and the phase's
      `validationCriterionMd`. Fill missing legacy cases before the relevant code and reuse exact
      existing coverage. Implement **one case at a time: relevant failing test → code → passing tests**,
-     using the convention's proportional alternatives and resume rules. Follow the repo's own coding
-     conventions. Cut PRs at natural seams; a small spec is a single PR.
+     using the convention's proportional alternatives and resume rules; each added test lands where
+     its placement rule puts it (gated suite or the host's out-of-gate location). Follow the repo's
+     own coding conventions. Cut PRs at natural seams; a small spec is a single PR.
    - Persist test references and observed evidence in the phase's coverage cells through
      `mcp__castalie__feature_spec_update_phase(phaseId, validationCriterionMd=...)`, preserving expected outcomes.
      No screen displays that field: a screenshot or a diagram a person must see goes where

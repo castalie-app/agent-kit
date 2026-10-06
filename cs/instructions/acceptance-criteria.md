@@ -3,7 +3,8 @@
 Every spec defines the expected behavior before coding and how the assistant verifies delivery.
 CI runs the tests that exist; it does not establish that the expected cases are covered.
 The phase cases below guide implementation. Acceptance tests remain the final walkthrough of the
-running product. Referenced by `feature-spec`, `feature-implement`, `ship`, `feature-followup`.
+running product. Referenced by `feature-spec`, `feature-implement`, `ship`, `feature-followup`,
+`bug-fix`, `bug-bash`.
 
 ## Cases to cover — in each phase
 
@@ -25,10 +26,12 @@ which may need several tests. Test source stays in Git and execution artifacts i
 only descriptions and references travel to Castalie, never source code or a copied test body.
 
 Prefer fast deterministic tests for calculations, permissions, transitions, deduplication and
-retries. Use integration tests for real database or service contracts, and journeys for critical
-interactions. For LLM work, separate deterministic contract tests from answer-quality evaluations.
-For wording, spacing or instruction-only changes, name the appropriate check and why another
-automated test adds no value; do not manufacture tests or bypass the repository's existing gates.
+retries. A unit test never waits wall-clock time: a delay, timeout, back-off or schedule goes through
+a clock the code receives (in .NET, `TimeProvider`, with `FakeTimeProvider` in the test), and the
+test advances that clock. Use integration tests for real database or service contracts, and
+journeys for critical interactions. For LLM work, separate deterministic contract tests from
+answer-quality evaluations. For wording, spacing or instruction-only changes, name the appropriate
+check and why another automated test adds no value; do not manufacture tests or bypass the repository's existing gates.
 A separate test-preparation phase needs a concrete harness or fixture dependency. Do not write all
 executable tests for the entire spec up front or freeze internal design to accommodate them.
 
@@ -53,20 +56,40 @@ executable tests for the entire spec up front or freeze internal design to accom
    computed outputs into assertions to obtain green. Trace an agreed requirement change with its
    reason before adapting the case.
 
+## Where a delivery-proof test lands
+
+A test added to prove a delivery — a case's red→green test, or a bug fix's regression test — is
+written and run red→green as above wherever it lands. It joins the gated suite (the tests a merge
+waits on) only when it:
+
+1. reproduces a production bug;
+2. guards money, access or security, data integrity, or a contract with a partner; or
+3. has failed at least once beyond its own red step — in a gate, a local run or a scheduled run.
+   The session that sees that failure promotes the test into the gate, in the change that fixes it.
+
+Every other added test goes to the host's out-of-gate test location, which runs on a schedule and
+never in a gate. The host declares that location (folder, tag or category, and its schedule) in the
+local rules it hands the skill (`${CLAUDE_PLUGIN_ROOT}/instructions/host-instructions.md`). A host
+that declares none keeps every added test where it puts tests today, and the delivery report says
+no out-of-gate location is declared. A test already in the suite stays where it is.
+
+Record each added test's placement and the criterion that decided it in the case's
+**Coverage / evidence** cell.
+
 ## Reconcile planned and executed coverage
 
 Before a phase is Done and before PR ready, compare each required case with an actually executed
 test or justified alternative. Reuse existing tests and add only missing coverage. A green global
 suite cannot substitute for an unverified case; keep that gap explicit and do not report completion.
-An added regression test protecting delivered behavior is intended as durable coverage: verify that
-the repository's CI selects it and fix selection if necessary. Report a justified one-off check or
-a locally passing but excluded test separately; neither proves CI protection. If CI is not available,
-record that limitation rather than claiming a gate ran.
+An added test is durable coverage in the suite its placement names: verify that the gate selects a
+gated test and the host's scheduled run selects an out-of-gate one, and fix selection if necessary.
+Report a justified one-off check or a locally passing but unselected test separately; neither proves
+protection. If CI is not available, record that limitation rather than claiming a gate ran.
 
 Update the phase's **Coverage / evidence** cells, preserving the criterion and expected outcomes.
 Keep the detailed reconciliation with local QA/PR evidence: case id, test reference or alternative,
-executed result, verified commit and CI selection. Mark cases first discovered in QA so later review
-can distinguish early coverage from late rework. An acceptance status is not a CI result. Existing
+executed result, verified commit, placement and CI selection. Mark cases first discovered in QA so
+later review can distinguish early coverage from late rework. An acceptance status is not a CI result. Existing
 reviews, running-product walkthroughs and production follow-ups still apply.
 
 Acceptance tests are stored on the spec via `feature_spec_add_acceptance_test` (kind `visual` or
