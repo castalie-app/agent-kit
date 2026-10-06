@@ -1,6 +1,6 @@
 {
   "name": "cs",
-  "version": "1.40.0",
+  "version": "1.40.1",
   "description": "Castalie project-management kit, invoked as /cs:<skill>: read the strategy, briefs and specs you manage in Castalie, then plan, implement and ship inside your own repository. Castalie never sees your code.",
   "author": {
     "name": "Castalie"
