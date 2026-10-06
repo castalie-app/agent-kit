@@ -74,6 +74,20 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    `already_completed` answer means the session closed the run itself: the normal case.
 7. **A log line per run** on the workstation: slot, run, task, start, end, exit code, cost.
 
+## How to name and describe the task
+
+The list and the task's page are read by people who never saw the prompt. They must understand the
+task from its title and its description alone.
+
+- **The title says what the task does, as an action, in a few words.** « Vérifier et relancer les
+  traitements de la nuit », not « Vérification de la nuit » nor « Application des décisions de
+  modèles ». Short, but explicit: a reader who does not know the project knows what it changes.
+- **The description reads alone.** When it runs, what it looks at, what it does by itself, what it
+  leaves to a person and where, and what it produces. No reference to a spec, a ticket, an internal
+  code or a skill name: those belong in the prompt, for the agent.
+- **Write it for the person who owns the workspace**, in the workspace's language, in short
+  sentences.
+
 ## How to write the prompt
 
 The prompt is short; the procedure lives in your repository, where it is reviewed and versioned.
