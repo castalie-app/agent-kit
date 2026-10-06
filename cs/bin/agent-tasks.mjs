@@ -11,7 +11,7 @@
 // `instructions/agent-tasks.md`; `--dry-run` prints exactly the payload.
 //
 //   cs agent-tasks report    [--endpoint <url>] [--match <glob>]... [--always-on] [--repo <dir>] [--dry-run]
-//   cs agent-tasks install   [--endpoint <url>] [--match <glob>]... [--always-on] [--repo <dir>] [--every <minutes>]
+//   cs agent-tasks install   [--endpoint <url>] [--match <glob>]... [--always-on] [--elevated] [--repo <dir>] [--every <minutes>]
 //   cs agent-tasks uninstall
 //
 // WHICH TASKS. A task is the workspace's when its action or its working directory sits in a working
@@ -380,7 +380,7 @@ function xmlEscape(value) {
 }
 
 /** The Task Scheduler definition: every N minutes from now on, no window, five minutes at most. */
-export function taskXml({ identity, every, command, argument, workingDirectory, description, start }) {
+export function taskXml({ identity, every, command, argument, workingDirectory, description, start, elevated = false }) {
   return `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo><Description>${xmlEscape(description)}</Description></RegistrationInfo>
@@ -395,7 +395,7 @@ export function taskXml({ identity, every, command, argument, workingDirectory, 
     <Principal id="Author">
       <UserId>${xmlEscape(identity)}</UserId>
       <LogonType>InteractiveToken</LogonType>
-      <RunLevel>LeastPrivilege</RunLevel>
+      <RunLevel>${elevated ? "HighestAvailable" : "LeastPrivilege"}</RunLevel>
     </Principal>
   </Principals>
   <Settings>
@@ -446,11 +446,15 @@ async function cmdInstall(args) {
   // Registered from an XML through schtasks, not with Register-ScheduledTask: that cmdlet answers
   // "access denied" unelevated on some profiles, where schtasks registers a current-user task fine.
   // The token's own name: an SSH session sets USERDOMAIN to the workgroup, which the scheduler cannot map.
-  const identity = execFileSync("whoami.exe", { encoding: "utf8", windowsHide: true }).trim();
+  // By SID: an Entra-joined profile's account name (AzureAD\name) does not always map back in the
+  // scheduler, and a Unix `whoami` earlier on the PATH answers in its own spelling.
+  const whoami = join(process.env.SystemRoot || "C:\\Windows", "System32", "whoami.exe");
+  const identity = execFileSync(whoami, ["/user", "/fo", "csv", "/nh"], { encoding: "utf8", windowsHide: true })
+    .trim().split(",").pop().replace(/"/g, "");
   const now = new Date(Date.now() + 60_000);
   const pad = (n) => String(n).padStart(2, "0");
   const start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`;
-  const xml = taskXml({ identity, every, command: "conhost.exe", argument, workingDirectory: repo, description, start });
+  const xml = taskXml({ identity, every, command: "conhost.exe", argument, workingDirectory: repo, description, start, elevated: args.elevated === true });
   const file = join(tmpdir(), `cs-agent-tasks-${process.pid}.xml`);
   try {
     writeFileSync(file, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, "utf16le")]));
@@ -474,12 +478,14 @@ function cmdUninstall(args) {
 const HELP = `cs agent-tasks — declare this workstation's agent tasks to Castalie
 
   cs agent-tasks report     [--endpoint <url>] [--match <glob>]... [--always-on] [--repo <dir>] [--dry-run]
-  cs agent-tasks install    [--endpoint <url>] [--match <glob>]... [--always-on] [--repo <dir>] [--every <minutes>]
+  cs agent-tasks install    [--endpoint <url>] [--match <glob>]... [--always-on] [--elevated] [--repo <dir>] [--every <minutes>]
   cs agent-tasks uninstall  [--task-name <name>]
 
 A task is reported when its action or working directory sits in a working copy of the repository
 (--repo, default: here, with all its worktrees), or when its name matches a --match pattern.
 --always-on: this machine runs day and night (a robot); Castalie calls it silent when reports stop.
+--elevated: run with the account's highest rights, to read tasks another account owns (SYSTEM);
+  install it from an elevated shell.
 Token: CASTALIE_TOKEN, .cs/config.json, or the one Claude Code stored when /mcp signed in.`;
 
 export async function runCli(argv) {

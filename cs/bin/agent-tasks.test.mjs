@@ -132,3 +132,16 @@ const hidden = (script) => ({
 }
 
 console.log("agent-tasks: all checks passed");
+
+// ── the task definition ──
+{
+  const { taskXml } = await import("./agent-tasks.mjs");
+  const base = { identity: "S-1-5-21-1", every: 15, command: "conhost.exe", argument: "--headless \"a & b\"", workingDirectory: "C:\r", description: "<d>", start: "2026-10-06T16:00:00" };
+  const plain = taskXml(base);
+  assert.ok(plain.includes("<RunLevel>LeastPrivilege</RunLevel>"));
+  assert.ok(plain.includes("<Interval>PT15M</Interval>"));
+  assert.ok(plain.includes("--headless &quot;a &amp; b&quot;"), "the argument line is escaped");
+  assert.ok(taskXml({ ...base, elevated: true }).includes("<RunLevel>HighestAvailable</RunLevel>"));
+}
+
+console.log("agent-tasks: task definition checks passed");

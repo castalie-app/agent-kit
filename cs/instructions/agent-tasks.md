@@ -36,6 +36,8 @@ node <plugin>/bin/cs.mjs agent-tasks install --endpoint https://<workspace>.cast
   always-on machine shows silent — on a machine nobody opens Claude on, set `CASTALIE_TOKEN`.
 - The task runs in the account's interactive session (no password stored): a machine with nobody
   logged on does not report, which is what « silent » then says.
+- `--elevated` (from an elevated shell) runs it with the account's highest rights: a task another
+  account owns (`SYSTEM`) is invisible to a filtered token, and is then reported too.
 
 ## What leaves the machine, and what never does
 
