@@ -437,7 +437,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `okr-key-result` | Give an objective its one key result, read off a report that tracks the metric over time: a report of your workspace, or the address of one elsewhere. The target is proposed from the data and confirmed by you; a key result with no report is refused. |
 | `feature-single-deliverable` | One deliverable, one pull request: brief, single story and one-phase spec in a single gesture, then the implementation loop to "PR ready". |
 | `feature-brief` | Frame a business need into a brief — problem, vision, user stories, success criteria. |
-| `feature-spec` | Turn a brief into a technical spec — explore your codebase, design, phases, risks, acceptance tests. |
+| `feature-spec` | Turn a brief into a technical spec — explore your codebase, design, phases, risks, acceptance tests. Its summary is a tree of claims read in a minute, and the choices that are yours land in your « Décisions » inbox, on the point they change. |
 | `feature-implement` | Implement a spec autonomously in your repo, phase by phase, ending at "PR ready". |
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |

@@ -62,11 +62,20 @@ synced by the CLI.
    `mcp__castalie__feature_spec_create(featureBriefId=<briefId>, title, scope, category, initialEstimateHours?)`
    → capture `spec_id`. Write the body via `cs content pull feature-spec <spec_id>`, edit the buffer
    (fields `executive`, `problem`, `solution`), `cs content push feature-spec <spec_id>`. **The
-   executive summary opens on a picture of the change** whenever one says it faster than prose — a
-   before/after, the new flow, the screen as it will look — then a few sentences around it. It is the
-   one field every reader opens, and the place a person decides whether the change is the right one;
-   a summary that is only prose is the exception, kept for a change no picture clarifies. Pick the
-   tool from *Showing, not only telling* below; `problem` and `solution` draw what they need too.
+   executive summary is the plan tree** (`${CLAUDE_PLUGIN_ROOT}/instructions/plan-tree.md`): one
+   page of claims a person reads closed in a minute (what someone can now do or see), opens one
+   level at a time (how, then where), each claim proved by one exhibit, then at most three
+   sentences. It is the one field every reader opens, and the place a person decides whether the
+   change is the right one. `problem` and `solution` draw what they need too, from *Showing, not
+   only telling* below.
+4b. **Put the person's choices where they will answer them.** Each fork that changes what someone
+   can do or see (a level-1 claim) is a decision on the spec, filed with `decision_create` as
+   `plan-tree.md` says: two to five per spec, the recommended option being the one the tree draws,
+   each option saying what it does to the tree, the claim it changes named on the sheet. They land
+   in the person's « Décisions » inbox, beside every other decision of the workspace. Then write
+   each decision's number into its box on the tree and push the body again. A fork only the code
+   feels is yours: decide it, and write the option you rejected in `solution`. When an answer
+   lands, apply it to the tree and the phases, `decision_mark_applied`, and push again.
 5. **Phases.** One `mcp__castalie__feature_spec_add_phase(specId, title, objectiveMd, actionPlanMd,
    validationCriterionMd, estimateHours)` per phase — cut at natural seams (layers, page sets,
    independent modules), each a coherent unit an implementer can finish and verify. Store its observable
@@ -153,7 +162,8 @@ the next step.
 - **Check case completeness before handoff.** Each phase has concrete expected outcomes, suitable
   verification and existing tests considered; a green CI alone is never its completion criterion.
 - **Acceptance tests describe *how to check*, not code.** URLs, commands, queries.
-- **A summary that could be drawn is drawn.** Prose alone is the exception, not the default.
+- **The summary is a tree of claims, not prose.** Read its level-1 claims aloud: they tell the whole change.
+- **A choice that is the person's is a decision in Castalie**, never a question left in the body or in a chat.
 - **What a person must see lives in a displayed field.** Never file it only in the plan or the criterion.
 
 ## Hand back

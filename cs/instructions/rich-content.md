@@ -87,3 +87,5 @@ most), then reference the returned attachment id from any body:
 
 Use it for a screenshot of the running product — the one kind of evidence neither Mermaid nor
 an illustration can fake.
+
+A spec's `executive` field holds a plan tree: its form and its page are in `plan-tree.md`.
