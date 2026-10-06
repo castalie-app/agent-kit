@@ -156,7 +156,7 @@
     {
       "name": "workspace_practices_get",
       "kind": "read",
-      "description": "The address of the company's shared practices space on GitHub (https://github.com/<owner>/<repository>), as the workspace's owner recorded it, or null when none is recorded. Any member reads it: it is what lets a newcomer's Claude install the company's practices without asking anyone for the address.",
+      "description": "The address of the company's shared practices space — a git repository Castalie hosts for the workspace (https://<workspace>/git/<name>.git) or one on github.com, gitlab.com, bitbucket.org or codeberg.org — as the workspace's owner recorded it, or null when none is recorded. Any member reads it: it is what lets a newcomer's Claude install the company's practices without asking anyone for the address.",
       "params": [],
       "returns": {
         "success": "bool",
@@ -166,18 +166,129 @@
     {
       "name": "workspace_practices_set",
       "kind": "write",
-      "description": "Record the address of the company's shared practices space on GitHub, so every member's Claude finds it with workspace_practices_get. Owner only, the same rule as the workspace settings screen: a member gets owner_only. An address that is not an https address on github.com is refused (not_github_https); the server normalises it to https://github.com/<path>, and an empty string clears the recorded address.",
+      "description": "Record the address of the company's shared practices space, so every member's Claude finds it with workspace_practices_get. Owner only, the same rule as /admin/bonnes-pratiques: a member gets owner_only. Accepted: a repository Castalie hosts for THIS workspace, stored as https://<workspace>/git/<name>.git, or an https address on github.com, gitlab.com, bitbucket.org or codeberg.org naming at least an organisation. Anything else is refused with unsupported_host and allowed_hosts; an empty string clears the recorded address.",
       "params": [
         {
           "name": "url",
           "type": "string",
           "required": true,
-          "description": "https://github.com/<owner>/<repository>; an empty string clears it."
+          "description": "https://<workspace>/git/<name>.git (from git_repository_list) or https://github.com/<owner>/<repository>; an empty string clears it."
         }
       ],
       "returns": {
         "success": "bool",
         "url": "string|null",
+        "error": "string",
+        "allowed_hosts": "string[]"
+      }
+    },
+    {
+      "name": "git_repository_list",
+      "kind": "read",
+      "description": "The workspace's git repositories hosted by Castalie, no GitHub account needed: each {name, clone_url, head, head_id, branch_count, total_bytes, object_count, last_push_at, last_push_by, read_only, moved_to_url, moved_at}. clone_url is https://<workspace>/git/<name>.git — use it as given for git clone, git push and claude plugin marketplace add. A git client authenticates with a password from git_credential_issue. Any active member reads them, the same rule as /admin/depots.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "repositories": "object[]",
+        "limits": "object"
+      }
+    },
+    {
+      "name": "git_repository_create",
+      "kind": "write",
+      "description": "Create an empty git repository hosted by Castalie for the workspace (e.g. bonnes-pratiques, the company's skills marketplace) and return it with its clone_url. Owner or member (a viewer gets forbidden), the same rule as /admin/depots. Refusals: invalid_name, already_exists, too_many_repositories.",
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "1 to 64 lower-case letters, digits, '.', '_' or '-', e.g. bonnes-pratiques; a trailing .git is dropped."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "repository": "object",
+        "error": "string",
+        "message": "string"
+      }
+    },
+    {
+      "name": "git_repository_move_to_github",
+      "kind": "write",
+      "description": "Move one of the workspace's repositories to the company's own GitHub: every branch and tag is pushed to an EMPTY GitHub repository with a token used for this call only and stored nowhere, the refs are read back and compared, then the Castalie repository becomes read-only and, when it was the practices space, workspace_practices_get answers the GitHub address. Owner only (owner_only), the same rule as /admin/depots. Refusals, after which nothing changed: not_found, already_moved, not_github_repository, token_required, empty_repository, remote_not_empty, github_refused_token, github_repository_not_found, github_unreachable, push_failed, verification_failed.",
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Repository name, from git_repository_list."
+        },
+        {
+          "name": "github_url",
+          "type": "string",
+          "required": true,
+          "description": "The empty GitHub repository, https://github.com/<owner>/<repository>."
+        },
+        {
+          "name": "github_token",
+          "type": "string",
+          "required": true,
+          "description": "A GitHub token allowed to write that repository's contents; used once, never stored."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "repository": "object",
+        "error": "string",
+        "message": "string"
+      }
+    },
+    {
+      "name": "git_credential_issue",
+      "kind": "write",
+      "description": "Issue a git password for the CALLER, so git on this machine clones and pushes the workspace's repositories. Returns username, password (shown once, starts with cgit_), host and credential_input — pipe it to `git credential approve` so the machine's credential helper keeps it; never write the password into a file. It opens /git/ of this workspace and nothing else, and what it may do follows the caller's role. Any active member, the same rule as /admin/depots.",
+      "params": [
+        {
+          "name": "label",
+          "type": "string",
+          "required": false,
+          "description": "What the password is for, e.g. the machine's name."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "id": "int",
+        "username": "string",
+        "password": "string",
+        "host": "string",
+        "credential_input": "string"
+      }
+    },
+    {
+      "name": "git_credential_list",
+      "kind": "read",
+      "description": "The caller's own git passwords still in force: id, label, created_at, last_used_at — never their value. The same list as /admin/depots.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "credentials": "object[]"
+      }
+    },
+    {
+      "name": "git_credential_revoke",
+      "kind": "write",
+      "description": "Revoke one of the caller's own git passwords by id; git on that machine is refused from then on. not_found when it is not the caller's or already revoked. The same gesture as /admin/depots.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "Password id, from git_credential_list."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "id": "int",
         "error": "string"
       }
     },

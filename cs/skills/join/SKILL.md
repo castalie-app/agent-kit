@@ -1,12 +1,12 @@
 ---
 name: join
-description: Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their GitHub connection handled end to end, the company's practices installed from the shared space Castalie names, a personal CLAUDE.md that says they are not a technician, their work recorded in their Castalie profile, a first quick win done together, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", right after the prompt of Castalie's public collaborator guide installed the kit, and on the guide's step 3 prompt ("Aide-moi à trouver un tout premier usage de l'IA dans mon travail", "find my first quick win"), which runs the quick win alone. Every technical gesture is done for the person; they are asked only for what they alone can give.
+description: Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their access to the company's shared space handled end to end — in Castalie, with no other account, or on GitHub — the company's practices installed from the space Castalie names, a personal CLAUDE.md that says they are not a technician, their work recorded in their Castalie profile, a first quick win done together, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", right after the prompt of Castalie's public collaborator guide installed the kit, and on the guide's step 3 prompt ("Aide-moi à trouver un tout premier usage de l'IA dans mon travail", "find my first quick win"), which runs the quick win alone. Every technical gesture is done for the person; they are asked only for what they alone can give.
 ---
 
 # join — a collaborator joins the company's AI
 
 The person in front of you is a collaborator, not a technician. Their leader invited them into the
-company's Castalie workspace and into its shared space on GitHub, sent them the link to
+company's Castalie workspace, which usually holds the company's shared practices space too, sent them the link to
 Castalie's public guide, and they pasted its prompt into Claude Desktop. The guide is the same for
 every company: nothing you need is in it, everything you need is in Castalie. Its prompt is
 this one, word for word, and the guide changes only together with this skill:
@@ -76,27 +76,50 @@ Find it, in this order, and stop at the first answer:
 
 1. `mcp__castalie__workspace_practices_get`: the address the leader recorded in Castalie. Use it
    when the verb is in your catalogue and the answer is not null.
-2. The person's personal `CLAUDE.md`, and the project's own, for a `github.com/<owner>/<repository>`
-   address noted as the company's shared space.
-3. The person, once: « Quelle est l'adresse de l'espace commun de votre entreprise sur GitHub ?
-   Votre référent la connaît. »
+2. The person's personal `CLAUDE.md`, and the project's own, for an address noted as the
+   company's shared space.
+3. The person, once: « Quelle est l'adresse de l'espace commun de votre entreprise ? Votre
+   référent la connaît. »
 
 When the verb is not in your catalogue, or answers null, say so in one line (« Castalie ne connaît
 pas encore l'adresse de vos pratiques ») before falling back. A null answer is worth a line to the
 leader too: the hand-back names it, so they record it with `onboard-team`.
 
-## 3. GitHub, end to end
+## 3. The access to the space
 
-**The tools.** `git --version` and `gh --version`. Install what is missing yourself, silently:
+**Which kind of space it is** decides everything here, and the address says it:
+
+- **In Castalie** — `https://<workspace>.castalie.app/git/<name>.git`, on the same workspace as the
+  `castalie` server: no other account, nothing to accept. Go to « In Castalie » below.
+- **On GitHub** — `https://github.com/<owner>/<repository>`: go to « On GitHub » below.
+- **On another forge** (GitLab, Bitbucket, Codeberg): the person signs in there the way their
+  referent says; give them the address and wait for « c'est fait ».
+
+**git, first, for both.** `git --version`. Install it yourself when it is missing, silently:
 `winget install --id Git.Git -e --silent --accept-source-agreements --accept-package-agreements`
-and the same for `GitHub.cli` on Windows; `brew install git gh` on a Mac (without Homebrew,
-download the installer from `https://cli.github.com` and open it for them). A shell opened before
-the install does not see the new command: call it by its full path
-(`C:\Program Files\GitHub CLI\gh.exe`, `C:\Program Files\Git\cmd\git.exe`) for the rest of the
-session.
+on Windows; `xcode-select --install` or `brew install git` on a Mac. A shell opened before the
+install does not see the new command: call it by its full path
+(`C:\Program Files\Git\cmd\git.exe`) for the rest of the session.
+
+### In Castalie
+
+1. `mcp__castalie__git_credential_issue`, with this computer's name as `label`: a git password for
+   this person, which opens their workspace's repositories and nothing else.
+2. Give its `credential_input`, as it is, to `git credential approve` on standard input: the
+   machine's credential helper keeps it. The password never goes into a file, a message or the
+   reply.
+3. `git ls-remote <address>` answers with the space's branches: the access is open. A refusal
+   means the password was not kept — issue a new one; never ask the person for it.
+
+Nothing else: their membership of the workspace is what opens the space.
+
+### On GitHub
+
+**The tool.** `gh --version`; install it the same way when it is missing (`GitHub.cli` with winget,
+`brew install gh`; its full path is `C:\Program Files\GitHub CLI\gh.exe`).
 
 **The account.** `gh auth status`. When nobody is signed in, ask once: « Avez-vous déjà un compte
-GitHub ? »
+GitHub ? » — GitHub, the service where the company keeps its shared practices.
 
 - **No**: open `https://github.com/signup` for them (`start` on Windows, `open` on a Mac), and
   guide one field at a time: their **work address** (the one the invitation went to), a password,
@@ -127,12 +150,15 @@ the access is not open yet; find out why, in this order:
 
 ## 4. The company's practices
 
-**Read how the space packages itself**: its `.claude-plugin/marketplace.json`
-(`gh api repos/<owner>/<repository>/contents/.claude-plugin/marketplace.json -H "Accept:
-application/vnd.github.raw"`) gives the marketplace's name and its plugin; its `README.md` gives
-the referents, the company's skills and how each one shows in the `/` menu.
+**Read how the space packages itself**: its `.claude-plugin/marketplace.json` gives the
+marketplace's name and its plugin; its `README.md` gives the referents, the company's skills and
+how each one shows in the `/` menu. For a space in Castalie or on another forge, clone it into a
+temporary folder (`git clone <address> <folder>`) and read the two files there; for one on GitHub,
+`gh api repos/<owner>/<repository>/contents/.claude-plugin/marketplace.json -H "Accept:
+application/vnd.github.raw"` is enough.
 
-**Install it**: `claude plugin marketplace add <owner>/<repository>`, then
+**Install it**: `claude plugin marketplace add <address>` — the address itself for a space in
+Castalie or on another forge, `<owner>/<repository>` for one on GitHub — then
 `claude plugin install <plugin>@<marketplace>`. When the `claude` command is not on this machine's
 path, the person types the two lines in Claude's input, one at a time: give them each line,
 prefixed with `/plugin`, and wait for each.
@@ -161,7 +187,7 @@ Je ne suis pas technicien. Fais toi-même tout ce qui est technique : installer
 lancer une commande. Ne me demande que ce que je suis seul à pouvoir faire : une réponse, un clic
 sur une page où je dois me connecter. Une question à la fois, en mots simples.
 
-Espace commun de l'entreprise : https://github.com/<owner>/<repository>
+Espace commun de l'entreprise : <address>
 Mon référent : <Prénom Nom, adresse>
 ```
 
@@ -271,6 +297,8 @@ never a company skill of the same name. Two sentences and the line to type:
 - **Never write someone else's profile**: `member_profile_set` records the person in front of you.
 - **Never open a second Castalie workspace**, and never run `connect`'s enrolment: the person was
   invited into the company's existing one.
+- **Never write a git password** anywhere but the machine's credential helper: not in a file, a
+  remote's address, a message or the reply.
 - **Never overwrite** the person's `CLAUDE.md`; add a section.
 - **Never work around a fresh session**: a tool or a skill installed during this session is
   reached by opening a new one, and the person is told so in one sentence.
