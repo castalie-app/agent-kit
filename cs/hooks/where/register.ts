@@ -1,6 +1,6 @@
 import type { On, RenderSurface, ToolInfo } from 'claude-code'
 
-import type { Host } from './host'
+import { NO_COMPANION, type Companion, type Host } from './host'
 import * as Names from './names.mjs'
 import { dockRows, inlineRows } from './render.mjs'
 import { payloadOf, readerOf, serverOf, serversOf } from './reader.mjs'
@@ -29,9 +29,13 @@ const isOnPaneSurface = <E extends Record<'surface', RenderSurface>>(
  * does not exist as far as the run is concerned. Everything else hangs off that bind:
  * with no host, every hook passes straight through.
  *
+ * The events it hooks without a matcher are handed on to `also`, the plugin's other pane: the
+ * engine takes one such hook per event and per plugin.
+ *
  * @param on the engine's registrar
+ * @param also the other pane, told of `session.start`, `tool.call`, `turn.complete` and `/clear`
  */
-export function register(on: On) {
+export function register(on: On, also: Companion = NO_COMPANION) {
   let host: Host | null = null
   let reader: Reader | null = null
   let burst: Burst | null = null
@@ -277,29 +281,29 @@ export function register(on: On) {
   on('session.start', async ($, e, next) => {
     if (e.surface === null || !e.isInteractive) return next(e)
 
-    await bind(
-      {
-        now: () => $.clock.now(),
-        after: (ms, fn) => $.clock.after(ms, fn),
-        every: (ms, fn) => $.clock.every(ms, fn),
-        exists: path => $.fs.exists(path),
-        readFile: path => $.fs.read(path),
-        stat: path => $.fs.stat(path),
-        storeGet: key => $.store.get(key),
-        storeSet: (key, value) => $.store.set(key, value),
-        storeDelete: key => $.store.delete(key),
-        mcpCall: (server, tool, args) => $.mcp.call(server, tool, args),
-        toolList: () => $.tool.list(),
-        cwd: () => $.session.cwd(),
-        invalidate: () => $.ui.invalidate('ui.render'),
-        uiLog: text => $.ui.log(text),
-        openPane: pane => $.ui.open(pane),
-        closePane: pane => $.ui.close(pane),
-        listCommands: () => $.command.list(),
-        registerCommand: spec => $.command.register(spec),
-      },
-      e.cwd,
-    ).catch(() => undefined)
+    const engine: Host = {
+      now: () => $.clock.now(),
+      after: (ms, fn) => $.clock.after(ms, fn),
+      every: (ms, fn) => $.clock.every(ms, fn),
+      exists: path => $.fs.exists(path),
+      readFile: path => $.fs.read(path),
+      stat: path => $.fs.stat(path),
+      storeGet: key => $.store.get(key),
+      storeSet: (key, value) => $.store.set(key, value),
+      storeDelete: key => $.store.delete(key),
+      mcpCall: (server, tool, args) => $.mcp.call(server, tool, args),
+      toolList: () => $.tool.list(),
+      cwd: () => $.session.cwd(),
+      invalidate: () => $.ui.invalidate('ui.render'),
+      uiLog: text => $.ui.log(text),
+      openPane: pane => $.ui.open(pane),
+      closePane: pane => $.ui.close(pane),
+      listCommands: () => $.command.list(),
+      registerCommand: spec => $.command.register(spec),
+    }
+
+    await bind(engine, e.cwd).catch(() => undefined)
+    await also.started(engine, e.cwd).catch(() => undefined)
 
     return next(e)
   })
@@ -482,6 +486,7 @@ export function register(on: On) {
 
   on('command.run', { command: ['clear', 'resume'] }, async ($, e, next) => {
     const result = await next(e)
+    await also.cleared().catch(() => undefined)
 
     if (host !== null) {
       if (isPaneOpen) await closePane(host)
@@ -528,11 +533,23 @@ export function register(on: On) {
           `où j'en suis : ${error instanceof Error ? error.message : String(error)}`,
         )
       }
+
+      try {
+        also.called(String(e.tool), e as unknown as Record<string, unknown>)
+      } catch (error) {
+        host?.uiLog(`décisions : ${error instanceof Error ? error.message : String(error)}`)
+      }
     }
   })
 
   on('turn.complete', ($, e, next) => {
     if (host !== null) void followTheFile(host).catch(() => undefined)
+
+    try {
+      also.turnEnded()
+    } catch {
+      // the other pane's own concern: its failure never ends this turn's hook
+    }
 
     return next(e)
   })

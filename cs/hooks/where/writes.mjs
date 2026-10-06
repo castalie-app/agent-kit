@@ -168,9 +168,12 @@ export function touchedBy(tool, args) {
  *   keysOf: (touched: Touched) => string[],
  *   forget: (keys: string[]) => Promise<void>,
  *   refresh: () => void,
- * }} of
+ *   verbOf?: (tool: string) => unknown,
+ *   touchedOf?: (tool: string, args: Record<string, unknown> | undefined) => any,
+ * }} of `verbOf` and `touchedOf` say which calls are writes and what each one touched —
+ *   `writeVerbOf` and `touchedBy` when left out; the decisions panel hands its own.
  */
-export function burstOf({ after, delayMs, keysOf, forget, refresh }) {
+export function burstOf({ after, delayMs, keysOf, forget, refresh, verbOf = writeVerbOf, touchedOf = touchedBy }) {
   /** @type {{ cancel: () => void } | null} */
   let armed = null;
   /** @type {Promise<void>} */
@@ -186,9 +189,9 @@ export function burstOf({ after, delayMs, keysOf, forget, refresh }) {
      * @returns {boolean}
      */
     wrote(tool, args) {
-      if (writeVerbOf(tool) === null) return false;
+      if (verbOf(tool) === null) return false;
 
-      const touched = touchedBy(tool, args);
+      const touched = touchedOf(tool, args);
       const keys = touched === null ? [] : keysOf(touched);
       // Forgets are queued in the order the writes landed, and the refresh waits for the
       // last of them: a read between a write and its forget would serve the state from

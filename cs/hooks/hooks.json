@@ -1,6 +1,6 @@
 {
-  "description": "Castalie — hold the door on the one file every session pays for, keep the row under the prompt on the work this session took in hand and hand it back to that session alone when it starts again, ask once when a pull request leaves no trace, and once when a merge leaves the working copy on its branch, draw beside the transcript the strategy tree of what this copy has in hand, and put the convention on how a turn ends in force from the first reply.",
-  "modules": ["./where/register.ts"],
+  "description": "Castalie — hold the door on the one file every session pays for, keep the row under the prompt on the work this session took in hand and hand it back to that session alone when it starts again, ask once when a pull request leaves no trace, and once when a merge leaves the working copy on its branch, draw beside the transcript the strategy tree of what this copy has in hand and the decisions waiting for the person as cards, one group per agent, and put the convention on how a turn ends in force from the first reply.",
+  "modules": ["./register.ts"],
   "hooks": {
     "PreToolUse": [
       {

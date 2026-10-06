@@ -289,11 +289,74 @@ The API that surface is written against may change between two releases of Claud
 without notice. The declarations it is typed against are versioned in the repository
 (`types/claude-code.d.ts`, whose first line names the Claude Code version that wrote them),
 and CI recompiles the module on every push, so a change is found here rather than on a
-workstation. Regenerate them with `/plugin-types ./types` after an update. `claude plugin
-test` does not exist in 2.1.272, so the `claude-code/testing` kit is out of reach: every
-decision the pane makes therefore lives in plain functions, replayed by
-`node scripts/check-where.mjs` against both workspaces' real answers, and what is left in
-`register.ts` is the binding itself.
+workstation. Regenerate them after an update: the engine writes them beside any mod it loads, and
+the `plugin-authoring` skill names the file. Every decision the pane makes lives in plain
+functions, replayed by `node scripts/check-where.mjs` against both workspaces' real answers, and
+what is left in `register.ts` is the binding itself.
+
+## The decisions panel
+
+An agent that needs a person files a decision (`decision_create`); it is not pushed at you. It
+waits in your inbox, and `/cs:decisions-panel` shows that inbox beside the conversation, as cards, one
+group per agent that asked:
+
+```
+Décisions                                      r: rafraîchir
+12 en attente · ~41 min pour tout trancher · 4 jamais ouvertes
+
+bug-fix · 2
+╭────────────────────────────────────────────╮
+│ ● Merge the VAT fix on credit notes and    │
+│ ship it to production?                     │
+│ autorisation · ~1 min · bloque 1 · avant   │
+│ le 09/10 · il y a 2 j                      │
+│ ★ Merge and ship it                        │
+│ 1: voir en grand                           │
+╰────────────────────────────────────────────╯
+feature-implement · 1
+╭────────────────────────────────────────────╮
+│ Which phone number goes to the partner     │
+│ portals in the listing export?             │
+│ savoir privé · ~7 min · bloque 3 · point   │
+│ 3.2 · contexte demandé · il y a 4 j        │
+│ ★ A relay number, always                   │
+│ 3: voir en grand                           │
+╰────────────────────────────────────────────╯
+```
+
+The inbox is `decision_list(scope=mine, status=pending)`, in the order the server ranks it; a
+group is `asked_by_agent`, else the person who asked, else the former arbitration queue, and groups
+follow their most urgent card. `●` marks a card never opened, `★` the recommended option.
+
+**A card opens whole.** Its title, its « voir en grand », or its digit once the panel holds the
+keyboard opens `decision_get(id)` in a pane of its own: why you, the summary, every option with
+its risk, cost, effect, what it gives up, what it removes and its exhibit (a Mermaid block stays
+a diagram), the recommendation, what waits, what goes on meanwhile, the context, the readers'
+comments and questions, and the answer once there is one. Escape or « ← cartes » closes it, and
+« ouvrir dans Castalie » opens the decision's own page, where you answer it. `/cs:decisions-panel 42`
+opens decision 42 the same way. The resume state an agent left itself is never shown.
+
+It reads through the workspace's own MCP connection, with the strategy pane's reader — the same
+cache in the plugin's store, the same deadline, the same spelling per server — and writes nothing.
+Nothing polls: the inbox is read when the panel opens, after a `decision_*` write of this session,
+at the end of a turn and when the panel is drawn, each only once the last read is thirty seconds
+old, and on « rafraîchir ». The cache is scoped to the working copy, because one server alias
+names a different workspace in each repository. It opens by itself in a session where decisions
+wait, unless you closed it last time.
+
+**Terminal and desktop.** The panel is a pane of the plugin's hooks module, and the same module
+draws it on both surfaces, each with its own elements: the terminal docks it beside the
+transcript (inline above the prompt outside fullscreen), and the desktop app seats it in its own
+pane. A terminal session binds at its start; a session the desktop app hosts starts with nothing
+drawing, so the panel binds when the desktop attaches. Where the attached surface seats no pane
+(an older desktop), `/cs:decisions-panel` prints the same cards, or the same sheet, as its output; and
+where the hooks module did not load at all, the skill's own text has the model draw them in the
+reply. Both need `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`, as the strategy pane does.
+
+What it decides is played by `node scripts/check-decisions.mjs` (also `npm run check:decisions`,
+and in CI). What reaches the engine — the bind, the panes, a press, on the terminal's element table
+and the desktop's — is `cs/hooks/decisions/panel.test.tsx`, played by `claude plugin test cs` on a
+workstation: it proves the trees validate on both surfaces, not how either one paints them.
 
 Nothing has to be typed as a command. **A plain sentence starts the first pass** — "démarre
 l'onboarding Castalie", "start the Castalie onboarding", "où en sont nos pratiques ?", "fais le point" — and
@@ -441,6 +504,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `feature-implement` | Implement a spec autonomously in your repo, phase by phase, ending at "PR ready". |
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
+| `decisions-panel` | Your decisions inbox beside the conversation, as cards grouped by the agent that asked, each opening whole in a pane of its own — in the terminal and in the desktop app. Reads only. |
 | `decision-resume` | Pick the work back up once a person has answered an agent's decision: play a robot's resume, answer a reader who asked for more context, or resume one decision by its id. Never answers in a person's place. |
 | `scheduled-run` | Play one run of a scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
@@ -591,7 +655,9 @@ The output is gitignored. It is a build artifact, not a second copy to maintain.
 cs/
   .claude-plugin/plugin.json      # plugin manifest
   hooks/hooks.json                # the guard on CLAUDE.md, the work in hand (taken on a write, stamped with its session, sorted by owner at every start), two Stop hooks (work recorded, slot given back), and the pane's module
+  hooks/register.ts               # the plugin's one hooks module: it registers both panes
   hooks/where/                    # the pane beside the transcript: its rows are pure functions, its bind is register.ts
+  hooks/decisions/                # the decisions panel: cards and sheet are pure functions, panel.test.tsx plays the engine
   statusline/bg-statusline.mjs    # the row under the prompt: objective > brief > spec, for this copy's own work
   agents/<name>.md                # the 6 subject agents the first pass dispatches
   skills/<name>/SKILL.md          # the skills, one folder each
@@ -602,12 +668,13 @@ cs/
   bin/build-codex.mjs             # the Codex projection, shipped so a client can run `cs codex`
   bin/playwright-mcp.mjs          # starts the browser the plugin declares in .mcp.json, on every OS
   .mcp.json                       # the plugin's own MCP servers: playwright and playwright-attach
-types/claude-code.d.ts            # the function-hooks API, as /plugin-types wrote it; the pane is typed against this
+types/claude-code.d.ts            # the function-hooks API, as the engine wrote it; both panes are typed against this
 tsconfig.json                     # what CI recompiles on every push
 package.json                      # makes the repo itself runnable: npx -y github:castalie-app/agent-kit
 setup/setup.mjs                   # the one-command setup
 scripts/build-codex.mjs           # the projection with this repository's defaults — a caller, not a copy
 scripts/check-where.mjs           # the pane's rows, replayed on both workspaces' real answers
+scripts/check-decisions.mjs       # the decisions panel's cards and sheet, replayed on answers in the server's shape
 ```
 
 ## License

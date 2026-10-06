@@ -374,17 +374,24 @@ export const SPELLINGS = ["contract", "castalie"];
  *   after?: (ms: number, fn: () => void) => { cancel: () => void },
  *   ttlMs?: number,
  *   deadlineMs?: number,
- * }} host
+ *   reads?: Record<string, { tool: string, args: Record<string, (id: number) => Record<string, unknown>>, read: (answer: any, id: number, wanted?: number) => any }>,
+ *   scope?: string,
+ * }} host `reads` is the table of verbs this reader knows, `READS` when left out: the decisions
+ *   panel hands its own and keeps the transport, the cache and the spelling settled per server.
+ *   `scope` prefixes every cache key, for a read whose answer depends on more than the server's
+ *   alias — one alias names a different workspace in each repository.
  */
 export function readerOf(host) {
   const ttl = host.ttlMs ?? NAMES_TTL_MS;
   const deadline = host.deadlineMs ?? READ_DEADLINE_MS;
+  const reads = host.reads ?? READS;
   /** @type {Map<string, Promise<any>>} */
   const inFlight = new Map();
   /** @type {Map<string, string>} */
   const spellings = new Map();
 
-  const cacheKeyOf = (server, kind, id) => `names/${server}/${kind}/${id}`;
+  const cacheKeyOf = (server, kind, id) =>
+    host.scope ? `names/${host.scope}/${server}/${kind}/${id}` : `names/${server}/${kind}/${id}`;
   const spellingKeyOf = (server) => `spelling/${server}`;
 
   async function spellingFor(server) {
@@ -422,7 +429,7 @@ export function readerOf(host) {
 
   /** Calls one verb, trying the remembered spelling first and the other once. */
   async function ask(server, kind, id) {
-    const plan = READS[kind];
+    const plan = reads[kind];
     const first = await spellingFor(server);
     const order = [first, ...SPELLINGS.filter((name) => name !== first)];
     let failure = null;
@@ -453,7 +460,7 @@ export function readerOf(host) {
    * @param {number} [wanted] the objective a `children` read is looking for
    */
   async function read(server, kind, id, wanted) {
-    if (!READS[kind]) throw new Error(`lecture inconnue : ${kind}`);
+    if (!reads[kind]) throw new Error(`lecture inconnue : ${kind}`);
     const key = cacheKeyOf(server, kind, wanted ?? id);
     const pending = inFlight.get(key);
     if (pending) return pending;
@@ -464,7 +471,7 @@ export function readerOf(host) {
       if (cached && typeof cached === "object" && at - Number(cached.at) < ttl) return cached.value;
 
       const answer = await ask(server, kind, id);
-      const value = READS[kind].read(answer, id, wanted);
+      const value = reads[kind].read(answer, id, wanted);
       await host.storeSet(key, { at, value }).catch(() => undefined);
       return value;
     })().finally(() => inFlight.delete(key));

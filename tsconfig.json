@@ -15,5 +15,5 @@
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment"
   },
-  "include": ["types/**/*.d.ts", "cs/hooks/where/**/*"]
+  "include": ["types/**/*.d.ts", "cs/hooks/register.ts", "cs/hooks/where/**/*", "cs/hooks/decisions/**/*"]
 }

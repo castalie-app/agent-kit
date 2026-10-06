@@ -20,6 +20,7 @@
     "check:codex": "node scripts/build-codex.mjs --check",
     "check:statusline": "node scripts/check-statusline.mjs",
     "check:where": "node scripts/check-where.mjs",
+    "check:decisions": "node scripts/check-decisions.mjs",
     "check:types": "npx -y -p typescript@5 tsc -p tsconfig.json"
   }
 }

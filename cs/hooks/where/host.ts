@@ -6,6 +6,7 @@ import type {
   PaneOpenArgs,
   TimerCall,
   ToolInfo,
+  UiOpenResult,
 } from 'claude-code'
 
 /**
@@ -58,8 +59,8 @@ export type Host = {
   /** `$.ui.log`: one debug line under the plugin's name. */
   uiLog: (text: string) => void
 
-  /** `$.ui.open`. */
-  openPane: (pane: PaneOpenArgs) => Promise<void>
+  /** `$.ui.open`: `isPlaced: false` with the reason where the pane waits undrawn. */
+  openPane: (pane: PaneOpenArgs) => Promise<UiOpenResult>
 
   /** `$.ui.close`. */
   closePane: (pane: PaneCloseArgs) => Promise<void>
@@ -69,4 +70,32 @@ export type Host = {
 
   /** `$.command.register`; rejects a name already taken, the plugin's own skill included. */
   registerCommand: (spec: CommandSpec) => Promise<unknown>
+}
+
+/**
+ * What another pane of the plugin asks to be told of the events this pane hooks without a
+ * matcher. The engine takes one such hook per event and per plugin, so the second pane cannot
+ * hook them itself: this pane's hooks hand them on, each call wrapped so the other pane's
+ * failure never becomes this one's.
+ */
+export type Companion = {
+  /** `session.start`, in an interactive session that draws: the host this pane bound. */
+  started: (engine: Host, cwd: string) => Promise<void>
+
+  /** `tool.call`, once the call settled: the tool's full name and its own arguments. */
+  called: (tool: string, args: Record<string, unknown>) => void
+
+  /** `turn.complete`. */
+  turnEnded: () => void
+
+  /** `/clear` or `/resume`, once the engine ran it. */
+  cleared: () => Promise<void>
+}
+
+/** No other pane: what the strategy pane hands on to when registered alone. */
+export const NO_COMPANION: Companion = {
+  started: async () => undefined,
+  called: () => undefined,
+  turnEnded: () => undefined,
+  cleared: async () => undefined,
 }

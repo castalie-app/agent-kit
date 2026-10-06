@@ -58,6 +58,14 @@ jobs:
       - name: Le panneau rejoue ses contrats sur les deux espaces de travail
         run: node scripts/check-where.mjs
 
+      # The decisions panel the same way: its cards, its groups per agent and its whole sheet are
+      # pure functions, replayed on answers in the server's own shape. What reaches the engine
+      # itself — the bind, the panes, a press, on the terminal's table and the desktop's — is
+      # `cs/hooks/decisions/panel.test.tsx`, which `claude plugin test cs` plays on a workstation:
+      # this runner has no Claude Code to play it with.
+      - name: Le panneau des décisions rejoue ses contrats
+        run: npm run check:decisions
+
       # La ligne sous le prompt et le hook qui l'alimente, rejoués ensemble sur un banc
       # d'essai en dossier temporaire : aucun réseau, aucune ligne de développeur touchée.
       # Ces contrats existaient sans être joués nulle part, donc sans rien garantir.
