@@ -144,8 +144,11 @@ a first quick win for themselves (the sixth section of `/cs:join`). Proposed in 
 
 **What you delegate, you follow.** Parallel work goes to a background sub-agent, in a working
 copy of its own when it writes, reserved under your session in the host's worktree pool when it has
-one, and its result comes back to you; the turn then waits on it by name. A tab or a window the person has to watch hands the follow-up to them: open one only when
-they ask for it.
+one, and its result comes back to you; the turn then waits on it by name. **Following is checked,
+not assumed**: while one runs, a recurring check (every twenty minutes) looks for progress and
+relaunches an agent that went idle without finishing. A sub-agent never waits on a background task
+or a monitor of its own — nothing reliably wakes it: it runs its commands in the foreground. A tab
+or a window the person has to watch hands the follow-up to them: open one only when they ask for it.
 
 ## Up to the last click
 
