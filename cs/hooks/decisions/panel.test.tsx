@@ -492,8 +492,8 @@ const APPROVAL = {
 
 /**
  * A session whose sheet of decision `id` is open, on `surface`, and whose workspace answers
- * `decision_answer` with `reply`: what was asked of it, which panes opened, and the sheet drawn
- * again on demand. Where the focus ring goes is not seen here: the test host seats no ring.
+ * `decision_answer` with `reply`: what was asked of it, which panes opened, what was handed to the
+ * session's agent, and the sheet drawn again on demand. Where the focus ring goes is not seen here: the test host seats no ring.
  */
 async function answering(
   $: Parameters<TestBody>[0],
@@ -506,6 +506,7 @@ async function answering(
 
   const answers: Record<string, unknown>[] = []
   const opened: string[] = []
+  const submitted: string[] = []
   on('tool.list', () => ({
     value: [
       { name: 'mcp__castalie__decision_list', description: '', isMcp: true },
@@ -549,6 +550,11 @@ async function answering(
   on('ui.invalidate', () => ({ value: undefined }))
   on('ui.log', () => ({ value: undefined }))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('prompt.submit', ($, e) => {
+    submitted.push(e.text)
+
+    return { text: e.text, context: e.context }
+  })
 
   await $.session.start({ cwd: 'C:/repo', surface, isInteractive: true })
   await clock.advance(2_000)
@@ -574,12 +580,12 @@ async function answering(
     drawn = null
   }
 
-  return { answers, opened, sheet, done }
+  return { answers, opened, submitted, sheet, done }
 }
 
 for (const surface of SURFACES) {
   test(`an option is answered by « Choisir », or by its digit then « Répondre », and the next card opens — ${surface}`, async ($, on) => {
-    const { answers, opened, sheet } = await answering($, on, { id: 77, surface })
+    const { answers, opened, submitted, sheet } = await answering($, on, { id: 77, surface })
 
     const bar = await sheet()
     expect((await bar.find({ key: 'option-302' }))?.props.hotkey).toBe('1')
@@ -589,13 +595,19 @@ for (const surface of SURFACES) {
     await bar.press({ key: 'option-302' })
     const marked = await sheet()
     expect(answers).toHaveLength(0)
+    expect(submitted).toHaveLength(0)
     expect((await marked.find({ key: 'confirm' }))?.props.label).toBe('Répondre « A relay number, always »')
 
     await marked.press({ key: 'confirm' })
     const next = await sheet(81)
     expect(answers.at(-1)).toEqual({ id: 77, option_id: 302, channel: 'click' })
     expect(opened.at(-1)).toBe('cs-decision')
-    expect((await next.find({ key: 'answered' }))?.text).toBe('✓ Réponse enregistrée sur n° 77. 1 à répondre.')
+    expect((await next.find({ key: 'answered' }))?.text).toBe("✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 1 à répondre.")
+    // The agent working in the session gets it at once, as a turn of its own.
+    expect(submitted).toHaveLength(1)
+    expect(submitted[0]).toMatch(/just answered « Which phone number goes to the partner portals\? » \(decision 77/)
+    expect(submitted[0]).toMatch(/Option chosen: « A relay number, always »\./)
+    expect(submitted[0]).toMatch(/decision-resume 77/)
     expect((await next.find({ key: 'sheet-81' }))?.text).toMatch(/Merge the VAT fix/)
 
     // « Choisir » answers at once.
@@ -606,7 +618,7 @@ for (const surface of SURFACES) {
 }
 
 test('typed words with the effect picked are the answer, channel text', async ($, on) => {
-  const { answers, sheet } = await answering($, on, { id: 77 })
+  const { answers, submitted, sheet } = await answering($, on, { id: 77 })
 
   const bar = await sheet()
   expect((await bar.find({ key: 'answer-text' }))?.props.label).toBe('Répondre autrement ou ajuster :')
@@ -615,11 +627,13 @@ test('typed words with the effect picked are the answer, channel text', async ($
   await sheet()
 
   expect(answers).toEqual([{ id: 77, text_md: 'Ask Northwind first.', effect: 'take_over', channel: 'text' }])
+  expect(submitted.join('\n')).toMatch(/Their answer, in their words: Ask Northwind first\./)
+  expect(submitted.join('\n')).toMatch(/Effect: take_over — the person takes the subject over/)
 })
 
 test("a refusal shows the server's fix, keeps the typed words, and the card stays", async ($, on) => {
   const fix = 'A service token files decisions and plays resumes; it never answers one.'
-  const { answers, opened, sheet } = await answering($, on, {
+  const { answers, opened, submitted, sheet } = await answering($, on, {
     id: 77,
     reply: () => ({ success: false, error: 'answer_requires_person', fix }),
   })
@@ -634,6 +648,7 @@ test("a refusal shows the server's fix, keeps the typed words, and the card stay
   expect((await refused.find({ key: 'answer-text' }))?.props.value).toBe('Relay, but only for Northwind.')
   expect((await refused.find({ key: 'sheet-77' }))?.text).toMatch(/Which phone number/)
   expect(opened.filter(pane => pane === 'cs-decision')).toHaveLength(1)
+  expect(submitted).toHaveLength(0)
 })
 
 test("an approval's « Non » without its reason is refused before anything leaves, and leaves with it", async ($, on) => {

@@ -181,7 +181,16 @@ export const NO_FIELD_TEXT = "Pour répondre par écrit, ouvrez la décision dan
 export const REFUSED_TEXT = (fix) => `Réponse refusée par Castalie : ${fix}`;
 export const UNSENT_TEXT = (reason) => `La réponse n'est pas partie : ${reason}`;
 export const ANSWERED_TEXT = (id, left) =>
-  left > 0 ? `✓ Réponse enregistrée sur n° ${id}. ${left} à répondre.` : `✓ Réponse enregistrée sur n° ${id}. Plus rien à répondre sur cet objectif.`;
+  left > 0
+    ? `✓ Réponse enregistrée sur n° ${id} et envoyée à l'agent. ${left} à répondre.`
+    : `✓ Réponse enregistrée sur n° ${id} et envoyée à l'agent. Plus rien à répondre sur cet objectif.`;
+
+/** What the effect of an answer asks of the agent that reads it, in the model's language. */
+export const EFFECT_ORDERS = {
+  continue: "carry on with this answer as the instruction",
+  take_over: "the person takes the subject over: leave it as it stands, say where it is, and do not resume it",
+  close: "the subject closes: do not resume it, and close what you opened for it",
+};
 
 /** What the bar refuses before anything leaves: the server's rules, in the sheet's words. */
 export const LOCAL_REFUSALS = {

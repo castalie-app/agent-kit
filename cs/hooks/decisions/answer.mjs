@@ -13,6 +13,7 @@
 import { groupsOf } from "./inbox.mjs";
 import {
   ALL_EFFECTS,
+  EFFECT_ORDERS,
   APPROVAL_TITLES,
   ARMED_HINT,
   CONFIRM_TEXT,
@@ -209,6 +210,30 @@ export function answerOutcomeOf(result) {
     return { ok: false, code, fix: String(fix ?? "refusé").trim() };
   }
   return { ok: true, status: typeof body.status === "string" ? body.status : "answered" };
+}
+
+/**
+ * The message the session's agent reads the moment the person answers in the panel: a turn of its
+ * own, so the agent picks the work up now, not at the person's next prompt. What was chosen, the
+ * person's words, what the effect asks of it, and how to resume. Written for the model, so in
+ * English, whatever the person's language.
+ *
+ * @param {Decision} decision the sheet that was answered
+ * @param {Record<string, unknown>} args what `decision_answer` was asked, and accepted
+ * @returns {string}
+ */
+export function answerMessageOf(decision, args) {
+  const name = `« ${decision.title ?? `decision ${decision.id}`} » (decision ${decision.id}${decision.url ? `, ${decision.url}` : ""})`;
+  const option = decision.options.find((candidate) => candidate.id !== null && candidate.id === args.option_id) ?? null;
+  const text = typeof args.text_md === "string" ? args.text_md : null;
+  const effect = option?.effect ?? (typeof args.effect === "string" ? args.effect : "continue");
+
+  const lines = [`Castalie: the person just answered ${name} in the decisions panel. It is recorded in Castalie.`];
+  if (option !== null) lines.push(`Option chosen: « ${option.title ?? `option ${option.id}`} ».`);
+  if (text !== null) lines.push(option === null ? `Their answer, in their words: ${text}` : `Their words, which count over the option: ${text}`);
+  lines.push(`Effect: ${effect} — ${EFFECT_ORDERS[effect] ?? "act on it as the decision says"}.`);
+  lines.push(`Pick the work back up now, as \`decision-resume ${decision.id}\` says, then \`decision_mark_applied\`.`);
+  return lines.join("\n");
 }
 
 /**

@@ -4,6 +4,7 @@ import type {
   McpToolResult,
   PaneCloseArgs,
   PaneOpenArgs,
+  PromptSubmitResult,
   TimerCall,
   ToolInfo,
   UiOpenResult,
@@ -73,6 +74,9 @@ export type Host = {
 
   /** `$.ui.focus`: the ring of one of the plugin's panes onto an element it drew there. */
   focus: (requestId: string, key: string) => Promise<unknown>
+
+  /** `$.prompt.submit`: a turn of its own for the session's model, once the session is idle. */
+  submitPrompt: (text: string) => Promise<PromptSubmitResult>
 }
 
 /**

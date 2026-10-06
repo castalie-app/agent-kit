@@ -7,6 +7,7 @@ import { heldOf, workFileOf, workingCopyRootOf } from '../where/work-file.mjs'
 import { burstOf } from '../where/writes.mjs'
 import {
   answerBarOf,
+  answerMessageOf,
   answerOutcomeOf,
   answerRequestOf,
   emptyDraft,
@@ -78,6 +79,7 @@ function hostOf($: EngineInterface): Host {
     listCommands: () => $.command.list(),
     registerCommand: spec => $.command.register(spec),
     focus: (requestId, key) => $.ui.focus({ requestId, key }),
+    submitPrompt: text => $.prompt.submit({ text }),
   }
 }
 
@@ -390,8 +392,9 @@ export function register(on: On, companion: Companion): void {
   /**
    * Sends the answer the draft holds — or the option pressed now — through `decision_answer` on
    * the decision's own workspace, with the session's credentials. The server holds the rights:
-   * a refusal is drawn as its `fix`, and the typed words stay in the field. Accepted, the card
-   * leaves the list at once and the next one opens, the count of what is left above it.
+   * a refusal is drawn as its `fix`, and the typed words stay in the field. Accepted, the answer
+   * goes to the session's agent at once (`handBack`), the card leaves the list and the next one
+   * opens, the count of what is left above it.
    */
   async function answer(engine: Host, chosen: { optionId?: number | null } = {}): Promise<void> {
     const shown = sheet
@@ -422,6 +425,8 @@ export function register(on: On, companion: Companion): void {
       return
     }
 
+    void handBack(engine, server, decision, request.args).catch(error => engine.uiLog(`décisions : ${message(error)}`))
+
     const known = readerFor(engine)
     await known.forget([...inboxKeysOf(known, server), known.cacheKeyOf(server, 'decision', id)]).catch(() => undefined)
     model = { ...model, workspaces: withoutCard(model.workspaces, server, id) }
@@ -435,6 +440,25 @@ export function register(on: On, companion: Companion): void {
       await openSheet(engine, next.id, next.server, true, notice)
     }
     scheduleRefresh(engine, Names.REFRESH_AFTER_WRITE_MS)
+  }
+
+  /**
+   * Hands the answer to the agent working in this session, at once: a prompt of the plugin's own,
+   * which starts a turn now where the session is idle — the agent that filed the decision is
+   * usually waiting on it — and the moment the running turn ends otherwise. The decision leaves
+   * the filed list first, so the next prompt does not carry it twice. Where the prompt does not
+   * enter, it goes back on that list, and the person's next prompt carries it as before.
+   */
+  async function handBack(engine: Host, server: string, decision: Decision, args: Record<string, unknown>): Promise<void> {
+    const filed = await filedNow(engine)
+    await keepFiled(engine, filed.filter(entry => !(entry.id === decision.id && entry.server === server)))
+
+    const entered = await engine.submitPrompt(answerMessageOf(decision, args)).catch((error: unknown) => ({ drop: message(error) }))
+    if (entered.drop === undefined) return
+
+    engine.uiLog(`décisions : la réponse à n° ${decision.id} n'a pas pu être envoyée à l'agent (${entered.drop}) ; elle part avec votre prochain message.`)
+    const kept = await filedNow(engine)
+    await keepFiled(engine, [...kept, { server, id: decision.id, at: await engine.now() }])
   }
 
   /** What the bar of decision `id` runs. */

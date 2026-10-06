@@ -375,8 +375,15 @@ opens decision 42 the same way. The resume state an agent left itself is never s
 It goes out as `decision_answer` on the workspace the decision lives in, with the session's own
 credentials — `channel: "click"` for an option alone, `"text"` once words are typed. The server
 holds the rights: a viewer or a service token is refused there, and the bar draws its `fix` in red
-(« Réponse refusée par Castalie : … ») with your words still in the field. Accepted, the card
-leaves the list at once and the next one opens, under « ✓ Réponse enregistrée sur n° 77. 2 à
+(« Réponse refusée par Castalie : … ») with your words still in the field.
+
+**Accepted, the answer goes to the agent at once.** It is recorded in Castalie, and handed to the
+agent working in this session as a message of the plugin's own (`$.prompt.submit`): the option,
+your words, what the effect asks of it, and `decision-resume <id>`. Where the session is idle — the
+agent that filed the decision is usually waiting on it — that message starts its turn right away;
+while a turn runs, it goes in the moment that turn ends, before anything you type next. Where it
+cannot enter, it goes back on the list the next prompt reads, as before. The card leaves the list
+at once and the next one opens, under « ✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 2 à
 répondre. »; with none left the sheet closes. The mobile app draws no field: there, the options
 answer and the bar points at Castalie for words.
 

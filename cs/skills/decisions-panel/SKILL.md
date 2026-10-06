@@ -40,8 +40,14 @@ the effect picked beside them (the robot carries on, I take it over, close it). 
 « Non » needs its reason, as on the sheet. The answer goes out as `decision_answer` on the
 decision's workspace, with the session's own credentials (`channel` `click` for an option alone,
 `text` once words are typed); a refusal of the server — a viewer, a service token — is shown as its
-`fix`, the words kept. Accepted, the card leaves the list and the next one opens, with what is left
-to answer. The mobile app draws no field: there the options answer, and words go through Castalie.
+`fix`, the words kept. Accepted, the answer is handed at once to the agent working in this
+session, as a message of the plugin's own: idle, the session starts a turn on it right away;
+mid-turn, it goes in when that turn ends. The card leaves the list and the next one opens, with
+what is left to answer.
+
+**When that message reaches you** (« Castalie: the person just answered … in the decisions
+panel »), it is the person's answer, already recorded: pick the work back up on it now, as
+`decision-resume <id>` says, without asking it again. The mobile app draws no field: there the options answer, and words go through Castalie.
 
 It reads through the workspace's own MCP server and writes only the answer the person gives it.
 A decision can also be answered on its page in Castalie — every card and sheet links to it — or

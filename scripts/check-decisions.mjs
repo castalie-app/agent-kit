@@ -16,6 +16,7 @@
 
 import {
   answerBarOf,
+  answerMessageOf,
   answerOutcomeOf,
   answerRequestOf,
   effectsFor,
@@ -606,8 +607,23 @@ check("one waiting decision reads in the singular",
     JSON.stringify({ next, left }));
   const last = { server: "castalie", inbox: { ...before, cards: [before.cards[0]], waiting: 1, total: 1 }, error: null };
   check("with nothing left, nothing opens", nextAfter(withoutCard([last], "castalie", before.cards[0].id)).next === null);
-  check("the line over the next sheet says what is left",
-    ANSWERED_TEXT(77, 2) === "✓ Réponse enregistrée sur n° 77. 2 à répondre." && ANSWERED_TEXT(77, 0).includes("Plus rien à répondre"));
+  check("the line over the next sheet says the agent has it, and what is left",
+    ANSWERED_TEXT(77, 2) === "✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 2 à répondre." &&
+      ANSWERED_TEXT(77, 0).includes("Plus rien à répondre"));
+
+  const chosen = answerMessageOf(pending, { id: 77, option_id: 302, channel: "click" });
+  check("the agent is told the option, its effect, and to resume now",
+    chosen.includes("just answered « Which phone number") && chosen.includes("(decision 77, https://acme.castalie.app/decisions/77)") &&
+      chosen.includes("Option chosen: « A relay number, always ».") && chosen.includes("Effect: continue — carry on") &&
+      chosen.includes("`decision-resume 77`") && !chosen.includes("Their"), chosen);
+  const adjustedMessage = answerMessageOf(pending, { id: 77, option_id: 302, text_md: "Only for Northwind.", channel: "text" });
+  check("the person's words come with the option, and count over it",
+    adjustedMessage.includes("Their words, which count over the option: Only for Northwind."));
+  const takeOver = answerMessageOf(pending, { id: 77, text_md: "I call Northwind myself.", effect: "take_over", channel: "text" });
+  check("words alone are the answer, and a take-over tells the agent not to resume",
+    takeOver.includes("Their answer, in their words: I call Northwind myself.") && !takeOver.includes("Option chosen") &&
+      takeOver.includes("Effect: take_over — the person takes the subject over") && takeOver.includes("do not resume it"));
+  check("the resume state an agent left itself never travels in the message", !chosen.includes("SECRET"));
 }
 
 if (failed) {
