@@ -143,8 +143,8 @@ a first quick win for themselves (the sixth section of `/cs:join`). Proposed in 
 ## Work you hand off
 
 **What you delegate, you follow.** Parallel work goes to a background sub-agent, in a working
-copy of its own when it writes, and its result comes back to you; the turn then waits on it by
-name. A tab or a window the person has to watch hands the follow-up to them: open one only when
+copy of its own when it writes, reserved under your session in the host's worktree pool when it has
+one, and its result comes back to you; the turn then waits on it by name. A tab or a window the person has to watch hands the follow-up to them: open one only when
 they ask for it.
 
 ## Up to the last click
