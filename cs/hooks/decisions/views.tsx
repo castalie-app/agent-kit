@@ -49,6 +49,7 @@ export type CardView = {
 
 export type PanelView = {
   notice: string | null
+  objective: { text: string; url: string | null; caveat: string | null } | null
   workspaces: {
     key: string
     label: string | null
@@ -130,6 +131,26 @@ export function cardsView(kit: Kit, panel: PanelView, on: CardsHandlers): Render
         <Text bold>{CARDS_PANE_TITLE}</Text>
         <Button key="refresh" plain dimColor hotkey="r" label={REFRESH_TEXT} onPress={() => on.refresh()} />
       </Box>
+      {panel.objective === null ? null : (
+        <Box key="objective" flexDirection="column">
+          {panel.objective.url === null ? (
+            <Text key="name" bold wrap="wrap">
+              {panel.objective.text}
+            </Text>
+          ) : (
+            <Link key="name" href={panel.objective.url}>
+              <Text bold wrap="wrap">
+                {panel.objective.text}
+              </Text>
+            </Link>
+          )}
+          {panel.objective.caveat === null ? null : (
+            <Text key="caveat" dimColor italic wrap="wrap">
+              {panel.objective.caveat}
+            </Text>
+          )}
+        </Box>
+      )}
       {panel.notice === null ? null : (
         <Text key="notice" dimColor wrap="wrap">
           {panel.notice}

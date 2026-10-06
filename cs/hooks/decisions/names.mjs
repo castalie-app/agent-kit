@@ -46,6 +46,9 @@ export const READ_DEADLINE_MS = 8_000;
 /** Rows asked for: the inbox's own page. More than this and the panel says how many it left out. */
 export const INBOX_TAKE = 50;
 
+/** Rows asked for when the panel filters the inbox itself: the server's largest page. */
+export const INBOX_FALLBACK_TAKE = 200;
+
 /** A decision write is followed by ONE refresh, this long after the last write of a burst. */
 export const REFRESH_AFTER_WRITE_MS = 1_500;
 
@@ -93,7 +96,11 @@ export const RECOMMENDED_MARK = "★";
 export const UNOPENED_MARK = "●";
 
 export const LOADING_TEXT = "Lecture de la boîte de décisions…";
-export const EMPTY_TEXT = "Aucune décision ne vous attend.";
+export const EMPTY_TEXT = "Aucune décision ne vous attend sur cet objectif.";
+export const NO_OBJECTIVE_TEXT = "Cette copie ne traite aucun objectif : aucune décision à montrer.";
+export const UNREAD_OBJECTIVE_TEXT = (error) => `L'objectif de cette copie n'a pas pu être lu (${error}) : aucune décision à montrer.`;
+export const OBJECTIVE_TEXT = (title, id) => `Objectif : ${title ?? `n° ${id}`}`;
+export const APPROXIMATE_TEXT = "filtre approximatif : ce serveur ne filtre pas encore par objectif";
 export const NO_SERVER_TEXT = "Aucun espace de travail ne sert `decision_list` dans cette session.";
 export const REFRESH_TEXT = "rafraîchir";
 export const OPEN_TEXT = "voir en grand";

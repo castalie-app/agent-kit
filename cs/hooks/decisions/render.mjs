@@ -1,6 +1,6 @@
 // What the decisions panel draws — as plain data, so every word and every cut is checked in node.
 //
-// `cardsOf` answers the cards pane: a header per workspace, a group per agent, a card per
+// `cardsOf` answers the cards pane: the objective the cards are filtered on, a header per workspace, a group per agent, a card per
 // decision with the line that says what it costs to answer. `sheetMarkdown` answers the pane one
 // card opens into: the whole sheet as model-style markdown, drawn by the surface's own `Markdown`
 // as an assistant reply is. `inboxMarkdown` and the sheet are also what the command prints where
@@ -11,17 +11,21 @@
 import { hrefOf } from "../where/render.mjs";
 import { groupsOf } from "./inbox.mjs";
 import {
+  APPROXIMATE_TEXT,
   COMPLEXITIES,
   EFFECTS,
   EMPTY_TEXT,
   HOTKEY_CARDS,
   LOADING_TEXT,
+  NO_OBJECTIVE_TEXT,
   NO_SERVER_TEXT,
+  OBJECTIVE_TEXT,
   REASONS,
   RECOMMENDED_MARK,
   RISKS,
   SHAPES,
   UNOPENED_MARK,
+  UNREAD_OBJECTIVE_TEXT,
 } from "./names.mjs";
 
 const DAY_MS = 86_400_000;
@@ -97,21 +101,45 @@ export function summaryText(inbox) {
 }
 
 /**
- * @typedef {{ server: string, inbox: import("./inbox.mjs").Inbox | null, error: string | null }} Workspace
- * @typedef {{ status: "loading" | "ready" | "no-server", workspaces: Workspace[] }} Model
+ * @typedef {{ server: string, inbox: import("./inbox.mjs").Inbox | null, error: string | null,
+ *   isApproximate?: boolean }} Workspace
+ * @typedef {{ id: number, title: string | null, url: string | null }} Objective
+ * @typedef {{ status: "loading" | "ready" | "no-server" | "no-objective" | "unread-objective",
+ *   objective?: Objective | null, error?: string | null, workspaces: Workspace[] }} Model
  *
  * @typedef {{ key: string, id: number, server: string, hotkey: string | undefined, title: string,
  *   url: string | null, meta: string, recommended: string | null, isUnopened: boolean }} CardView
  * @typedef {{ key: string, label: string, isAgent: boolean, count: number, cards: CardView[] }} GroupView
  * @typedef {{ key: string, label: string | null, summary: string | null, pageUrl: string | null,
  *   notice: string | null, groups: GroupView[], more: number }} WorkspaceView
- * @typedef {{ notice: string | null, workspaces: WorkspaceView[] }} PanelView
+ * @typedef {{ text: string, url: string | null, caveat: string | null }} ObjectiveView
+ * @typedef {{ notice: string | null, objective: ObjectiveView | null, workspaces: WorkspaceView[] }} PanelView
  */
+
+/**
+ * The line that names the objective the cards are filtered on, and says when that filter is the
+ * panel's own approximation rather than the server's.
+ *
+ * @param {Model} model
+ * @returns {ObjectiveView | null}
+ */
+export function objectiveViewOf(model) {
+  const objective = model.objective ?? null;
+  if (objective === null) return null;
+  const isApproximate = model.workspaces.some((workspace) => workspace.isApproximate === true);
+  return {
+    text: OBJECTIVE_TEXT(objective.title, objective.id),
+    url: hrefOf(objective.url),
+    caveat: isApproximate ? APPROXIMATE_TEXT : null,
+  };
+}
 
 /**
  * The cards pane, as data.
  *
- * One block per workspace that serves the inbox, named only when there are several. Inside it, a
+ * First the objective the cards are filtered on; a copy on no objective gets one line and no
+ * card, never the whole inbox. Then one block per workspace read, named only when there are
+ * several. Inside it, a
  * group per agent, in the order of its most urgent card; inside a group, the server's own order.
  * The first nine cards of the pane carry the digits that open them from the keyboard. A card's
  * line is never cut: it wraps inside its frame, so a narrow pane loses no deadline.
@@ -121,9 +149,14 @@ export function summaryText(inbox) {
  * @returns {PanelView}
  */
 export function cardsOf(model, view) {
-  if (model.status === "no-server") return { notice: NO_SERVER_TEXT, workspaces: [] };
+  if (model.status === "no-server") return { notice: NO_SERVER_TEXT, objective: null, workspaces: [] };
+  if (model.status === "no-objective") return { notice: NO_OBJECTIVE_TEXT, objective: null, workspaces: [] };
+  if (model.status === "unread-objective") {
+    return { notice: UNREAD_OBJECTIVE_TEXT(model.error ?? "lecture refusée"), objective: null, workspaces: [] };
+  }
+  const objective = objectiveViewOf(model);
   if (model.status === "loading" && model.workspaces.every((workspace) => workspace.inbox === null)) {
-    return { notice: LOADING_TEXT, workspaces: [] };
+    return { notice: LOADING_TEXT, objective, workspaces: [] };
   }
 
   const named = model.workspaces.length > 1;
@@ -176,7 +209,7 @@ export function cardsOf(model, view) {
     };
   });
 
-  return { notice: null, workspaces };
+  return { notice: null, objective, workspaces };
 }
 
 /** Markdown link text: the brackets a title may carry would close the link early. */
@@ -205,9 +238,14 @@ export function cardTitleMarkdown(card) {
  */
 export function inboxMarkdown(model, view) {
   const panel = cardsOf(model, { now: view.now });
-  if (panel.notice !== null) return panel.notice;
-
   const lines = [];
+  if (panel.objective !== null) {
+    const name = panel.objective.url === null ? panel.objective.text : `[${linkText(panel.objective.text)}](${panel.objective.url})`;
+    lines.push(`**${name}**`, "");
+    if (panel.objective.caveat !== null) lines.push(`_${panel.objective.caveat}_`, "");
+  }
+  if (panel.notice !== null) return [...lines, panel.notice].join("\n").trim();
+
   for (const workspace of panel.workspaces) {
     if (workspace.label !== null) lines.push(`## ${workspace.label}`, "");
     if (workspace.summary !== null) lines.push(`**Décisions** — ${workspace.summary}`, "");

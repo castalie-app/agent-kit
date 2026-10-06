@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// check-decisions — the decisions panel draws the reader's inbox as cards, one group per agent,
-// and one card whole, from what a workspace really answers.
+// check-decisions — the decisions panel draws the reader's inbox on the objective this working copy
+// works on as cards, one group per agent, and one card whole, from what a workspace really answers.
+// A copy on no objective draws no card, and a server that does not filter by objective is filtered
+// here — approximately, and said so — never shown whole.
 //
 // Everything the panel decides lives in plain functions (`cs/hooks/decisions/*.mjs`), and this is
 // where they are played, the way `check-where.mjs` plays the strategy pane. What is left in
@@ -26,15 +28,19 @@ import {
   inboxOf,
 } from "../cs/hooks/decisions/inbox.mjs";
 import {
+  APPROXIMATE_TEXT,
   EMPTY_TEXT,
   HOTKEY_CARDS,
+  INBOX_FALLBACK_TAKE,
   INBOX_TTL_MS,
   LOADING_TEXT,
   MIGRATED_GROUP,
+  NO_OBJECTIVE_TEXT,
   NO_SERVER_TEXT,
   RECOMMENDED_MARK,
   UNOPENED_MARK,
 } from "../cs/hooks/decisions/names.mjs";
+import { copyObjectiveOf, inboxForObjective, subjectsOf } from "../cs/hooks/decisions/objective.mjs";
 import {
   ageText,
   cardTitleMarkdown,
@@ -280,28 +286,35 @@ check("one waiting decision reads in the singular",
   });
 
   const reader = readerOf(hostWith("decisions/C:/repo-a"));
-  const inbox = await reader.read("castalie", "inbox", INBOX_ID);
-  check("the inbox is asked as the reader's own pending decisions",
+  const inbox = await reader.read("castalie", "inbox", 5);
+  check("the inbox is asked as the reader's own pending decisions on the copy's objective",
     calls.length === 1 && calls[0].tool === "decision_list" &&
-      JSON.stringify(calls[0].args) === JSON.stringify({ scope: "mine", status: "pending", take: 50 }),
+      JSON.stringify(calls[0].args) === JSON.stringify({ scope: "mine", status: "pending", objective_id: 5, take: 50 }),
     JSON.stringify(calls[0]?.args));
   check("the reader hands back the normalised inbox", inbox.cards.length === 6);
 
-  await reader.read("castalie", "inbox", INBOX_ID);
+  await reader.read("castalie", "inbox", 5);
   check("a second read within the TTL is served from the store", calls.length === 1);
 
   at += INBOX_TTL_MS + 1;
-  await reader.read("castalie", "inbox", INBOX_ID);
+  await reader.read("castalie", "inbox", 5);
   check("a read past the TTL asks again", calls.length === 2);
 
   const other = readerOf(hostWith("decisions/C:/repo-b"));
-  await other.read("castalie", "inbox", INBOX_ID);
+  await other.read("castalie", "inbox", 5);
   check("one server alias in another working copy is another inbox, never the cached one",
-    calls.length === 3 && reader.cacheKeyOf("castalie", "inbox", 0) !== other.cacheKeyOf("castalie", "inbox", 0));
+    calls.length === 3 && reader.cacheKeyOf("castalie", "inbox", 5) !== other.cacheKeyOf("castalie", "inbox", 5));
 
   const sheet = await reader.read("castalie", "decision", 77);
   check("a sheet is asked by its id and read whole",
     calls[3].tool === "decision_get" && calls[3].args.id === 77 && sheet.options.length === 3 && sheet.comments.length === 2);
+
+  await reader.read("castalie", "inboxAll", INBOX_ID);
+  check("the whole inbox, read only to be filtered here, asks for the server's largest page and no objective",
+    JSON.stringify(calls[4]?.args) === JSON.stringify({ scope: "mine", status: "pending", take: INBOX_FALLBACK_TAKE }),
+    JSON.stringify(calls[4]?.args));
+  check("the filtered inbox and the whole one never share a cache key",
+    reader.cacheKeyOf("castalie", "inbox", 5) !== reader.cacheKeyOf("castalie", "inboxAll", INBOX_ID));
 
   calls.length = 0;
   const refusing = readerOf(
@@ -326,7 +339,7 @@ check("one waiting decision reads in the singular",
     verbOf: decisionWriteOf,
     touchedOf: decisionTouchedBy,
     keysOf: (touched) => [
-      reader.cacheKeyOf(touched.server, "inbox", INBOX_ID),
+      reader.cacheKeyOf(touched.server, "inbox", 5),
       ...(touched.decisionId === null ? [] : [reader.cacheKeyOf(touched.server, "decision", touched.decisionId)]),
     ],
     forget: async (keys) => void forgotten.push(...keys),
@@ -341,12 +354,110 @@ check("one waiting decision reads in the singular",
   check("each write forgets the inbox and the decision it named",
     forgotten.includes("names/decisions/C:/repo-a/castalie/decision/77") &&
       forgotten.includes("names/decisions/C:/repo-a/castalie/decision/81") &&
-      forgotten.filter((key) => key.endsWith("/inbox/0")).length === 2, forgotten.join(", "));
+      forgotten.filter((key) => key.endsWith("/inbox/5")).length === 2, forgotten.join(", "));
   check("a burst of writes is followed by one refresh", refreshes === 1, `${refreshes} refreshes`);
+}
+
+// ── The copy's objective, and the decisions that belong to it ────────────
+{
+  // What the strategy pane reads for a copy holding spec 1210 (brief 32, objective 5 under 2) and,
+  // earlier, brief 40 (objective 9): the names the status line and the pane already draw.
+  const NAMES = {
+    spec: { 1210: { id: 1210, title: "Export", status: "InProgress", briefId: 32, phases: [{ id: 501, title: "Contact fields", status: "InProgress", url: null }], followups: [] } },
+    brief: {
+      32: { id: 32, title: "Listing export", status: "InProgress", url: null, objectiveId: 5, objectiveTitle: "Partners", specs: [{ id: 1210, title: "Export", status: "InProgress", url: null }, { id: 1211, title: "Import", status: "Draft", url: null }] },
+      40: { id: 40, title: "Older work", status: "InProgress", url: null, objectiveId: 9, objectiveTitle: "Other", specs: [] },
+      41: { id: 41, title: "Outside", status: "Draft", url: null, objectiveId: null, objectiveTitle: null, specs: [] },
+    },
+    chain: {
+      5: [{ id: 2, title: "Grow", period: "T4", url: null, icon: null }, { id: 5, title: "Ten partners a month", period: "T4", url: "https://acme.castalie.app/strategy/5", icon: null }],
+      9: [{ id: 9, title: "Other", period: "T4", url: null, icon: null }],
+    },
+    objective: { 5: { keyResults: [], url: null, icon: null }, 9: { keyResults: [], url: null, icon: null } },
+  };
+  const read = async (server, kind, id) => {
+    const value = NAMES[kind]?.[id];
+    if (value === undefined) throw new Error(`${kind} ${id} illisible`);
+    return value;
+  };
+  const entry = (id, hoursAgo) => ({ id, at: NOW - hoursAgo * 3_600_000, server: "castalie" });
+  const resolve = (held, reads = read) => copyObjectiveOf({ held, read: reads, serverFor: (named) => named ?? "castalie" });
+
+  const found = await resolve({ specs: [entry(1210, 1)], briefs: [entry(40, 3)] });
+  check("the copy's objective is the leaf of the chain its latest work serves",
+    found.status === "found" && found.id === 5 && found.title === "Ten partners a month" && found.server === "castalie" &&
+      found.url === "https://acme.castalie.app/strategy/5", JSON.stringify(found));
+  check("the objective's subjects are the briefs, specs and phases the copy knows under it",
+    found.status === "found" && [...found.subjects.feature_brief].join() === "32" &&
+      [...found.subjects.feature_spec].sort().join() === "1210,1211" && [...found.subjects.feature_spec_phase].join() === "501");
+
+  const newer = await resolve({ specs: [entry(1210, 5)], briefs: [entry(40, 1)] });
+  check("the latest work wins, whichever kind it is", newer.status === "found" && newer.id === 9);
+
+  const skipping = await resolve({ specs: [entry(1210, 2)], briefs: [entry(41, 1)] });
+  check("a brief outside the strategy is stepped over for the next work that has an objective",
+    skipping.status === "found" && skipping.id === 5);
+
+  check("a copy holding nothing has no objective", (await resolve({ specs: [], briefs: [] })).status === "none");
+  check("a copy holding only work outside the strategy has none either",
+    (await resolve({ specs: [], briefs: [entry(41, 1)] })).status === "none");
+
+  const unread = await resolve({ specs: [entry(1210, 1)], briefs: [] }, async (server, kind, id) => {
+    if (kind === "spec") throw new Error("lecture trop longue");
+    return read(server, kind, id);
+  });
+  check("an objective that could not be read is a gap, never « no objective »",
+    unread.status === "unread" && unread.error.includes("lecture trop longue"), JSON.stringify(unread));
+
+  check("subjectsOf reads siblings' phases where they were read",
+    subjectsOf([{ brief: { id: 1 }, specs: [], siblings: [{ id: 2, phases: [{ id: 3 }] }] }]).feature_spec_phase.has(3));
+
+  // The filter.
+  const whole = inboxOf(inboxAnswer);
+  const objective = found.status === "found" ? found : null;
+  const served = inboxForObjective({ ...whole, objectiveId: 5 }, objective);
+  check("an answer that echoes the objective is the server's filter, kept as it came",
+    !served.isApproximate && served.inbox.cards.length === 6 && served.inbox.waiting === 12);
+
+  const filtered = inboxForObjective(whole, objective);
+  check("an answer that does not echo it is filtered here on the objective's known subjects",
+    filtered.isApproximate && filtered.inbox.cards.map((card) => card.id).join() === "77",
+    filtered.inbox.cards.map((card) => card.id).join());
+  check("the figures are counted again over what is kept, not the whole inbox's",
+    filtered.inbox.waiting === 1 && filtered.inbox.total === 1 && filtered.inbox.minutes === 7 && filtered.inbox.neverOpened === 0);
+  check("an echo of ANOTHER objective is not trusted",
+    inboxForObjective({ ...whole, objectiveId: 9 }, objective).isApproximate);
+  check("a decision on no subject never passes the approximate filter",
+    !filtered.inbox.cards.some((card) => card.subjectKind === "none"));
+  check("the echo is read from the answer", inboxOf({ ...inboxAnswer, objective_id: 5 }).objectiveId === 5 && whole.objectiveId === null);
+
+  // What the panel draws.
+  const head = { id: 5, title: "Ten partners a month", url: "https://acme.castalie.app/strategy/5" };
+  const drawn = cardsOf({ status: "ready", objective: head, workspaces: [{ server: "castalie", inbox: served.inbox, error: null, isApproximate: false }] }, { now: NOW });
+  check("the panel names the objective its cards are filtered on, as a link to it",
+    drawn.objective?.text === "Objectif : Ten partners a month" && drawn.objective.url === "https://acme.castalie.app/strategy/5" &&
+      drawn.objective.caveat === null);
+  const approx = cardsOf({ status: "ready", objective: head, workspaces: [{ server: "castalie", inbox: filtered.inbox, error: null, isApproximate: true }] }, { now: NOW });
+  check("a filter made here says it is approximate", approx.objective?.caveat === APPROXIMATE_TEXT);
+  check("an objective with no title is named by its number",
+    cardsOf({ status: "loading", objective: { id: 5, title: null, url: null }, workspaces: [{ server: "castalie", inbox: null, error: null }] }, { now: NOW }).objective?.text === "Objectif : n° 5");
+
+  const none = cardsOf({ status: "no-objective", workspaces: [] }, { now: NOW });
+  check("a copy on no objective gets one line and no card",
+    none.notice === NO_OBJECTIVE_TEXT && none.workspaces.length === 0 && none.objective === null);
+  const gap = cardsOf({ status: "unread-objective", error: "spec 1210 : lecture trop longue", workspaces: [] }, { now: NOW });
+  check("an objective that could not be read says why, and shows no card",
+    gap.notice?.includes("spec 1210 : lecture trop longue") && gap.workspaces.length === 0);
+
+  const text = inboxMarkdown({ status: "ready", objective: head, workspaces: [{ server: "castalie", inbox: filtered.inbox, error: null, isApproximate: true }] }, { now: NOW });
+  check("the printed inbox opens on the objective and the caveat",
+    text.startsWith(`**[Objectif : Ten partners a month](https://acme.castalie.app/strategy/5)**\n\n_${APPROXIMATE_TEXT}_`), text.split("\n").slice(0, 3).join(" | "));
+  check("the printed inbox of a copy on no objective is that one line",
+    inboxMarkdown({ status: "no-objective", workspaces: [] }, { now: NOW }) === NO_OBJECTIVE_TEXT);
 }
 
 if (failed) {
   console.error(`\n${failed} check(s) failed.`);
   process.exit(1);
 }
-console.log("✓ the decisions panel draws the reader's inbox as cards, one group per agent, and one card whole.");
+console.log("✓ the decisions panel draws the reader's inbox on the copy's objective as cards, one group per agent, and one card whole.");

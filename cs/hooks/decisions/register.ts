@@ -1,9 +1,9 @@
 import type { EngineInterface, On, ToolInfo } from 'claude-code'
 
 import type { Companion, Host } from '../where/host'
-import { payloadOf, readerOf } from '../where/reader.mjs'
+import { payloadOf, readerOf, serverOf, serversOf } from '../where/reader.mjs'
 import { hrefOf } from '../where/render.mjs'
-import { workingCopyRootOf } from '../where/work-file.mjs'
+import { heldOf, workFileOf, workingCopyRootOf } from '../where/work-file.mjs'
 import { burstOf } from '../where/writes.mjs'
 import {
   DECISION_READS,
@@ -13,6 +13,7 @@ import {
   decisionWriteOf,
 } from './inbox.mjs'
 import * as Names from './names.mjs'
+import { copyObjectiveOf, inboxForObjective } from './objective.mjs'
 import { cardsOf, inboxMarkdown, sheetMarkdown } from './render.mjs'
 import { cardsView, sheetView, type CardView, type Kit } from './views.jsx'
 
@@ -20,8 +21,14 @@ type Reader = ReturnType<typeof readerOf>
 type Burst = ReturnType<typeof burstOf>
 type Inbox = ReturnType<typeof DECISION_READS.inbox.read>
 type Decision = ReturnType<typeof DECISION_READS.decision.read>
-type Workspace = { server: string; inbox: Inbox | null; error: string | null }
-type Model = { status: 'loading' | 'ready' | 'no-server'; workspaces: Workspace[] }
+type Workspace = { server: string; inbox: Inbox | null; error: string | null; isApproximate?: boolean }
+type Objective = { id: number; title: string | null; url: string | null }
+type Model = {
+  status: 'loading' | 'ready' | 'no-server' | 'no-objective' | 'unread-objective'
+  objective?: Objective | null
+  error?: string | null
+  workspaces: Workspace[]
+}
 type Sheet = { id: number; server: string; decision: Decision | null; error: string | null }
 
 /**
@@ -65,8 +72,9 @@ async function drawnOf($: EngineInterface): Promise<Drawn | null> {
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /**
- * Registers the decisions panel: beside the transcript, the decisions waiting for the person as
- * cards, one group per agent that asked them, and one card opened whole in a pane of its own.
+ * Registers the decisions panel: beside the transcript, the decisions waiting for the person on
+ * the objective this working copy works on, as cards, one group per agent that asked them, and one
+ * card opened whole in a pane of its own. A copy on no objective shows no card at all.
  *
  * It binds where something draws. A terminal session binds at `session.start` (which the
  * strategy pane hooks, and hands on through `companion`); a session the
@@ -86,11 +94,14 @@ export function register(on: On, companion: Companion): void {
   let host: Host | null = null
   let binding: Promise<void> | null = null
   let reader: Reader | null = null
+  let names: Reader | null = null
   let burst: Burst | null = null
   let tools: ToolInfo[] = []
   let root: string | null = null
 
   let model: Model = { status: 'loading', workspaces: [] }
+  /** The objective the inbox was last read for: its cache key is the one a write forgets. */
+  let objectiveId: number | null = null
   let sheet: Sheet | null = null
   let readAt = 0
   let isRefreshing = false
@@ -136,6 +147,45 @@ export function register(on: On, companion: Companion): void {
     return reader
   }
 
+  /**
+   * The strategy pane's reader, as that pane builds it: the copy's objective is resolved through
+   * the same verbs and the same cache, so the pane and the panel never disagree on it.
+   */
+  function namesFor(engine: Host): Reader {
+    names ??= readerOf({
+      call: async (server, tool, args) => payloadOf(await engine.mcpCall(server, tool, args)),
+      storeGet: key => engine.storeGet(key),
+      storeSet: (key, value) => engine.storeSet(key, value),
+      storeDelete: key => engine.storeDelete(key),
+      now: () => engine.now(),
+      after: (ms, fn) => engine.after(ms, fn),
+      has: (server, tool) => tools.some(listed => listed.name === `mcp__${server}__${tool}`),
+    })
+
+    return names
+  }
+
+  /** The objective this copy works on, from its own work file — the strategy pane's resolution. */
+  async function objectiveNow(engine: Host) {
+    const text = root === null ? '' : await engine.readFile(workFileOf(root)).catch(() => '')
+    const known = namesFor(engine)
+
+    return copyObjectiveOf({
+      held: heldOf(text, await engine.now()),
+      read: (server, kind, id, wanted) => known.read(server, kind, id, wanted),
+      serves: (server, tool) => known.serves(server, tool),
+      serverFor: named => serverOf(named, tools) ?? serversOf(tools)[0] ?? null,
+    })
+  }
+
+  /** The inbox keys of the objective last read: the filtered read, and the whole one. */
+  function inboxKeysOf(known: Reader, server: string): string[] {
+    const keys = [known.cacheKeyOf(server, 'inboxAll', INBOX_ID)]
+    if (objectiveId !== null) keys.push(known.cacheKeyOf(server, 'inbox', objectiveId))
+
+    return keys
+  }
+
   /** The servers that serve the inbox, the tool list asked again while there are none. */
   async function serversNow(engine: Host): Promise<string[]> {
     if (decisionServersOf(tools).length === 0) tools = await engine.toolList().catch((): ToolInfo[] => [])
@@ -160,28 +210,48 @@ export function register(on: On, companion: Companion): void {
         return
       }
 
-      model = {
-        status: 'loading',
-        workspaces: servers.map(
-          server => model.workspaces.find(known => known.server === server) ?? { server, inbox: null, error: null },
-        ),
+      // Only the decisions of the objective this copy works on, and only from the workspace that
+      // objective lives in: an objective's number means nothing in another one.
+      const found = await objectiveNow(engine)
+      if (found.status === 'none') {
+        model = { status: 'no-objective', workspaces: [] }
+        readAt = await engine.now()
+
+        return
       }
+      if (found.status === 'unread') {
+        model = { status: 'unread-objective', error: found.error, workspaces: [] }
+
+        return
+      }
+      if (!servers.includes(found.server)) {
+        model = { status: 'no-server', workspaces: [] }
+
+        return
+      }
+
+      const objective: Objective = { id: found.id, title: found.title, url: found.url }
+      const server = found.server
+      const kept = objectiveId === found.id ? model.workspaces.find(known => known.server === server) : undefined
+      objectiveId = found.id
+      model = { status: 'loading', objective, workspaces: [kept ?? { server, inbox: null, error: null }] }
       redraw(engine)
 
       const known = readerFor(engine)
-      const workspaces = await Promise.all(
-        servers.map(async (server): Promise<Workspace> => {
-          try {
-            return { server, inbox: await known.read(server, 'inbox', INBOX_ID), error: null }
-          } catch (error) {
-            const kept = model.workspaces.find(workspace => workspace.server === server)?.inbox ?? null
+      let workspace: Workspace
+      try {
+        // A server that predates `objective_id` drops it without a word and answers the whole
+        // inbox: the filter is the server's only when its answer says so. Otherwise the whole
+        // inbox is read and filtered here, and the panel says the filter is approximate.
+        let inbox = await known.read(server, 'inbox', found.id).catch(() => null)
+        if (inbox === null || inbox.objectiveId !== found.id) inbox = await known.read(server, 'inboxAll', INBOX_ID)
+        const shown = inboxForObjective(inbox, found)
+        workspace = { server, inbox: shown.inbox, error: null, isApproximate: shown.isApproximate }
+      } catch (error) {
+        workspace = { server, inbox: kept?.inbox ?? null, isApproximate: kept?.isApproximate, error: `${server} : ${message(error)}` }
+      }
 
-            return { server, inbox: kept, error: `${server} : ${message(error)}` }
-          }
-        }),
-      )
-
-      model = { status: 'ready', workspaces }
+      model = { status: 'ready', objective, workspaces: [workspace] }
       readAt = await engine.now()
     } catch (error) {
       engine.uiLog(`décisions : ${message(error)}`)
@@ -217,7 +287,7 @@ export function register(on: On, companion: Companion): void {
   /** Forgets the inbox and the sheet on show, then reads them again. */
   async function forgetAndRefresh(engine: Host): Promise<void> {
     const known = readerFor(engine)
-    const keys = model.workspaces.map(workspace => known.cacheKeyOf(workspace.server, 'inbox', INBOX_ID))
+    const keys = model.workspaces.flatMap(workspace => inboxKeysOf(known, workspace.server))
     if (sheet !== null) keys.push(known.cacheKeyOf(sheet.server, 'decision', sheet.id))
     await known.forget(keys)
     if (sheet !== null) void loadSheet(engine, sheet.id, sheet.server)
@@ -238,7 +308,7 @@ export function register(on: On, companion: Companion): void {
       keysOf: (said: unknown) => {
         const touched = said as { server: string; decisionId: number | null }
         const known = readerFor(engine)
-        const keys = [known.cacheKeyOf(touched.server, 'inbox', INBOX_ID)]
+        const keys = inboxKeysOf(known, touched.server)
         if (touched.decisionId !== null) keys.push(known.cacheKeyOf(touched.server, 'decision', touched.decisionId))
 
         return keys

@@ -1,7 +1,8 @@
 // What the decisions panel reads, and what each answer means.
 //
-// Two verbs of the `pm-v1` contract: `decision_list(scope=mine, status=pending)`, which IS the
-// reader's inbox, and `decision_get(id)`, the whole sheet one card opens into. Both go through
+// Two verbs of the `pm-v1` contract: `decision_list(scope=mine, status=pending, objective_id)`,
+// which is the reader's inbox narrowed to the objective this copy works on (`objective.mjs`), and
+// `decision_get(id)`, the whole sheet one card opens into. Both go through
 // the strategy pane's reader (`../where/reader.mjs`): the same transport, the same cache in the
 // plugin's store, the same deadline and the same argument spelling settled per server. This file
 // only hands that reader its table of verbs, and turns their answers into plain records.
@@ -10,7 +11,7 @@
 // snake_case; a workspace that writes PascalCase on its own verbs is read the same way.
 
 import { fieldOf } from "../where/reader.mjs";
-import { INBOX_TAKE, MIGRATED_GROUP, PERSON_GROUP } from "./names.mjs";
+import { INBOX_FALLBACK_TAKE, INBOX_TAKE, MIGRATED_GROUP, PERSON_GROUP } from "./names.mjs";
 
 /** A whole number, or null. */
 const idOf = (value) => {
@@ -48,7 +49,8 @@ const pascalOf = (snake) => snake.replace(/(^|_)([a-z])/g, (_, __, letter) => le
  * }} Card
  *
  * @typedef {{ cards: Card[], total: number | null, waiting: number | null, minutes: number | null,
- *   neverOpened: number | null, oldestDays: number | null, pageUrl: string | null }} Inbox
+ *   neverOpened: number | null, oldestDays: number | null, pageUrl: string | null,
+ *   objectiveId: number | null }} Inbox
  */
 
 /**
@@ -84,6 +86,8 @@ export function cardOf(row) {
 /**
  * The inbox, from `decision_list`: its rows in the order the server ranks them (failed resumes,
  * missed deadlines, the most work frozen, the oldest), and the figures it computes over them.
+ * `objectiveId` is the objective the server says it filtered on — null from a server that does
+ * not filter, whatever it was asked.
  *
  * @param {any} answer
  * @returns {Inbox}
@@ -98,6 +102,7 @@ export function inboxOf(answer) {
     neverOpened: numberOf(pick(answer, "never_opened")),
     oldestDays: numberOf(pick(answer, "oldest_days")),
     pageUrl: textOf(pick(answer, "page_url")),
+    objectiveId: idOf(pick(answer, "objective_id")),
   };
 }
 
@@ -197,14 +202,23 @@ export function decisionOf(answer) {
 /** @typedef {ReturnType<typeof decisionOf>} Decision */
 
 /**
- * The two reads the panel makes, in the shape the strategy pane's reader takes. Both verbs
- * spell their arguments the same way in every workspace, so each carries one spelling only:
- * the reader skips a spelling a verb does not have instead of asking the same thing twice.
+ * The reads the panel makes, in the shape the strategy pane's reader takes. The verbs spell
+ * their arguments the same way in every workspace, so each carries one spelling only: the reader
+ * skips a spelling a verb does not have instead of asking the same thing twice.
+ *
+ * `inbox` is keyed by the objective it is asked for. `inboxAll` is the whole inbox, read only
+ * when a server refused `objective_id`, and only ever drawn filtered (`inboxForObjective`); it
+ * asks for the server's largest page, since what it keeps is counted on what came back.
  */
 export const DECISION_READS = {
   inbox: {
     tool: "decision_list",
-    args: { contract: () => ({ scope: "mine", status: "pending", take: INBOX_TAKE }) },
+    args: { contract: (objectiveId) => ({ scope: "mine", status: "pending", objective_id: objectiveId, take: INBOX_TAKE }) },
+    read: inboxOf,
+  },
+  inboxAll: {
+    tool: "decision_list",
+    args: { contract: () => ({ scope: "mine", status: "pending", take: INBOX_FALLBACK_TAKE }) },
     read: inboxOf,
   },
   decision: {
@@ -214,7 +228,7 @@ export const DECISION_READS = {
   },
 };
 
-/** The inbox has no id of its own: its cache key carries this one. */
+/** The whole inbox has no id of its own: its cache key carries this one. */
 export const INBOX_ID = 0;
 
 /**

@@ -3203,6 +3203,12 @@
           "description": "Only this subject id."
         },
         {
+          "name": "objective_id",
+          "type": "int",
+          "required": false,
+          "description": "Only decisions whose subject traces to this objective or one of its sub-objectives: a brief through its key results, a spec through its brief, a phase through its spec, a bug through its spec or brief, a follow-up run through its check. The answer echoes it as objective_id; a server that does not echo it did not filter."
+        },
+        {
           "name": "dedupe_key",
           "type": "string",
           "required": false,
@@ -3255,6 +3261,7 @@
         "minutes": "int",
         "never_opened": "int",
         "page_url": "string — the inbox",
+        "objective_id": "int — the objective filtered on, when objective_id was passed",
         "decisions": "object[] — each with url"
       }
     },

@@ -297,11 +297,12 @@ what is left in `register.ts` is the binding itself.
 ## The decisions panel
 
 An agent that needs a person files a decision (`decision_create`); it is not pushed at you. It
-waits in your inbox, and `/cs:decisions-panel` shows that inbox beside the conversation, as cards, one
-group per agent that asked:
+waits in your inbox, and `/cs:decisions-panel` shows beside the conversation the part of that inbox
+that belongs to the objective this working copy works on, as cards, one group per agent that asked:
 
 ```
 Décisions                                      r: rafraîchir
+Objectif : Croissance : dix locataires par mois
 12 en attente · ~41 min pour tout trancher · 4 jamais ouvertes
 
 bug-fix · 2
@@ -324,7 +325,17 @@ feature-implement · 1
 ╰────────────────────────────────────────────╯
 ```
 
-The inbox is `decision_list(scope=mine, status=pending)`, in the order the server ranks it; a
+**Only this copy's objective.** The objective is the strategy pane's own: the leaf of the chain
+that the latest spec or brief of `.cs/work.json` serves — the one the status line names — read
+through the same verbs and the same cache. The cards are `decision_list(scope=mine,
+status=pending, objective_id=<it>)`: the decisions whose subject traces to that objective or one
+of its sub-objectives, from the workspace that objective lives in. The header names it. A copy on
+no objective gets one line and no card — never the whole inbox. A server that predates
+`objective_id` drops it without a word, so the filter is trusted only when the answer echoes
+`objective_id`; otherwise the panel reads the whole inbox and keeps the decisions on the briefs,
+specs and phases it knows under the objective, and says « filtre approximatif » under the header.
+
+The inbox comes in the order the server ranks it; a
 group is `asked_by_agent`, else the person who asked, else the former arbitration queue, and groups
 follow their most urgent card. `●` marks a card never opened, `★` the recommended option.
 
@@ -342,7 +353,7 @@ Nothing polls: the inbox is read when the panel opens, after a `decision_*` writ
 at the end of a turn and when the panel is drawn, each only once the last read is thirty seconds
 old, and on « rafraîchir ». The cache is scoped to the working copy, because one server alias
 names a different workspace in each repository. It opens by itself in a session where decisions
-wait, unless you closed it last time.
+on its objective wait, unless you closed it last time.
 
 **Terminal and desktop.** The panel is a pane of the plugin's hooks module, and the same module
 draws it on both surfaces, each with its own elements: the terminal docks it beside the
@@ -504,7 +515,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `feature-implement` | Implement a spec autonomously in your repo, phase by phase, ending at "PR ready". |
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
-| `decisions-panel` | Your decisions inbox beside the conversation, as cards grouped by the agent that asked, each opening whole in a pane of its own — in the terminal and in the desktop app. Reads only. |
+| `decisions-panel` | The decisions waiting for you on this working copy's objective, beside the conversation, as cards grouped by the agent that asked, each opening whole in a pane of its own — in the terminal and in the desktop app. Reads only. |
 | `decision-resume` | Pick the work back up once a person has answered an agent's decision: play a robot's resume, answer a reader who asked for more context, or resume one decision by its id. Never answers in a person's place. |
 | `scheduled-run` | Play one run of a scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
