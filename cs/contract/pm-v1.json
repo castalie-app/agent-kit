@@ -3113,6 +3113,59 @@
       }
     },
     {
+      "name": "discussion_post",
+      "kind": "write",
+      "description": "Say something about a brief, a spec or a bug. The thread opens on the first message rather than when a sheet is displayed, so an empty thread means nobody has spoken — not that nobody answered. author_kind separates a person from their agent: pass \"agent\" when you are writing on somebody's behalf, and the thread will say so instead of signing it as them. author_user_id goes further: it signs the message with the automation's OWN account, so no colleague is told about words they never wrote. An agent reply to a bug awaiting reporter feedback releases it and returns awaiting_validation to new — provided the caller may write in this workspace; a read-only member's message is still posted and the ticket stays parked, which the answer says with bug_released_from_awaiting_feedback.",
+      "params": [
+        {
+          "name": "entity_type",
+          "type": "string",
+          "required": true,
+          "description": "brief, spec or bug."
+        },
+        {
+          "name": "entity_id",
+          "type": "int",
+          "required": true,
+          "description": "The id of the brief, spec or bug."
+        },
+        {
+          "name": "body_md",
+          "type": "string",
+          "required": true,
+          "description": "What is being said (markdown)."
+        },
+        {
+          "name": "author_kind",
+          "type": "string",
+          "required": false,
+          "description": "person or agent. Defaults to person; pass agent when writing on somebody's behalf. It is a label: it does not change whose the message is — author_user_id does that."
+        },
+        {
+          "name": "mentioned_user_ids",
+          "type": "int[]",
+          "required": false,
+          "description": "Who to call into this message, by user id. Recorded as metadata, never injected into the text."
+        },
+        {
+          "name": "author_display_name",
+          "type": "string",
+          "required": false,
+          "description": "The name to show when the message has NO account of this workspace behind it — a takeover or an intake carries the name the person had elsewhere. Omit it and the author's own name is used. Supplying one for a write that does have an account behind it would show one person's words under another's name: refused with author_display_name_requires_service_token, since no screen here lets anybody do that."
+        },
+        {
+          "name": "author_user_id",
+          "type": "int",
+          "required": false,
+          "description": "The automation's OWN account to sign this message with, by user id. author_kind only labels the message; this is what makes the message BELONG to the robot, so no colleague is told about words they never wrote. Reserved for a service token: a person's token gets author_user_id_requires_service_token, and the account named must be marked as an automation."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "discussion_message_id": "int"
+      }
+    },
+    {
       "name": "decision_list",
       "kind": "read",
       "description": "List decisions, ordered as the inbox orders them: failed resumes first, then missed deadlines, then the most work frozen, then the oldest. decision_list(scope=mine, status=pending) IS a person's inbox. Returns rows plus waiting, oldest_days, minutes (what answering every pending one costs) and never_opened. Each row carries plan_point and answer_read.",
