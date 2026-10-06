@@ -64,8 +64,7 @@ names its exact list of inputs, or it spends its time choosing them.
 
 One background sub-agent per charter, four at a time, each with **its own browser session** (the
 kit's `playwright` server, `${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`) and its own account.
-When the repository already uses an agentic end-to-end tool with an exploration mode (TesterArmy's
-open-source `e2e explore`, for one), run the charters through it instead: same charters, same rules.
+Nothing else is needed: no test framework, no service, no key beyond the session's own model.
 
 Each explorer gets a **budget** (about eight steps and ten minutes), stops after three steps in a
 row that found nothing new, and records each finding as it goes:
@@ -101,9 +100,11 @@ One sub-agent per area, with its three to five candidates. For each one:
 
 1. **Read the observation against the evidence.** A finding the screenshot contradicts is rejected
    here.
-2. **Write a reproduction test** in the project's own end-to-end harness, following the steps and
-   asserting the **expected** behaviour, so it fails today and passes once the bug is fixed. Exact
-   locators come from the live page, never from memory.
+2. **Write a reproduction test** following the steps and asserting the **expected** behaviour, so
+   it fails today and passes once the bug is fixed. Exact locators come from the live page, never
+   from memory. Write it in the project's own end-to-end tests when it has some. When it has none,
+   write one Playwright test file (`@playwright/test`, run with `npx -y playwright test <file>`)
+   under the working copy's ignored scratch folder: the proof needs no setup in the project.
 3. **Run it alone.** The bug is confirmed **only when the test fails on the assertion that encodes
    it**. Any other failure (an element not found, a timeout, a sign-in that did not hold) means the
    test is wrong: fix the test and run it again. A test that passes means the bug did not
@@ -144,3 +145,5 @@ and the warnings. Last line: the charters run, what they cost, and the areas no 
 ## Hand back
 
 Close the turn on the reply and the verdict of `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`.
+
+<!-- Prior art, to read again before improving this skill: https://github.com/tester-army/e2e -->
