@@ -5,8 +5,10 @@ description: Show or hide, beside the transcript, the strategy tree of what this
 
 # okr-panel — the strategy tree, beside the transcript
 
-`/cs:okr-panel` opens the panel named « Où j'en suis » next to the conversation, and run again it
-closes it. The choice is remembered across sessions of this machine.
+`/cs:okr-panel` opens the panel named « Où j'en suis », and run again it closes it. The choice is
+remembered across sessions of this machine. In the terminal's fullscreen layout the panel sits next
+to the conversation, and opens by itself the first time this copy holds something; on the main
+screen it sits above the prompt, so it opens only when asked.
 
 What it draws, for whatever this working copy currently holds: the objective a brief serves, the
 brief, its specs, the phases of each spec with the one in progress pointing at itself, and the

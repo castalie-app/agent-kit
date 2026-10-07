@@ -124,6 +124,32 @@ function workspaceOf(on: Parameters<TestBody>[1], options: { objective?: boolean
   })
 }
 
+/**
+ * The surface says whether it docks a pane, as the hint under the prompt is drawn: `true` is the
+ * terminal's fullscreen layout, `false` its main screen.
+ */
+async function drawsHint(
+  $: Parameters<TestBody>[0],
+  on: Parameters<TestBody>[1],
+  surface: 'terminal' | 'desktop',
+  isFullscreen: boolean,
+) {
+  // The engine's own hint line, beneath the plugin's hook: the hook reads and passes it on.
+  on('ui.render', { component: 'PromptHint' }, async ($, e) => {
+    const { Text } = await $.ui.resolve(e)
+
+    return <Text>{e.props.hint}</Text>
+  })
+  const hint = await $.ui.mount({
+    plugin: 'cs',
+    surface,
+    component: 'PromptHint',
+    props: { isDraft: false, isWorking: false, hint: '? for shortcuts' },
+    viewport: { columns: 160, rows: 48, isFullscreen },
+  })
+  await hint.unmount()
+}
+
 const PANE_PROPS = (title: string) => ({
   title,
   isFocused: false,
@@ -161,6 +187,7 @@ test('the inbox is drawn as cards per agent, and a card opens whole, on the term
   on('ui.log', () => ({ value: undefined }))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
 
+  await drawsHint($, on, 'terminal', true)
   await $.session.start({ cwd: 'C:/repo', surface: 'terminal', isInteractive: true })
   await clock.advance(2_000)
 
@@ -280,7 +307,7 @@ test('a session the desktop app hosts binds when the desktop attaches, and a hea
   await clock.advance(2_000)
   expect(asked).toHaveLength(0)
 
-  await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
+  await $.session.attach({ surface: 'desktop', clientId: 'desktop:default', viewport: { columns: 160, rows: 48, isFullscreen: true } })
   await clock.advance(2_000)
 
   expect(asked).toContain('decision_list')
@@ -369,11 +396,20 @@ test('a server that ignores objective_id is filtered here, on what the copy know
   expect(text).not.toMatch(/Which phone number/)
 })
 
-test('a decision this session files opens the panel on its sheet, unasked, even after the person closed it', async ($, on) => {
+/**
+ * A terminal session, fullscreen or on the main screen, whose workspace files decision 77 when
+ * asked: the panes opened, and the line under the prompt as it was pinned and cleared.
+ */
+async function filing(
+  $: Parameters<TestBody>[0],
+  on: Parameters<TestBody>[1],
+  options: { isFullscreen: boolean; store?: Record<string, unknown> },
+) {
   const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
-  mock.store(on, { 'decisions/open': false })
+  mock.store(on, options.store ?? {})
 
   const opened: { id: string; focus?: boolean }[] = []
+  const lines: (string | undefined)[] = []
   on('tool.list', () => ({
     value: [
       { name: 'mcp__castalie__decision_list', description: '', isMcp: true },
@@ -390,6 +426,12 @@ test('a decision this session files opens the panel on its sheet, unasked, even 
 
     return { value: { isPlaced: true } } as never
   })
+  on('ui.close', () => ({ value: undefined }))
+  on('ui.status', ($, e) => {
+    lines.push(e.text)
+
+    return { value: undefined }
+  })
   on('ui.invalidate', () => ({ value: undefined }))
   on('ui.log', () => ({ value: undefined }))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
@@ -397,17 +439,71 @@ test('a decision this session files opens the panel on its sheet, unasked, even 
     result: { content: [{ type: 'text', text: '{"success":true,"decision_id":77}' }] },
     text: JSON.stringify({ success: true, decision_id: 77, url: 'https://acme.castalie.app/decisions/77' }),
   }) as never)
+  on('command.run', () => ({ text: 'the skill' }))
 
+  await drawsHint($, on, 'terminal', options.isFullscreen)
   await $.session.start({ cwd: 'C:/repo', surface: 'terminal', isInteractive: true })
   await clock.advance(2_000)
+
+  const file = async () => {
+    await $.tool.call({ tool: 'mcp__castalie__decision_create', title: 'Which phone number goes to the partner portals?' } as never)
+    await clock.advance(200)
+  }
+  const type = async (args: string) => {
+    const presentation = { isFullscreen: options.isFullscreen, columns: 160 }
+    const run = await $.command.run({ command: 'cs:decisions-panel', args, origin: { kind: 'composer' } as never, presentation })
+    await clock.advance(200)
+
+    return run.text ?? ''
+  }
+
+  return { opened, lines, file, type }
+}
+
+test('in fullscreen, a decision this session files opens the panel on its sheet, unasked, even after the person closed it', async ($, on) => {
+  const { opened, lines, file } = await filing($, on, { isFullscreen: true, store: { 'decisions/open': false } })
   expect(opened.some(pane => pane.id === 'cs-decisions')).toBe(false)
 
-  await $.tool.call({ tool: 'mcp__castalie__decision_create', title: 'Which phone number goes to the partner portals?' } as never)
-  await clock.advance(200)
+  await file()
 
   expect(opened.map(pane => pane.id)).toContain('cs-decisions')
   expect(opened.at(-1)).toEqual({ id: 'cs-decision', focus: undefined })
+  expect(lines.filter(line => line !== undefined)).toHaveLength(0)
 })
+
+test('on the main screen, nothing opens unasked over the conversation: a line under the prompt names the command', async ($, on) => {
+  const { opened, lines, file } = await filing($, on, { isFullscreen: false })
+
+  // Decisions wait at the start: the cards stay shut, and the line counts them.
+  expect(opened).toHaveLength(0)
+  expect(lines.at(-1)).toBe('2 décisions vous attendent sur cet objectif : /cs:decisions-panel')
+
+  // A decision filed here: still no pane, and the line names it.
+  await file()
+  expect(opened).toHaveLength(0)
+  expect(lines.at(-1)).toBe('Décision n° 77 en attente de votre réponse : /cs:decisions-panel 77')
+})
+
+for (const isFullscreen of [true, false]) {
+  const layout = isFullscreen ? 'fullscreen' : 'main screen'
+
+  test(`the typed command opens the sheet and the cards — ${layout}`, async ($, on) => {
+    const { opened, lines, file, type } = await filing($, on, { isFullscreen, store: { 'decisions/open': false } })
+    await file()
+    const before = opened.length
+
+    const sheet = await type('77')
+    expect(opened.slice(before).map(pane => pane.id)).toEqual(['cs-decision'])
+    expect(sheet).toBe(`Decision 77 is open ${isFullscreen ? 'beside the transcript' : 'above the prompt'}; Escape closes it.`)
+    // Whatever the line said, the pane it pointed at is now open: the line goes.
+    if (!isFullscreen) expect(lines.at(-1)).toBeUndefined()
+
+    if (isFullscreen) expect(await type('')).toMatch(/hidden/)
+    const cards = await type('')
+    expect(opened.at(-1)?.id).toBe('cs-decisions')
+    expect(cards).toMatch(isFullscreen ? /beside the transcript/ : /above the prompt/)
+  })
+}
 
 test('a decision this session filed comes back with its answer at the next prompt, once settled', async ($, on) => {
   const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })

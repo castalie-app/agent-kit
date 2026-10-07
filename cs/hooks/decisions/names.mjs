@@ -25,7 +25,7 @@ export const SKILL_COMMAND = `cs:${COMMAND_NAME}`;
 export const COMMAND_KEYS = [COMMAND_NAME, SKILL_COMMAND];
 export const COMMAND_LABEL = `/${SKILL_COMMAND}`;
 export const COMMAND_DESCRIPTION =
-  "Show, beside the transcript, the decisions waiting for you as cards, one group per agent; a number opens that decision whole";
+  "Show the decisions waiting for you as cards, one group per agent (beside the transcript in fullscreen, above the prompt otherwise); a number opens that decision whole";
 
 /** Where the person's own open/close choice is remembered, across sessions of this machine. */
 export const STORE_OPEN_KEY = "decisions/open";
@@ -122,8 +122,21 @@ export const ALL_IN_CASTALIE_TEXT = "toute la boîte dans Castalie";
 export const SHEET_LOADING_TEXT = "Lecture de la décision…";
 export const SHEET_GONE_TEXT = "Rouvrez une carte pour la voir en grand.";
 
-export const SHOWN_TEXT = `Your decisions are beside the transcript. ${COMMAND_LABEL} hides them; ${COMMAND_LABEL} <number> opens one whole.`;
-export const SHEET_SHOWN_TEXT = (id) => `Decision ${id} is open beside the transcript; Escape closes it.`;
+/** Where an asked pane sits: docked beside a fullscreen transcript, else inline above the prompt. */
+const WHERE_TEXT = (isSidebar) => (isSidebar ? "beside the transcript" : "above the prompt");
+
+export const SHOWN_TEXT = (isSidebar) =>
+  `Your decisions are ${WHERE_TEXT(isSidebar)}. ${COMMAND_LABEL} hides them; ${COMMAND_LABEL} <number> opens one whole.`;
+export const SHEET_SHOWN_TEXT = (id, isSidebar) => `Decision ${id} is open ${WHERE_TEXT(isSidebar)}; Escape closes it.`;
+
+/**
+ * The line pinned under the prompt where a pane opened unasked would not be a sidebar: the main
+ * screen draws it inline above the prompt, in the conversation's place, so the panel stays shut
+ * and this line names the command that opens it.
+ */
+export const FILED_SIGNAL_TEXT = (id) => `Décision n° ${id} en attente de votre réponse : ${COMMAND_LABEL} ${id}`;
+export const WAITING_SIGNAL_TEXT = (count) =>
+  `${count === 1 ? "1 décision vous attend" : `${count} décisions vous attendent`} sur cet objectif : ${COMMAND_LABEL}`;
 export const SHEET_UNREAD_TEXT = (id, reason) => `Decision ${id} could not be read: ${reason}.`;
 export const HIDDEN_TEXT = `The decisions panel is hidden. ${COMMAND_LABEL} brings it back.`;
 export const NO_WORKSPACE_TEXT =

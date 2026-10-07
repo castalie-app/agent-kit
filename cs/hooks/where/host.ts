@@ -60,6 +60,9 @@ export type Host = {
   /** `$.ui.log`: one debug line under the plugin's name. */
   uiLog: (text: string) => void
 
+  /** `$.ui.status`: the plugin's one line pinned under the prompt; undefined clears it. */
+  status: (text: string | undefined) => void
+
   /** `$.ui.open`: `isPlaced: false` with the reason where the pane waits undrawn. */
   openPane: (pane: PaneOpenArgs) => Promise<UiOpenResult>
 
@@ -103,6 +106,13 @@ export type Companion = {
 
   /** `/clear` or `/resume`, once the engine ran it. */
   cleared: () => Promise<void>
+
+  /**
+   * Whether every surface that said so docks a pane beside the transcript (`isFullscreen`): the
+   * only place a pane nobody asked for may open. The other pane reads it from the drawings it
+   * hooks; false while no surface has said.
+   */
+  isSidebar: () => boolean
 }
 
 /** No other pane: what the strategy pane hands on to when registered alone. */
@@ -111,4 +121,5 @@ export const NO_COMPANION: Companion = {
   called: () => undefined,
   turnEnded: () => undefined,
   cleared: async () => undefined,
+  isSidebar: () => false,
 }
