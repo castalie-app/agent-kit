@@ -208,5 +208,5 @@ French, translate the email; the link stays the same.
 
 Close the turn on the reply and the verdict of
 `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`. The gestures only the leader can make
-(send the draft, finish the Castalie invitations) are lines under *Finished*, not a question.
+(send the draft, finish the Castalie invitations) end the turn on *To do*, not a question.
 The next simple step closes the reply, in one sentence: the company's new website, `/cs:site`.

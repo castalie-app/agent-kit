@@ -307,6 +307,6 @@ never a company skill of the same name. Two sentences and the line to type:
 
 Close the turn on the reply and the verdict of
 `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`. Opening a new session, accepting an
-invitation or sending a prepared message are gestures only the person can make: lines under
-*Finished* when everything else is delivered, never an *I need you*. A profile kept in the personal
-`CLAUDE.md` because Castalie could not take it yet is one line under *Finished* too.
+invitation or sending a prepared message are gestures only the person can make: they end the turn
+on *To do* when everything else is delivered, never an *I need you*. A profile kept in the personal
+`CLAUDE.md` because Castalie could not take it yet is one line of that verdict too.
