@@ -15,15 +15,16 @@ decode; two sessions ending a turn two different ways cost more than either shap
 
 ## The two rules, verbatim
 
-**A turn ends** only on a delivered result or a cited legitimate stop, and names one of three
-verdicts: finished, the session can be closed — only once its work item is closed where it is
-tracked; waiting, on what; or, I need you: the decision, its options, what each costs. Never a
-topic name. Never two of them. Never end on a stated intention of your own ("I'll check X next",
-"j'enchaîne", "the loop/cron will resume it") — execute it in the same turn; a loop tick is a
-safety net for a dead turn, never a reason to defer work you can do now. A check the user asks for
-before a larger piece of work is the whole turn: deliver it and what it changes for that work, then
-stop. An errored or interrupted tool call is unfinished — re-issue it, never end the turn treating
-it as done.
+**A turn ends** only on a delivered result or a cited legitimate stop, and names one of four
+verdicts: finished here for you, the session can be closed — only once its work item is closed
+where it is tracked and nothing is left for the user; to do: the gesture left to the user, where it
+is ready, what it unblocks; waiting, on what; or, I need you: the decision, its options, what each
+costs. Never a topic name. Never two of them. Never end on a stated intention of your own
+("I'll check X next", "j'enchaîne", "the loop/cron will resume it") — execute it in the same turn;
+a loop tick is a safety net for a dead turn, never a reason to defer work you can do now. A check
+the user asks for before a larger piece of work is the whole turn: deliver it and what it changes
+for that work, then stop. An errored or interrupted tool call is unfinished — re-issue it, never
+end the turn treating it as done.
 
 **Replies**: 5 bullets max, one idea per bullet, what changed for the user first; mechanics
 (branch, commit, path, phase) only on request; minimalist and direct, no politeness formulas, no
@@ -57,16 +58,20 @@ the terminal included. They need no loading, because they are here:
 a spec or a ticket, a procedure) also loads the skill, for its replacements and its check, and runs
 the check on the text before handing it back.
 
-## The three verdicts, as they print
+## The four verdicts, as they print
 
 The rules above stay in English; the verdict is written in the user's language. In French:
 
 ```
-> **Terminé** : la session peut être fermée.
+> **Terminé ici pour vous** : la session peut être fermée.
 ```
 
 ```
 > **En attente** : de la mise en production du correctif, pour la sonde de disponibilité.
+```
+
+```
+> **À faire** : jouer le script ouvert dans l'éditeur SQL, qui débloque la suite du traitement.
 ```
 
 ```
@@ -76,19 +81,22 @@ The rules above stay in English; the verdict is written in the user's language. 
 > **C.** Attendre : ce que ça coûte.
 ```
 
-In English the headings are **Finished**, **Waiting** and **I need you**. The blockquote is the
-whole mechanism: the terminal draws it as a vertical bar, and nothing else has to render it.
+In English the headings are **Finished here for you**, **To do**, **Waiting** and **I need you**.
+The finished heading always names its scope: never « Finished » or « Terminé » alone. The
+blockquote is the whole mechanism: the terminal draws it as a vertical bar, and nothing else has to
+render it.
 
-- **Exactly one of the three**, and it is the last block of the turn.
+- **Exactly one of the four**, and it is the last block of the turn.
 - **Finished waits for the tracker**: while the work item is still open where it is tracked, the
   verdict is *Waiting*, on whatever closes it. One exception: when all that is left is a production
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
   right after the release, and a failure, or no play within two hours, relaunches the work by itself.
   Ordinary follow-ups (next day and later) never qualify a turn for this exception.
-  `> **Terminé** : mise en production en cours, le travail sera relancé si besoin.`
-- **A gesture only the user can perform**, once everything else is delivered, is a line under
-  *Finished*, never an *I need you*; one another session already took on is not asked again.
+  `> **Terminé ici pour vous** : mise en production en cours, le travail sera relancé si besoin.`
+- **A gesture only the user can perform**, once everything else is delivered, ends the turn on
+  *To do*, never *Finished* nor *I need you*; one another session already took on is not asked
+  again.
 - **I need you is also filed in Castalie, when the turn works on a tracked item.** A session on a
   spec, a brief or a ticket files the same question with `decision_create`: the complete sheet of
   `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, the work item as its subject, and a

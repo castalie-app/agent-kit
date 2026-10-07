@@ -269,4 +269,4 @@ Close the turn on the reply and the verdict of
 `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`. The demo links are the first lines of
 the reply. After the first pair, the verdict is *I need you*: which version to pursue, **A.** « Sublimer », **B.**
 « Réinventer ». Sharing the links and, on the GitHub path, the sign-in at the registrar are the
-leader's gestures: lines under *Finished*, never a question.
+leader's gestures: they end the turn on *To do* once nothing else is pending, never a question.
