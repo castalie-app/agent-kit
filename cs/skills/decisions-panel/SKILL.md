@@ -1,15 +1,20 @@
 ---
 name: decisions-panel
-description: Show or hide, beside the transcript, the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — open one card whole with "/cs:decisions-panel <number>", and answer it there, by an option or in your own words. A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
+description: Show or hide the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — open one card whole with "/cs:decisions-panel <number>", and answer it there, by an option or in your own words. A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
 ---
 
 # decisions-panel — what your agents are waiting on, as cards
 
-`/cs:decisions-panel` opens the panel named « Décisions » next to the conversation, and run again it
-closes it. `/cs:decisions-panel 42` opens decision 42 whole. The choice to keep the panel open is
-remembered across sessions of this machine, and the panel opens by itself in a new session where
-decisions wait, unless it was closed. When this session files a decision (`decision_create`), the
-panel opens by itself on that decision's sheet, closed or not.
+`/cs:decisions-panel` opens the panel named « Décisions », and run again it closes it.
+`/cs:decisions-panel 42` opens decision 42 whole. Asked for, the panel sits beside the transcript
+in the terminal's fullscreen layout, and above the prompt on its main screen (and wherever a
+surface does not dock panes).
+
+It opens by itself only where it would be a sidebar — fullscreen, wide enough: in a new session
+where decisions wait, unless it was closed; and on a decision's sheet when this session files one
+(`decision_create`), closed or not. On the main screen nothing opens over the conversation: a line
+under the prompt says how many decisions wait (`/cs:decisions-panel`) or names the one just filed
+(`/cs:decisions-panel 42`), and goes once the panel is opened.
 
 What it draws: the part of your inbox that belongs to the objective this working copy works on —
 `decision_list(scope=mine, status=pending, objective_id=<it>)` — under a header that names that

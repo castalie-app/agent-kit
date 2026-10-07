@@ -194,9 +194,11 @@ The chain of objectives is drawn in blue, so it reads apart from the brief and t
 under it; the period above it, the key results, the brief, the specs, their phases and
 their checks keep the terminal's own colour. A linked row of the chain keeps its underline.
 
-It opens by itself the first time a copy takes something up, closes on `/cs:okr-panel`, and
-remembers that choice for the next session. Below 110 columns, and outside fullscreen, it
-sits inline above the prompt as an eight-row summary instead. With nothing in hand it does
+In the fullscreen layout it opens by itself the first time a copy takes something up; it closes
+on `/cs:okr-panel`, and remembers that choice for the next session. On the main screen it opens
+only on `/cs:okr-panel`: an unasked pane would sit above the prompt, in the conversation's place.
+Below 110 columns, and outside fullscreen, it sits inline above the prompt as an eight-row summary
+instead. With nothing in hand it does
 not open at all, and opened by hand it says `Pas de travail en cours.`
 
 What is in hand belongs to the conversation that took it up, not to the copy. A conversation
@@ -387,9 +389,12 @@ at once and the next one opens, under « ✓ Réponse enregistrée sur n° 77 et
 répondre. »; with none left the sheet closes. The mobile app draws no field: there, the options
 answer and the bar points at Castalie for words.
 
-**A decision this session files opens by itself.** When `decision_create` answers, the panel
-opens on that decision's sheet without a command, even where the cards were closed, and without
-taking the keyboard from the composer. The shared conventions have an agent waiting on a person
+**A decision this session files opens by itself — beside the transcript.** When
+`decision_create` answers in the fullscreen layout, the panel opens on that decision's sheet
+without a command, even where the cards were closed, and without taking the keyboard from the
+composer. On the main screen, where a pane opened unasked would sit above the prompt in the
+conversation's place, nothing opens: a line under the prompt names the decision and
+`/cs:decisions-panel <number>`, and goes once the panel is opened. The shared conventions have an agent waiting on a person
 on a tracked item file its « J'ai besoin de vous » that way too, so the question is on screen and
 in Castalie. **And the answer comes back:** the decisions a copy filed are kept in the plugin's
 store; at the person's next prompt each one settled since (answered in the panel's page, in
@@ -403,8 +408,9 @@ answer you give it.
 Nothing polls: the inbox is read when the panel opens, after a `decision_*` write of this session,
 at the end of a turn and when the panel is drawn, each only once the last read is thirty seconds
 old, and on « rafraîchir ». The cache is scoped to the working copy, because one server alias
-names a different workspace in each repository. It opens by itself in a session where decisions
-on its objective wait, unless you closed it last time.
+names a different workspace in each repository. In the fullscreen layout it opens by itself in a
+session where decisions on its objective wait, unless you closed it last time; on the main screen
+the line under the prompt counts them instead.
 
 **Terminal and desktop.** The panel is a pane of the plugin's hooks module, and the same module
 draws it on both surfaces, each with its own elements: the terminal docks it beside the

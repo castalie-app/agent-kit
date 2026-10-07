@@ -222,9 +222,13 @@ export function register(on: On, also: Companion = NO_COMPANION) {
     isPaneOpen = false
   }
 
-  /** Opens by itself the first time this copy holds something, unless it was closed. */
+  /**
+   * Opens by itself the first time this copy holds something, unless it was closed — and only
+   * where it would be a sidebar. On the main screen a pane sits above the prompt, in the
+   * conversation's place: there it opens when the person asks for it.
+   */
   async function openOnFirstHold(engine: Host): Promise<void> {
-    if (isPaneOpen || hasAutoOpened) return
+    if (isPaneOpen || hasAutoOpened || !also.isSidebar()) return
 
     const preference = await engine.storeGet(Names.STORE_OPEN_KEY).catch(() => undefined)
     if (preference === false) return
@@ -265,6 +269,8 @@ export function register(on: On, also: Companion = NO_COMPANION) {
     // the names come after, once the session's MCP servers have finished dialing.
     await openOnFirstHold(engine).catch(() => undefined)
     scheduleRefresh(engine, FIRST_READ_MS)
+    // Whether the pane would be a sidebar is known once the surface has drawn: one more look then.
+    engine.after(FIRST_READ_MS, () => void openOnFirstHold(engine).catch(() => undefined))
 
     timers.get('poll')?.cancel()
     timers.set(
@@ -296,6 +302,7 @@ export function register(on: On, also: Companion = NO_COMPANION) {
       cwd: () => $.session.cwd(),
       invalidate: () => $.ui.invalidate('ui.render'),
       uiLog: text => $.ui.log(text),
+      status: text => $.ui.status(text),
       openPane: pane => $.ui.open(pane),
       closePane: pane => $.ui.close(pane),
       listCommands: () => $.command.list(),

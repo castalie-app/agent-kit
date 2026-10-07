@@ -74,6 +74,7 @@ function hostOf($: EngineInterface): Host {
     cwd: () => $.session.cwd(),
     invalidate: () => $.ui.invalidate('ui.render'),
     uiLog: text => $.ui.log(text),
+    status: text => $.ui.status(text),
     openPane: pane => $.ui.open(pane),
     closePane: pane => $.ui.close(pane),
     listCommands: () => $.command.list(),
@@ -96,9 +97,14 @@ async function drawnOf($: EngineInterface): Promise<Drawn | null> {
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /**
- * Registers the decisions panel: beside the transcript, the decisions waiting for the person on
- * the objective this working copy works on, as cards, one group per agent that asked them, and one
- * card opened whole in a pane of its own. A copy on no objective shows no card at all.
+ * Registers the decisions panel: the decisions waiting for the person on the objective this
+ * working copy works on, as cards, one group per agent that asked them, and one card opened whole
+ * in a pane of its own. A copy on no objective shows no card at all.
+ *
+ * Where it sits is the surface's: docked beside the transcript in the terminal's fullscreen
+ * layout, inline above the prompt on its main screen. So it opens unasked only where every surface
+ * said it docks a pane (`isFullscreen`); elsewhere a line under the prompt names the command, and
+ * the pane opens when the person asks for it.
  *
  * It binds where something draws. A terminal session binds at `session.start` (which the
  * strategy pane hooks, and hands on through `companion`); a session the
@@ -132,6 +138,13 @@ export function register(on: On, companion: Companion): void {
   let isRefreshQueued = false
   let isCardsOpen = false
   let hasAutoOpened = false
+  /**
+   * Whether each surface that said so docks a pane beside the transcript (`isFullscreen`). The
+   * terminal says it on every drawing, fixed for the session; a remote surface when it attaches.
+   */
+  const layouts = new Map<string, boolean>()
+  /** What the line under the prompt names: a decision filed here, 0 for the count waiting, or none. */
+  let signalled: number | null = null
 
   const timers = new Map<'refresh' | 'redraw', { cancel: () => void }>()
 
@@ -146,6 +159,45 @@ export function register(on: On, companion: Companion): void {
         engine.invalidate()
       }),
     )
+  }
+
+  // ── Where a pane sits, and the line that stands in for it ────────────────
+
+  function learnLayout(surface: string, viewport: { isFullscreen?: boolean } | undefined) {
+    if (typeof viewport?.isFullscreen === 'boolean') layouts.set(surface, viewport.isFullscreen)
+  }
+
+  /**
+   * True only where every surface that said so docks a pane: a pane opened unasked is then a
+   * sidebar. On the main screen it would sit above the prompt, in the conversation's place; and a
+   * surface that said nothing yet is not taken for one that docks.
+   */
+  function isSidebar(): boolean {
+    return layouts.size > 0 && [...layouts.values()].every(Boolean)
+  }
+
+  function waitingCount(): number {
+    return model.workspaces.reduce((count, workspace) => count + (workspace.inbox?.cards.length ?? 0), 0)
+  }
+
+  /** Pins the line under the prompt that names the command, in place of a pane opened unasked. */
+  function signal(engine: Host, text: string, id: number) {
+    signalled = id
+    engine.status(text)
+  }
+
+  function clearSignal(engine: Host) {
+    if (signalled === null) return
+    signalled = null
+    engine.status(undefined)
+  }
+
+  /** The count on the line follows the inbox, and the line goes once nothing waits. */
+  function resignal(engine: Host) {
+    if (signalled !== 0 || model.status !== 'ready') return
+    const count = waitingCount()
+    if (count === 0) clearSignal(engine)
+    else engine.status(Names.WAITING_SIGNAL_TEXT(count))
   }
 
   // ── Reading ─────────────────────────────────────────────────────────────
@@ -277,6 +329,7 @@ export function register(on: On, companion: Companion): void {
 
       model = { status: 'ready', objective, workspaces: [workspace] }
       readAt = await engine.now()
+      resignal(engine)
     } catch (error) {
       engine.uiLog(`décisions : ${message(error)}`)
     } finally {
@@ -376,8 +429,10 @@ export function register(on: On, companion: Companion): void {
     void loadSheet(engine, id, server, notice)
 
     const pane = { id: Names.SHEET_PANE_ID, title: Names.SHEET_PANE_TITLE(id), closeOnEscape: true } as const
+    const placed = await engine.openPane(focus ? { ...pane, focus: true } : pane)
+    if (placed.isPlaced) clearSignal(engine)
 
-    return engine.openPane(focus ? { ...pane, focus: true } : pane)
+    return placed
   }
 
   // ── Answering from the sheet ────────────────────────────────────────────
@@ -509,9 +564,11 @@ export function register(on: On, companion: Companion): void {
   }
 
   /**
-   * A decision this session just filed: the panel opens by itself on its sheet, without a
-   * command, even where the person closed the cards last time — the agent is now waiting on it.
-   * The sheet does not take the keyboard: the turn is still running, and the composer keeps it.
+   * A decision this session just filed: where the pane would be a sidebar, the panel opens by
+   * itself on its sheet, without a command, even where the person closed the cards last time —
+   * the agent is now waiting on it. The sheet does not take the keyboard: the turn is still
+   * running, and the composer keeps it. Elsewhere nothing opens over the conversation: a line
+   * under the prompt names the decision and the command that opens it.
    */
   async function openFiled(engine: Host, filed: { server: string; id: number }): Promise<void> {
     const known = await filedNow(engine)
@@ -519,8 +576,14 @@ export function register(on: On, companion: Companion): void {
       await keepFiled(engine, [...known, { ...filed, at: await engine.now() }])
     }
 
-    if (!isCardsOpen) await openCards(engine)
-    await openSheet(engine, filed.id, filed.server, false)
+    if (isSidebar()) {
+      if (!isCardsOpen) await openCards(engine)
+      const placed = await openSheet(engine, filed.id, filed.server, false)
+      // Too narrow for a pane nobody asked for: it waits undrawn, and the line says it is there.
+      if (placed.isPlaced) return
+    }
+
+    signal(engine, Names.FILED_SIGNAL_TEXT(filed.id), filed.id)
   }
 
   /**
@@ -540,8 +603,12 @@ export function register(on: On, companion: Companion): void {
       try {
         await known.forget([known.cacheKeyOf(entry.server, 'decision', entry.id)])
         const decision = await known.read(entry.server, 'decision', entry.id)
-        if (SETTLED_STATUSES.has(decision.status ?? '')) notices.push(settledNotice(decision))
-        else pending.push(entry)
+        if (SETTLED_STATUSES.has(decision.status ?? '')) {
+          notices.push(settledNotice(decision))
+          if (signalled === entry.id) clearSignal(engine)
+        } else {
+          pending.push(entry)
+        }
       } catch {
         pending.push(entry)
       }
@@ -576,6 +643,7 @@ export function register(on: On, companion: Companion): void {
     const placed = await engine.openPane({ id: Names.CARDS_PANE_ID, title: Names.CARDS_PANE_TITLE })
     isCardsOpen = true
     hasAutoOpened = true
+    if (placed.isPlaced) clearSignal(engine)
     void refreshIfStale(engine)
 
     return placed
@@ -588,7 +656,9 @@ export function register(on: On, companion: Companion): void {
 
   /**
    * Opens by itself once per session where decisions wait, unless the person closed it last
-   * time. Opened unasked, a pane is only seated where it would be a sidebar; elsewhere it waits.
+   * time — and only where it would be a sidebar: in fullscreen, wide enough for a pane nobody
+   * asked for. Elsewhere it stays shut, and a line under the prompt says how many wait and names
+   * the command.
    */
   async function openOnWaiting(engine: Host): Promise<void> {
     if (isCardsOpen || hasAutoOpened) return
@@ -597,10 +667,13 @@ export function register(on: On, companion: Companion): void {
     if (preference === false) return
 
     await refresh(engine)
-    const waiting = model.workspaces.some(workspace => (workspace.inbox?.cards.length ?? 0) > 0)
-    if (!waiting) return
+    const count = waitingCount()
+    if (count === 0) return
 
-    await openCards(engine)
+    if (isSidebar() && (await openCards(engine)).isPlaced) return
+
+    hasAutoOpened = true
+    signal(engine, Names.WAITING_SIGNAL_TEXT(count), 0)
   }
 
   // ── The bind ────────────────────────────────────────────────────────────
@@ -660,6 +733,7 @@ export function register(on: On, companion: Companion): void {
   }).catch(($, e, next) => next(e))
 
   on('session.attach', async ($, e, next) => {
+    learnLayout(e.surface, e.viewport)
     const result = await next(e)
     if (host === null) await bind(hostOf($), await $.session.cwd()).catch(() => undefined)
 
@@ -671,7 +745,18 @@ export function register(on: On, companion: Companion): void {
    * surface back unchanged, says so in the interface's log, and leaves its stack in the store
    * for the next session to be asked about.
    */
+  /**
+   * The hint under the prompt is drawn from the first frame on the terminal and the desktop: its
+   * viewport says, before any pane opens, whether this surface docks one. Read, never redrawn.
+   */
+  on('ui.render', { component: 'PromptHint' }, ($, e, next) => {
+    learnLayout(e.surface, e.viewport)
+
+    return next(e)
+  })
+
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
+    learnLayout(e.surface, e.viewport)
     const isCards = e.requestId === Names.CARDS_PANE_ID
     const isSheet = e.requestId === Names.SHEET_PANE_ID
     if ((!isCards && !isSheet) || host === null) return next(e)
@@ -765,6 +850,8 @@ export function register(on: On, companion: Companion): void {
     const servers = await serversNow(engine)
     if (servers.length === 0) return { text: Names.NO_WORKSPACE_TEXT }
 
+    // Asked for, a pane is seated either way: docked beside a fullscreen transcript, else inline.
+    const isDocked = e.presentation.isFullscreen || isSidebar()
     const asked = Number.parseInt(e.args.trim().replace(/^#/, ''), 10)
     if (Number.isInteger(asked) && asked > 0) {
       const server =
@@ -772,7 +859,7 @@ export function register(on: On, companion: Companion): void {
         servers[0] ??
         ''
       const placed = await openSheet(engine, asked, server)
-      if (placed.isPlaced) return { text: Names.SHEET_SHOWN_TEXT(asked) }
+      if (placed.isPlaced) return { text: Names.SHEET_SHOWN_TEXT(asked, isDocked) }
 
       // Asked for, a pane is seated at any width: one that waits is on a surface that places
       // none. It is closed again, and the sheet is printed instead, every time.
@@ -798,7 +885,7 @@ export function register(on: On, companion: Companion): void {
     if (placed.isPlaced) {
       await engine.storeSet(Names.STORE_OPEN_KEY, true).catch(() => undefined)
 
-      return { text: Names.SHOWN_TEXT }
+      return { text: Names.SHOWN_TEXT(isDocked) }
     }
 
     await closeCards(engine)
@@ -811,6 +898,9 @@ export function register(on: On, companion: Companion): void {
   // the engine refuses a second one — so that pane hands them on, through this.
   companion.started = (engine, cwd) => bind(engine, cwd)
 
+  // The strategy pane opens by itself too: it asks this panel, which reads the drawings, where.
+  companion.isSidebar = isSidebar
+
   companion.called = (tool, args, said) => {
     if (host === null) return
     burstFor(host).wrote(tool, args)
@@ -820,7 +910,8 @@ export function register(on: On, companion: Companion): void {
   }
 
   companion.turnEnded = () => {
-    if (host !== null && isCardsOpen) void refreshIfStale(host).catch(() => undefined)
+    // The line under the prompt keeps its count true, as the open cards keep theirs.
+    if (host !== null && (isCardsOpen || signalled === 0)) void refreshIfStale(host).catch(() => undefined)
   }
 
   companion.cleared = async () => {
