@@ -36,6 +36,7 @@
 //   cs on-behalf                       # attended or not, and the workspace's robot account
 //   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
 //   cs prompt screen --kind <k> ...    # screen a text written elsewhere with Jev (prompt-screen.mjs)
+//   cs prompt gate <target> <id>       # screen a stored scheduled-task or resume prompt before it is played (prompt-gate.mjs)
 //   cs inbox watch|install             # hand this workstation's agent messages to their sessions (inbox.mjs)
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
@@ -250,6 +251,9 @@ const HELP = `cs — Castalie project-management CLI
   cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
                                     # screen a text written elsewhere with Jev before an unattended
                                     #   agent reads it; exit 0 = pass, 2 = refuse (fails closed)
+  cs prompt gate scheduled-run|decision-resume <id> [-- <command> <args...>]
+                                    # read a stored prompt from Castalie, screen it, close the run or
+                                    #   the resume on a refusal; launch <command> on a pass only
   cs inbox help                     # the round that hands Castalie's agent messages to their sessions
   cs version                        # the version of the kit that is running
   cs codex [--verify|--check]       # project this kit's skills, instructions and agents into
@@ -277,6 +281,11 @@ async function main() {
     return agentTasks.runCli(rest);
   }
   // `prompt` answers with an exit code (0 = pass, 2 = refuse) that a caller's script branches on.
+  if (cmd === "prompt" && rest[0] === "gate") {
+    const gate = await import("./prompt-gate.mjs");
+    process.exitCode = await gate.runCli(rest.slice(1));
+    return;
+  }
   if (cmd === "prompt") {
     const screen = await import("./prompt-screen.mjs");
     process.exitCode = await screen.runCli(rest);

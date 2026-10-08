@@ -56,30 +56,42 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    `scheduled-run` compares both, ignoring case. The task is known only once the run is picked, so a
    launcher passes the longest maximum duration it plays, plus 15 (at most 495). `picked=false`:
    release the slot, exit.
-3. **One working copy per slot**, reset to the default branch before each run, never the main
+3. **Screen the prompt, before any session.** `cs prompt gate scheduled-run <run_id>` reads the
+   run's `prompt_snapshot_md` (and `continuation_md`) from Castalie and asks Jev, failing closed.
+   Exit 2: refused, and the gate already closed the run `failed` with Jev's reasons in its notes —
+   launch nothing, and skip the fallback close below. Exit 1: it could not read the run — launch
+   nothing, and close it as the fallback below does, « not screened: <what it printed> ». Exit 0:
+   carry on. The gate can launch the session itself, on a pass only:
+   `cs prompt gate scheduled-run <run_id> -- claude --print --output-format json "/cs:scheduled-run <run_id>"`
+   returns the session's own exit code, prints its verdict on stderr, and leaves stdout to the
+   session. `scheduled-run` screens the prompt again as its first gesture, for a launcher that
+   does not.
+4. **One working copy per slot**, reset to the default branch before each run, never the main
    checkout another automation or a person is using. A run that opens a pull request opens it from
    there.
-4. **The session.** Unattended environment (`CS_UNATTENDED=1`, and `CS_ROBOT_USER_ID` when the
+5. **The session.** Unattended environment (`CS_UNATTENDED=1`, and `CS_ROBOT_USER_ID` when the
    workspace has a robot account, `on-whose-behalf.md`); the task's `recommended_model` and
    `recommended_effort`, the launcher's defaults otherwise; headless with machine-readable output (for
    Claude Code, `claude --print --output-format json "/cs:scheduled-run <run_id>"`), empty input,
    the permission policy the workstation grants its unattended sessions. Cut the session at
    `max_duration_minutes`, killing its whole process tree.
-5. **The cost, always, after the session.** `scheduled_task_run_record_usage(run_id, total_cost_usd,
+6. **The cost, always, after the session.** `scheduled_task_run_record_usage(run_id, total_cost_usd,
    model_used)`, read from the session's output; 0 and the requested model when the output is
    missing. Once per run, closed or not. The session never writes it.
-6. **The fallback close.** When the session ends without a verdict — cut, crashed, or simply exited —
+7. **The fallback close.** When the session ends without a verdict — cut, crashed, or simply exited —
    `scheduled_task_run_complete(id, outcome="skipped", final_status="human_required", notes_md=<"the
    session ended without a verdict": exit code, duration, last lines of output>)`. An
    `already_completed` answer means the session closed the run itself: the normal case.
-7. **A log line per run** on the workstation: slot, run, task, start, end, exit code, cost.
-8. **Its own health, reported.** The launcher is itself a task of the workstation's scheduler: install
+8. **A log line per run** on the workstation: slot, run, task, start, end, exit code, cost.
+9. **Its own health, reported.** The launcher is itself a task of the workstation's scheduler: install
    `cs agent-tasks` on that machine (`--always-on` on a robot) so Castalie shows whether it runs, fails
    or is stuck, beside the tasks it plays — `${CLAUDE_PLUGIN_ROOT}/instructions/agent-tasks.md`.
 
 **Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first**, and a
 refusal launches nothing: the prompt reaches an agent that holds the workstation's credentials, with
-nobody watching. The screen and its thresholds are in `${CLAUDE_PLUGIN_ROOT}/instructions/agent-inbox.md`.
+nobody watching. For a scheduled run that is step 3, and the first gesture of `scheduled-run` once it knows the run
+is its own. The
+screen and its thresholds are in `${CLAUDE_PLUGIN_ROOT}/instructions/agent-inbox.md`.
 
 ## How to name and describe the task
 

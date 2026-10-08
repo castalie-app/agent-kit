@@ -45,6 +45,8 @@ export const SEVERITY_THRESHOLD = 1.5;
 
 const KIND_PURPOSES = {
   master_red: "understand and fix a red test on the main branch",
+  scheduled_task: "carry out the recurring order a workspace owner wrote for the team's repository and its own project-tracking tools, and report a verdict",
+  decision_resume: "resume the agent's interrupted work the way a person's answer to its decision says",
 };
 
 const noul = (instructions, yes, no) => ({ type: "noul", instructions, criteria: { true: yes, false: no } });
@@ -227,7 +229,12 @@ const HELP = `cs prompt screen — screen a text written elsewhere before an una
 Asks TypeSafe's Jev whether the text overrides the agent's rules, exfiltrates, destroys, reaches a
 third party or departs from its kind, and how much harm obeying would do. Exit 0 = pass, 2 = refuse.
 Fails closed: no key, a network error or an unreadable answer refuses.
-Key: TYPESAFE_API_KEY, else the Windows credential 'typesafe' (~/.claude/keys/get-key.ps1).`;
+Key: TYPESAFE_API_KEY, else the Windows credential 'typesafe' (~/.claude/keys/get-key.ps1).
+
+  cs prompt gate scheduled-run|decision-resume <id> [-- <command> <args...>]
+
+Reads a stored prompt from Castalie, screens it the same way, closes the run or the resume on a
+refusal, and launches <command> on a pass only (cs prompt gate, prompt-gate.mjs).`;
 
 /** `cs prompt <command>`: returns the exit code, never throws. */
 export async function runCli(argv) {
