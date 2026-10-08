@@ -75,8 +75,12 @@ else is written back as text. For a drawing, use Mermaid or an illustration.
 
 ## An image attached to the sheet
 
-Attach the file to the sheet's thread with `discussion_attachment_upload` (base64, 16 MiB at
-most), then reference the returned attachment id from any body:
+A file on this machine goes through `attach_file` of the plugin's local `castalie-files` server
+(or `cs attach <brief|spec|bug> <id> <file...>` in a terminal): it reads the file itself, makes an
+image lighter first, and answers with the Markdown below. Never copy base64 into
+`discussion_attachment_upload` by hand: an agent cannot reproduce tens of kilobytes of it exactly,
+and the server answers `invalid_base64`. That remote verb stays for bytes a program already holds.
+Then reference the returned attachment id from any body:
 
 | Sheet | Markdown |
 |---|---|

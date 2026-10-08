@@ -125,6 +125,17 @@ Your agent does the gesture itself, up to the last click, and hands you only the
 `PLAYWRIGHT_MCP_HEADLESS`, `PLAYWRIGHT_MCP_EXTENSION_TOKEN` and the other `PLAYWRIGHT_MCP_*`
 variables are read as the server documents them. The method is `cs/instructions/browser.md`.
 
+### Files from your machine, attached by path
+
+A third server, `castalie-files`, joins a file from your disk (a screenshot, a PDF, a CSV) to a brief,
+a spec or a bug, given its path: `attach_file` reads it, makes an image lighter first (at most
+1 600 px wide, WebP, kept only when lighter), and returns the Markdown that shows it in a body. In a
+terminal, `cs attach <brief|spec|bug> <id> <file...>` does the same. It signs in like your assistant
+does: a token you wrote (`CASTALIE_TOKEN`, `.cs/config.json`) if there is one, else `cs login`, once
+per machine, which opens your workspace's own approval page and keeps the sign-in renewed in
+`~/.castalie/credentials.json`. Image compression uses `sharp`, installed once into `~/.castalie/deps`
+on first use; without it, the file goes as it is.
+
 ### How updates reach you
 
 The marketplace tracks this repository, so a skill improved here reaches every installation without
@@ -729,7 +740,12 @@ cs/
   bin/cs.mjs                      # the cs CLI
   bin/build-codex.mjs             # the Codex projection, shipped so a client can run `cs codex`
   bin/playwright-mcp.mjs          # starts the browser the plugin declares in .mcp.json, on every OS
-  .mcp.json                       # the plugin's own MCP servers: playwright and playwright-attach
+  bin/castalie-files-mcp.mjs      # starts castalie-files: attach_file and login (castalie-files.mjs)
+  bin/attach.mjs                  # reads, lightens and uploads a local file — shared by attach_file and cs attach
+  bin/auth.mjs                    # the workspace sign-in (OAuth, PKCE, loopback) and its renewal
+  bin/config.mjs                  # where the endpoint and a hand-written token are read from
+  bin/image.mjs                   # image compression with sharp, installed on first use
+  .mcp.json                       # the plugin's own MCP servers: playwright, playwright-attach, castalie-files
 types/claude-code.d.ts            # the function-hooks API, as the engine wrote it; both panes are typed against this
 tsconfig.json                     # what CI recompiles on every push
 package.json                      # makes the repo itself runnable: npx -y github:castalie-app/agent-kit
