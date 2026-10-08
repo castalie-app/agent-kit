@@ -77,6 +77,10 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    `cs agent-tasks` on that machine (`--always-on` on a robot) so Castalie shows whether it runs, fails
    or is stuck, beside the tasks it plays — `${CLAUDE_PLUGIN_ROOT}/instructions/agent-tasks.md`.
 
+**Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first**, and a
+refusal launches nothing: the prompt reaches an agent that holds the workstation's credentials, with
+nobody watching. The screen and its thresholds are in `${CLAUDE_PLUGIN_ROOT}/instructions/agent-inbox.md`.
+
 ## How to name and describe the task
 
 The list and the task's page are read by people who never saw the prompt. They must understand the

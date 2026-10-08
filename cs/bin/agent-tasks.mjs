@@ -206,7 +206,8 @@ function kitVersion() {
 
 const CONFIG_DIRS = [".cs", ".bg", ".g" + "aly"];
 
-function readConfigFrom(startDir) {
+/** The first `.cs/config.json` (or a former folder's) found upward from `startDir`; `{}` when none. */
+export function readConfigFrom(startDir) {
   let dir = resolve(startDir);
   for (;;) {
     for (const folder of CONFIG_DIRS) {
@@ -252,12 +253,17 @@ function resolveEndpoint(args, config) {
 /**
  * The token, read only for the endpoint it was issued for: CASTALIE_TOKEN (set by whoever runs the
  * reporter), .cs/config.json's when its own endpoint is this one, else Claude Code's for <endpoint>/mcp.
+ * `cs inbox watch` reads it the same way.
  */
+export function resolveToken(endpoint, config = {}) {
+  const configToken = config.token && bareEndpoint(config.endpoint) === bareEndpoint(endpoint) ? config.token : null;
+  return process.env.CASTALIE_TOKEN || configToken || storedOAuthToken(endpoint);
+}
+
 function resolveConnection(args, repo) {
   const config = readConfigFrom(repo);
   const endpoint = resolveEndpoint(args, config);
-  const configToken = config.token && bareEndpoint(config.endpoint) === bareEndpoint(endpoint) ? config.token : null;
-  const token = process.env.CASTALIE_TOKEN || configToken || storedOAuthToken(endpoint);
+  const token = resolveToken(endpoint, config);
   if (!token) {
     fail(`No token for ${endpoint}/mcp. Set CASTALIE_TOKEN, write .cs/config.json { "token": ... }, `
       + "or sign in to the castalie MCP server once in Claude Code (/mcp) on this machine's account.");
@@ -379,8 +385,8 @@ function xmlEscape(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/** The Task Scheduler definition: every N minutes from now on, no window, five minutes at most. */
-export function taskXml({ identity, every, command, argument, workingDirectory, description, start, elevated = false }) {
+/** The Task Scheduler definition: every N minutes from now on, no window, `limit` at most (five minutes by default). */
+export function taskXml({ identity, every, command, argument, workingDirectory, description, start, elevated = false, limit = "PT5M" }) {
   return `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo><Description>${xmlEscape(description)}</Description></RegistrationInfo>
@@ -406,7 +412,7 @@ export function taskXml({ identity, every, command, argument, workingDirectory, 
     <AllowStartOnDemand>true</AllowStartOnDemand>
     <Enabled>true</Enabled>
     <WakeToRun>false</WakeToRun>
-    <ExecutionTimeLimit>PT5M</ExecutionTimeLimit>
+    <ExecutionTimeLimit>${limit}</ExecutionTimeLimit>
   </Settings>
   <Actions Context="Author">
     <Exec>
@@ -422,6 +428,33 @@ function schtasks(...args) {
   const result = spawnSync("schtasks.exe", args, { encoding: "utf8", windowsHide: true });
   if (result.status !== 0) fail(`schtasks ${args[0]} failed: ${(result.stderr || result.stdout || "").trim()}`);
   return result.stdout;
+}
+
+/**
+ * Registers (or replaces) a current-user task running `conhost.exe <argument>` every `every`
+ * minutes, then starts it once. Shared by `cs agent-tasks install` and `cs inbox install`.
+ */
+export function registerScheduledTask({ name, every, argument, workingDirectory, description, elevated = false, limit }) {
+  // Registered from an XML through schtasks, not with Register-ScheduledTask: that cmdlet answers
+  // "access denied" unelevated on some profiles, where schtasks registers a current-user task fine.
+  // The token's own name: an SSH session sets USERDOMAIN to the workgroup, which the scheduler cannot map.
+  // By SID: an Entra-joined profile's account name (AzureAD\name) does not always map back in the
+  // scheduler, and a Unix `whoami` earlier on the PATH answers in its own spelling.
+  const whoami = join(process.env.SystemRoot || "C:\\Windows", "System32", "whoami.exe");
+  const identity = execFileSync(whoami, ["/user", "/fo", "csv", "/nh"], { encoding: "utf8", windowsHide: true })
+    .trim().split(",").pop().replace(/"/g, "");
+  const now = new Date(Date.now() + 60_000);
+  const pad = (n) => String(n).padStart(2, "0");
+  const start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`;
+  const xml = taskXml({ identity, every, command: "conhost.exe", argument, workingDirectory, description, start, elevated, limit });
+  const file = join(tmpdir(), `cs-task-${process.pid}.xml`);
+  try {
+    writeFileSync(file, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, "utf16le")]));
+    schtasks("/create", "/tn", name, "/xml", file, "/f");
+  } finally {
+    rmSync(file, { force: true });
+  }
+  schtasks("/run", "/tn", name);
 }
 
 async function cmdInstall(args) {
@@ -443,26 +476,7 @@ async function cmdInstall(args) {
   const description = "Castalie: reports this workstation's agent tasks for the workspace every "
     + `${every} minutes (cs agent-tasks). Sends names, triggers, last and next runs, results; never a command's arguments.`;
 
-  // Registered from an XML through schtasks, not with Register-ScheduledTask: that cmdlet answers
-  // "access denied" unelevated on some profiles, where schtasks registers a current-user task fine.
-  // The token's own name: an SSH session sets USERDOMAIN to the workgroup, which the scheduler cannot map.
-  // By SID: an Entra-joined profile's account name (AzureAD\name) does not always map back in the
-  // scheduler, and a Unix `whoami` earlier on the PATH answers in its own spelling.
-  const whoami = join(process.env.SystemRoot || "C:\\Windows", "System32", "whoami.exe");
-  const identity = execFileSync(whoami, ["/user", "/fo", "csv", "/nh"], { encoding: "utf8", windowsHide: true })
-    .trim().split(",").pop().replace(/"/g, "");
-  const now = new Date(Date.now() + 60_000);
-  const pad = (n) => String(n).padStart(2, "0");
-  const start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`;
-  const xml = taskXml({ identity, every, command: "conhost.exe", argument, workingDirectory: repo, description, start, elevated: args.elevated === true });
-  const file = join(tmpdir(), `cs-agent-tasks-${process.pid}.xml`);
-  try {
-    writeFileSync(file, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, "utf16le")]));
-    schtasks("/create", "/tn", name, "/xml", file, "/f");
-  } finally {
-    rmSync(file, { force: true });
-  }
-  schtasks("/run", "/tn", name);
+  registerScheduledTask({ name, every, argument, workingDirectory: repo, description, elevated: args.elevated === true });
   console.log(`Installed '${name}': every ${every} min, from ${repo}, reporting to ${endpoint}.`);
   console.log(`It runs ${cli}. Check what it sends with: node ${quote(cli)} agent-tasks report --dry-run --repo ${quote(repo)}${args.match.map((m) => ` --match ${quote(m)}`).join("")}`);
 }
