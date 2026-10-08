@@ -1,7 +1,9 @@
 // Answering a decision from its sheet — as plain data, so every rule is checked in node.
 //
-// The sheet's answer bar is Castalie's own (`_DecisionAnswerBar.cshtml`): one control per option,
-// a field to answer otherwise or adjust, and the effect a written answer has. It answers through
+// The sheet is Castalie's own since spec 88 (`Detail.cshtml`): one card per option, and a press
+// on the card answers; the last card is always « Autre réponse ou question : », a field whose
+// words are the answer (« Répondre ») or a question to the agent (« Poser la question »,
+// `decision_ask_context`). A written answer carries the subject's first allowed effect. It answers through
 // `decision_answer` on the workspace the decision lives in, with the session's own credentials:
 // the server holds the rights — a viewer or a service token is refused there, and the bar shows
 // its `fix`. The rules that need no server (an approval's « Non » carries its reason, a written
@@ -11,37 +13,37 @@
 // and reads the reply with `answerOutcomeOf`.
 
 import { groupsOf } from "./inbox.mjs";
+import { hrefOf } from "../where/render.mjs";
+import { asksMarkdown, optionCardMarkdown } from "./render.mjs";
 import {
   ALL_EFFECTS,
   EFFECT_ORDERS,
   APPROVAL_TITLES,
+  ANSWER_TEXT,
   ARMED_HINT,
+  ASK_TEXT,
   CONFIRM_TEXT,
-  EFFECT_CHOICES,
-  EFFECT_LABEL,
   HOTKEY_CARDS,
   LOCAL_REFUSALS,
   NARROW_EFFECTS,
   NARROW_EFFECT_SUBJECTS,
   NO_FIELD_TEXT,
+  OTHER_PLACEHOLDER,
+  OTHER_TITLE,
   REASON_HINT,
-  RECOMMENDED_MARK,
-  TEXT_LABEL_ADJUST,
   TEXT_LABEL_FREE,
-  TEXT_LABEL_OTHER,
   TEXT_LABEL_REASON,
-  TEXT_PLACEHOLDER,
   TEXT_SUBMIT,
 } from "./names.mjs";
 
 /**
  * @typedef {import("./inbox.mjs").Decision} Decision
  * @typedef {{ optionId: number | null, text: string, effect: string | null, error: string | null,
- *   isSending: boolean }} Draft
+ *   isSending: boolean, level: number | null }} Draft
  */
 
-/** A draft nobody has touched yet. @returns {Draft} */
-export const emptyDraft = () => ({ optionId: null, text: "", effect: null, error: null, isSending: false });
+/** A draft nobody has touched yet: 80 words shown, nothing chosen. @returns {Draft} */
+export const emptyDraft = () => ({ optionId: null, text: "", effect: null, error: null, isSending: false, level: null });
 
 /**
  * The effects a written answer may have on this subject — the sheet's rule, `none` left out as
@@ -81,30 +83,37 @@ export function isRefusalOption(decision, optionId) {
 }
 
 /**
- * The answer bar, as data — null where the decision no longer waits.
+ * The answering half of a sheet, as data — null where the decision no longer waits: one card per
+ * option, then the card « Autre réponse ou question ».
  *
- * Choosing an option is one deliberate gesture: a press on its « Choisir », or its digit (which
- * only marks it) then Enter on « Répondre ». A digit never answers by itself, so the two presses
- * that open a card and pick its first option cannot answer it by accident.
+ * A press on a card answers with that option at once. Its digit only marks it, and Enter on
+ * « Répondre « … » » answers: the two presses that open a card from the cards pane and pick its
+ * first option cannot answer it by accident.
  *
  * @param {Decision} decision
  * @param {Draft} draft
- * @param {{ hasField: boolean }} surface whether the surface draws an `Input` and a `Select`
+ * @param {{ hasField: boolean }} surface whether the surface draws an `Input`
  */
 export function answerBarOf(decision, draft, surface) {
   // A server that names no status is read as waiting: the server is the one that refuses.
   if (decision.status !== null && decision.status !== "pending") return null;
 
-  const options = pickable(decision).map((option, index) => ({
+  // A card's press lands on the option's own anchor of the sheet, which the pane takes over.
+  const page = hrefOf(decision.url);
+  const cards = pickable(decision).map((option, index) => {
+    const href = page === null ? null : `${page}#option-${option.id}`;
+    return {
     id: /** @type {number} */ (option.id),
     title: optionTitleOf(decision, option),
-    label: `${option.isRecommended ? `${RECOMMENDED_MARK} ` : ""}${optionTitleOf(decision, option)}`,
+    href,
+    markdown: optionCardMarkdown(decision, option, index, href),
     hotkey: index < HOTKEY_CARDS ? String(index + 1) : undefined,
     isRecommended: option.isRecommended,
     isArmed: option.id === draft.optionId,
-  }));
+    };
+  });
 
-  const chosen = options.find((option) => option.isArmed) ?? null;
+  const chosen = cards.find((card) => card.isArmed) ?? null;
   const needsReason = chosen !== null && isRefusalOption(decision, chosen.id);
   const armed =
     chosen === null
@@ -118,38 +127,43 @@ export function answerBarOf(decision, draft, surface) {
         };
 
   const label =
-    decision.shape === "free_text"
-      ? TEXT_LABEL_FREE
-      : armed === null
-        ? TEXT_LABEL_OTHER
-        : armed.needsReason
-          ? TEXT_LABEL_REASON(armed.title)
-          : TEXT_LABEL_ADJUST(armed.title);
+    decision.shape === "free_text" ? TEXT_LABEL_FREE : armed !== null && armed.needsReason ? TEXT_LABEL_REASON(armed.title) : OTHER_TITLE;
 
-  const allowed = effectsFor(decision.subjectKind);
   return {
     error: draft.error,
     isSending: draft.isSending,
-    options,
+    cards,
     armed,
-    field: surface.hasField ? { label, placeholder: TEXT_PLACEHOLDER, value: draft.text, submitLabel: TEXT_SUBMIT } : null,
-    effects:
-      surface.hasField && armed === null
-        ? {
-            label: EFFECT_LABEL,
-            value: draft.effect !== null && allowed.includes(draft.effect) ? draft.effect : (allowed[0] ?? "continue"),
-            options: allowed.map((effect) => ({ value: effect, label: EFFECT_CHOICES[effect] ?? effect })),
-          }
-        : null,
-    canSendText: surface.hasField && armed === null,
+    other: {
+      title: OTHER_TITLE,
+      asks: asksMarkdown(decision),
+      field: surface.hasField ? { label, placeholder: OTHER_PLACEHOLDER, value: draft.text, submitLabel: TEXT_SUBMIT } : null,
+      answerLabel: ANSWER_TEXT,
+      askLabel: ASK_TEXT,
+      canAnswer: surface.hasField && armed === null,
+      canAsk: surface.hasField && armed === null,
+    },
     fallback: surface.hasField ? null : NO_FIELD_TEXT,
   };
 }
 
 /**
+ * What `decision_ask_context` is asked from the card's field, or why nothing leaves.
+ *
+ * @param {Decision} decision
+ * @param {Draft} draft
+ * @returns {{ ok: true, args: Record<string, unknown> } | { ok: false, code: string, fix: string }}
+ */
+export function askRequestOf(decision, draft) {
+  const text = draft.text.trim();
+  if (text === "") return { ok: false, code: "context_ask_required", fix: LOCAL_REFUSALS.question_required };
+  return { ok: true, args: { id: decision.id, asked_md: text } };
+}
+
+/**
  * What `decision_answer` is asked, or why nothing leaves. An option chosen without words is a
- * `click`; anything typed is `text`. Without an option the words are the answer, with the effect
- * the person picked (the subject's first allowed one by default).
+ * `click`; anything typed is `text`. Without an option the words are the answer, with the
+ * subject's first allowed effect.
  *
  * @param {Decision} decision
  * @param {Draft} draft
@@ -178,6 +192,8 @@ export function answerRequestOf(decision, draft, chosen = {}) {
     };
   }
 
+  // The card has no effect to pick (Castalie spec 88): a written answer restarts the work from
+  // the person's words, with the subject's first allowed effect.
   const allowed = effectsFor(decision.subjectKind);
   const effect = draft.effect !== null && allowed.includes(draft.effect) ? draft.effect : (allowed[0] ?? "continue");
   return { ok: true, args: { id: decision.id, text_md: text, effect, channel: "text" } };

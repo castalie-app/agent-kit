@@ -160,7 +160,7 @@ seven reasons of `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), file i
 `decision_create(subject_kind="bug", subject_id=<ticket>, answer_shape="choice")`, one option per
 approach, each with **what it costs** (`cost_text`), **what it leaves behind** (`gives_up_md`), its
 `risk` and its `effect` — `continue` for the approaches the robot can carry, `take_over` for the one
-a person must — the one you recommend marked, and why in `recommendation_md`. Then carry on with
+a person must — the one you recommend marked, and why in the description. Then carry on with
 what does not depend on it: the reproduction, the regression test.
 
 **A ticket you picked up may already carry the answer.** `bug_get` returns its `decisions`: an

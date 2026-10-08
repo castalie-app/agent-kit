@@ -2,7 +2,17 @@
 
 There is one way for an agent to ask a person anything: `decision_create`, a **decision** tied to
 the work it blocks. It lands in the person's inbox (`/decisions`), they answer it in a click, a
-sentence or by voice, and Castalie applies the answer to that work at once. Read by `bug-fix`,
+sentence or by voice, and Castalie applies the answer to that work at once.
+
+**The sheet keeps three things, and nothing else**, on the screen, in the decisions panel and when
+a session poses it in the conversation:
+
+1. **the title**, the question;
+2. **the description**, written by you at three depths: 80, 250 and 500 words. The reader clicks
+   the depth they want; 80 words shows first;
+3. **the options, as cards**: one card per option, with its title, its consequence, its cost or
+   what it gives up, and the recommendation marked on its card. A click on the card answers. The
+   last card is always « Autre réponse ou question : », a free field. Read by `bug-fix`,
 `feature-implement`, `brief-acceptance`, `acceptance`, `feature-followup` and `decision-resume`,
 and by any skill that is about to stop for a person.
 
@@ -37,16 +47,21 @@ three minutes and teaches them to stop reading your sheets.
 **Look before you file.** `decision_list(scope=subject, subject_kind, subject_id)` shows what
 already waits on that work: a question already asked is not asked again.
 
-## The complexity sets the length
+## The description, at three depths
 
-| `complexity` | Reads in | `executive_md` | `context_md` | Shape |
-|---|---|---|---|---|
-| `simple` | under a minute | 80 words | 150 words | `approve`, or a `choice` of two |
-| `standard` | three minutes | 200 words | 600 words | anything |
-| `complex` | seven minutes | 400 words | 1,500 words | anything; `context_md` mandatory |
+| Field | At most | What it holds |
+|---|---|---|
+| `description_80_md` | 80 words | shown first, and often all that is read: the fact that decides, and what you recommend |
+| `description_250_md` | 250 words | for the reader who wants more: what you checked, what each option leads to |
+| `description_500_md` | 500 words | the deepest level: the figures, the history, a diagram |
 
-A fenced block (a Mermaid diagram, an illustration) is looked at, not read: it does not count. Pick
-the lowest that holds the decision, and move detail into `context_md` before you raise it.
+All three are mandatory, and you write them when you file: the page never generates them. Each one
+stands alone; a deeper level repeats what decides, then adds. A fenced block (a Mermaid diagram,
+an illustration) is looked at, not read: it does not count. A level identical to the one above it
+is not offered to the reader.
+
+`complexity` is optional (`standard` by default). It no longer sets any length: a `simple` sheet is
+an approval or a choice between two options.
 
 ## The title is the question
 
@@ -55,19 +70,19 @@ the lowest that holds the decision, and move detail into `context_md` before you
 - Yes: "Merge the VAT fix on credit notes and ship it to production?"
 - No: "VAT fix", "Question about the export", "Decision needed".
 
-## The summary opens on the fact that decides
+## The first level opens on the fact that decides
 
-`executive_md` is what a person reads on a phone, and often all they read. Its first sentence is
-the fact the answer turns on, not the history of how you got there.
+`description_80_md` is what a person reads on a phone, and often all they read. Its first sentence
+is the fact the answer turns on, not the history of how you got there.
 
 - **Measured figures, never an estimate where a measure exists.** "37 credit notes since
   1 October", read from the database, not "a few dozen".
 - **Say what you already checked**, so the reader does not ask you for it.
-- **A diagram when the choice is about a flow**: a ```` ```mermaid ```` block renders on the sheet.
-  The sheet renders the same rich content as a brief or a ticket; what goes where is in
+- **Say what you recommend, and why**, in one sentence: the recommended card carries the mark, the
+  description carries the reason.
+- **A diagram when the choice is about a flow**: a ```` ```mermaid ```` block renders on the sheet,
+  best in the 250- or 500-word level. What goes where is in
   `${CLAUDE_PLUGIN_ROOT}/instructions/rich-content.md`.
-- `why_human_md` (400 characters at most) says why THIS person: "You hold the customer contract",
-  not "A human must decide".
 
 ## Options pull on different axes
 
@@ -82,9 +97,15 @@ answer only, no options, no recommendation).
 - **`cost_text`** ("+111 $ per month", "2 h of development"), mandatory on every option when the
   reason is `money` — on an `approve` too, so draft its two options.
 - **`risk`**: `low`, `medium` or `high`.
-- **Exactly one option `is_recommended`, and `recommendation_md` says why**, on a `choice` and on
-  an `approve`. The reader decides against your choice, not between your hesitations. A question
-  with nothing to recommend is a `free_text`.
+- **Exactly one option `is_recommended`**, on a `choice` and on an `approve`: its card carries the
+  mark, and the description says why. The reader decides against your choice, not between your
+  hesitations. A question with nothing to recommend is a `free_text`.
+- **Each option is a card the reader clicks to answer**: its title, its `body_md` (the
+  consequence, plain text), its `cost_text` or `gives_up_md`. Keep `body_md` to a sentence or two;
+  a link inside it cannot be followed from a card.
+- **The last card is always « Autre réponse ou question »**: Castalie adds it, you do not draft it.
+  What the person writes there is the answer, or a question that comes back to you
+  (`decision-resume --context`).
 - **An `approve` carries two options, yes then no, or none** (then they are "Yes" and "No"). A "no"
   is answered with a reason.
 
@@ -134,8 +155,9 @@ on the same candidate at the same price, is not asked again.
   `decisions`/`robot_resume` is `on`**; elsewhere it is refused with `resume_mode_unavailable`, and
   you file as `asker`.
 
-`continuing_md` is mandatory when an agent asks: what you carry on with while this waits. If truly
-nothing can move, write that, and why.
+Asking is still not stopping: carry on with what does not depend on the answer. `why_human_md`,
+`context_md`, `blocked_md`, `continuing_md` and `recommendation_md` are optional and no longer
+shown anywhere; what the reader needs goes in the description.
 
 `asked_by_agent` names you — the skill, or your robot's name — so the answer and a reader's
 questions find their way back to you (`decision-resume --context`).
@@ -156,13 +178,13 @@ Correct and file again; never work around a refusal by changing the complexity a
 | Code | Fix |
 |---|---|
 | `title_not_a_question` | write the question, 12 to 160 characters, ending with `?` |
-| `executive_too_long`, `context_too_long` | cut to `cap` words, or raise the complexity if the choice is that involved |
-| `complexity_mismatch` | `simple` takes an approval or two options; `complex` needs `context_md` |
+| `description_required` | write the three levels: `description_80_md`, `description_250_md`, `description_500_md` (a caller that still sends only `executive_md` gets this one) |
+| `description_80_too_long`, `description_250_too_long`, `description_500_too_long` | cut that level to `cap` words; move the rest one level deeper |
+| `complexity_mismatch` | `simple` takes an approval or two options |
 | `options_count` | `choice` 2 to 4, `approve` 0 or 2, `free_text` none |
 | `option_missing_gives_up`, `options_same_axis` | say what each option gives up, on a different axis |
-| `recommendation_missing`, `several_recommended` | one option recommended, and `recommendation_md` |
+| `recommendation_missing`, `several_recommended` | mark exactly one option `is_recommended` |
 | `option_missing_cost` | a `cost_text` on every option of a `money` decision |
-| `continuing_missing` | say what you carry on with |
 | `resume_missing` | `resume_state_md` for `asker`, `resume_prompt_md` for `robot_prompt` |
 | `resume_mode_unavailable` | no robot resumes here: file as `asker` |
 | `effect_not_allowed_for_subject` | use an effect that subject knows (table above) |
@@ -172,7 +194,8 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
 
 **After filing**, a fact that changes the picture is added with `decision_add_context` while the
-decision waits; a fact that overturns it is a new sheet, by `decision_supersede`. A question the
+decision waits: it lands at the end of the 500-word level, within its 500 words. A fact that
+overturns it is a new sheet, by `decision_supersede`. A question the
 work settled on its own is withdrawn with `decision_cancel` and its reason.
 
 ## Three complete sheets
@@ -180,14 +203,14 @@ work settled on its own is withdrawn with `decision_cancel` and its reason.
 Each one passes the server's admission as written. Replace `subject_id` and `addressee_user_id`
 with ids of your workspace.
 
-### A merge authorisation — `simple`
+### A merge authorisation — an approval
 
 ```json
 {
   "title": "Merge the VAT fix on credit notes and ship it to production?",
-  "complexity": "simple",
-  "executive_md": "Pull request [#1834](https://github.com/acme/billing/pull/1834) fixes the VAT rounding on credit notes. Quality gate green: 214 tests pass, the review panel found no blocker. Risk low: one function changed, six new tests, reverted in one commit. Merging deploys here. 37 credit notes issued since 1 October carry a wrong VAT amount; this fix stops new ones, it does not correct them.",
-  "why_human_md": "Merging ships to production on this repository, and its bug-fix merge setting stops before every merge: a person authorises it.",
+  "description_80_md": "Pull request #1834 fixes the VAT rounding on credit notes: 214 tests pass, the review found no blocker. 37 credit notes issued since 1 October carry a wrong VAT amount, about four more each day. I recommend merging now: the change is small and one commit reverts it.",
+  "description_250_md": "Pull request [#1834](https://github.com/acme/billing/pull/1834) fixes the VAT rounding on credit notes. Quality gate green: 214 tests pass, the review panel found no blocker. Risk low: one function changed, six new tests, reverted in one commit.\n\nMerging deploys here. 37 credit notes issued since 1 October carry a wrong VAT amount; this fix stops new ones, it does not correct them. A script corrects them, as its own decision, with its production row count.\n\nI recommend merging now: every day without it issues about four more wrong credit notes.",
+  "description_500_md": "Pull request [#1834](https://github.com/acme/billing/pull/1834) fixes the VAT rounding on credit notes. Quality gate green: 214 tests pass, the review panel found no blocker. Risk low: one function changed, six new tests, reverted in one commit.\n\n```mermaid\nflowchart LR\n  N[Credit note] --> R[Round per line] --> V[VAT right]\n```\n\nMerging deploys here, about ten minutes after the merge. 37 credit notes issued since 1 October carry a wrong VAT amount, read from the database this morning. This fix stops new ones, it does not correct them: the script that corrects them comes as its own decision, with its production row count.\n\nNot merging leaves the pull request open and the ticket with you. I recommend merging now: every day without it issues about four more wrong credit notes.",
   "escalation_reason": "authorization",
   "answer_shape": "approve",
   "subject_kind": "bug",
@@ -207,25 +230,21 @@ with ids of your workspace.
       "effect": "take_over"
     }
   ],
-  "recommendation_md": "Merge: the change is small, covered and revertible, and every day without it issues about four more wrong credit notes.",
-  "blocked_md": "The VAT fix of this ticket.",
   "blocked_items": 1,
-  "continuing_md": "I write the script that corrects the 37 existing credit notes. It comes as its own decision, with its production row count.",
   "addressee_user_id": 7,
   "resume_mode": "subject",
   "asked_by_agent": "bug-fix"
 }
 ```
 
-### A customer arbitration — `complex`
+### A customer arbitration — a choice
 
 ```json
 {
   "title": "Which phone number goes to the partner portals in the listing export?",
-  "complexity": "complex",
-  "executive_md": "Northwind, our largest agency network, asks that the partner export carry each owner's phone number. Today the export carries none: 0 of the 18,400 listings exported last week had one. The contract we can read promises \"listing data\", and does not say whether owner contact details are part of it. That answer is in the account's history, not in the code.\n\nThree ways to answer, and they do not cost the same thing:\n\n- export the phone only where the owner consented, which needs a consent we do not collect yet;\n- export a relay number that forwards calls, so no personal number leaves us;\n- keep the export without phones and tell Northwind so.\n\nPhase 2 of the export spec (portal formats) does not depend on this answer and goes on. Phase 3 (contact fields) waits.",
-  "context_md": "## What was checked\n\n- The export code sends 41 fields per listing; `owner_phone` is not one of them, by design since its first version.\n- 11,210 of the 18,400 listings have an owner phone on file. None has a recorded consent to share it: the field does not exist.\n- Two of the three portals Northwind uses accept a contact field; the third ignores it.\n\n## How each option changes the flow\n\n```mermaid\nflowchart LR\n  L[Listing] --> E[Export]\n  E -->|A: consent given| P1[Owner phone]\n  E -->|B: always| P2[Relay number]\n  E -->|C| P3[No phone]\n  P1 --> Portal\n  P2 --> Portal\n  P3 --> Portal\n```\n\n## Cost in work\n\n- A: a consent field, its screen, and a filter in the export: about 4 days. Coverage starts at 0 % and grows as owners answer.\n- B: a relay provider and a number per listing: about 6 days, plus the provider's price per number.\n- C: nothing to build; one sentence to Northwind.",
-  "why_human_md": "You hold the Northwind account: what the contract promised on contact details was agreed with you, and is written nowhere I can read.",
+  "description_80_md": "Northwind, our largest agency network, asks that the partner export carry each owner's phone number. Today it carries none, and no owner ever consented to share theirs. What the contract promised on contact details is in the account's history, not in the code. I recommend exporting the phone only where the owner consented.",
+  "description_250_md": "Northwind, our largest agency network, asks that the partner export carry each owner's phone number. Today the export carries none: 0 of the 18,400 listings exported last week had one. 11,210 listings have an owner phone on file, and none has a recorded consent to share it.\n\nThe contract we can read promises \"listing data\", and does not say whether owner contact details are part of it. That answer is in the account's history.\n\nThree ways to answer: the phone where the owner consented (a consent field first, about 4 days), a relay number that forwards calls (about 6 days plus a provider), or no phone and a sentence to Northwind. I recommend consent first: it answers the request without sending a number nobody agreed to share.",
+  "description_500_md": "Northwind, our largest agency network, asks that the partner export carry each owner's phone number. Today the export carries none: 0 of the 18,400 listings exported last week had one.\n\n## What was checked\n\n- The export code sends 41 fields per listing; `owner_phone` is not one of them, by design since its first version.\n- 11,210 of the 18,400 listings have an owner phone on file. None has a recorded consent to share it: the field does not exist.\n- Two of the three portals Northwind uses accept a contact field; the third ignores it.\n\n```mermaid\nflowchart LR\n  L[Listing] --> E[Export]\n  E -->|consent given| P1[Owner phone]\n  E -->|always| P2[Relay number]\n  E -->|neither| P3[No phone]\n```\n\nThe contract we can read promises \"listing data\" and says nothing of contact details. Phase 2 of the export spec (portal formats) does not depend on this answer and goes on; phase 3 (contact fields) waits.\n\nI recommend consent first: it gives Northwind what they asked for without sending any number an owner did not agree to share, and it is the cheaper of the two options that answer the request.",
   "escalation_reason": "private_knowledge",
   "answer_shape": "choice",
   "subject_kind": "feature_brief",
@@ -257,10 +276,7 @@ with ids of your workspace.
       "effect": "continue"
     }
   ],
-  "recommendation_md": "Consent first: it gives Northwind what they asked for without sending any number an owner did not agree to share, and it is the cheapest of the two options that answer the request.",
-  "blocked_md": "Phase 3 of the export spec (contact fields), and acceptance criterion 3 of the brief.",
   "blocked_items": 2,
-  "continuing_md": "Phase 2 (the three portal formats), which does not depend on contact fields.",
   "addressee_user_id": 12,
   "resume_mode": "asker",
   "resume_state_md": "Branch feat/partner-export, phase 2 of the export spec in progress, phase 3 not started. On the consent option: add the consent column and screen, filter owner_phone on it in ExportMapper, criterion 3 replayed with a consenting owner. On the relay option: stop at phase 2, the person who answered designs the relay; leave phase 3 NotStarted. On no phones: drop phase 3, set criterion 3 NotApplicable with the answer as its reason.",
@@ -268,14 +284,14 @@ with ids of your workspace.
 }
 ```
 
-### A model cost rise — `standard`, recurring
+### A model cost rise — recurring
 
 ```json
 {
   "title": "Switch ticket triage to the provider's new model before the current one retires?",
-  "complexity": "standard",
-  "executive_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls. Replayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today.\n\nSwitching is one configuration line and is reverted the same way until 15 January.",
-  "why_human_md": "It raises a recurring cost by 111 $ a month, and spending is yours to approve.",
+  "description_80_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. It routes 93 % of 200 past tickets right, against 88 %. I recommend switching now.",
+  "description_250_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today.\n\nSwitching is one configuration line and is reverted the same way until 15 January. I recommend switching now: the switch has to happen anyway, and doing it early leaves time to revert.",
+  "description_500_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today. The five points are mostly billing tickets the current model sends to support.\n\nSwitching is one configuration line and is reverted the same way until 15 January. Waiting until the retirement date saves about 330 $ and leaves no margin if the switch goes wrong that day. Staying means triage stops on 15 January unless someone switches by hand.\n\nI recommend switching now: the switch has to happen before 15 January anyway, the measured gain is five points of routing, and switching early leaves time to revert if something breaks.",
   "escalation_reason": "money",
   "answer_shape": "choice",
   "subject_kind": "feature_brief",
@@ -307,10 +323,7 @@ with ids of your workspace.
       "effect": "none"
     }
   ],
-  "recommendation_md": "Switch now: the switch has to happen before 15 January anyway, the measured gain is five points of routing, and switching early leaves time to revert if something breaks.",
-  "blocked_md": "The monthly model review for ticket triage.",
   "blocked_items": 1,
-  "continuing_md": "The review of the other two model usages, which need no decision this month.",
   "addressee_user_id": 3,
   "resume_mode": "asker",
   "resume_state_md": "Usage ticket-triage, candidate model-b. Switch now: change TRIAGE_MODEL to model-b, replay the 200 tickets, record the score. Wait: schedule the switch for 15 January. Stay: nothing; the dedupe key keeps the question from coming back while price and candidate are unchanged.",
@@ -328,10 +341,12 @@ can play the resume: `resume_mode` `robot_prompt` with a `resume_prompt_md` in p
 - **A decision about a plan names its point.** `plan_point` ("2.1", 40 characters at most) is the
   point of the subject's plan the answer changes; it shows on the sheet. Each option may carry its
   picture (`exhibit_md`: a Mermaid block or a few lines of code) and what it removes from the plan
-  (`removes_md`: "point 4 goes"). How a spec places its choices: `plan-tree.md`.
-- **Readers comment before they answer.** `decision_comment` leaves a remark on an option or on a
-  line of `context_md`; `decision_get` returns them in `comments[]`. A comment that asks something
-  is answered with `decision_add_context`, one that changes the sheet with `decision_supersede`.
-- **Read how the answer was given.** `answer.read` says whether the context was opened before the
-  answer. `answer.confirmed` false means a decision that matters was settled on its recommendation
-  without opening it: confirm with the person before acting (`decision-resume`).
+  (`removes_md`: "point 4 goes"); neither shows on the card, which keeps its title, consequence,
+  cost and what it gives up. How a spec places its choices: `plan-tree.md`.
+- **Readers ask before they answer.** What a person writes in « Autre réponse ou question » and
+  sends as a question reaches you as a context question (`decision-resume --context`): answer it
+  with `decision_add_context(context_ask_id=…)`. `decision_comment` still records a remark on an
+  option through MCP; `decision_get` returns them in `comments[]`.
+- **Read how the answer was given.** `answer.read` says whether the 250- or 500-word level was
+  opened before the answer. `answer.confirmed` false means a decision that matters was settled on
+  its recommendation without opening it: confirm with the person before acting (`decision-resume`).

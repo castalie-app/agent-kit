@@ -10,6 +10,7 @@ import {
   answerMessageOf,
   answerOutcomeOf,
   answerRequestOf,
+  askRequestOf,
   emptyDraft,
   isRefusalOption,
   nextAfter,
@@ -27,8 +28,19 @@ import {
 } from './inbox.mjs'
 import * as Names from './names.mjs'
 import { copyObjectiveOf, inboxForObjective } from './objective.mjs'
-import { cardsOf, inboxMarkdown, settledNotice, sheetMarkdown } from './render.mjs'
-import { cardsView, sheetView, type AnswerHandlers, type CardView, type Kit } from './views.jsx'
+import {
+  answerMarkdown,
+  asksMarkdown,
+  cardsOf,
+  descriptionLevelsOf,
+  inboxMarkdown,
+  levelShownOf,
+  optionCardMarkdown,
+  settledNotice,
+  sheetHeadMarkdown,
+  sheetMarkdown,
+} from './render.mjs'
+import { cardsView, sheetView, type AnswerHandlers, type CardView, type Kit, type SheetView } from './views.jsx'
 
 type Reader = ReturnType<typeof readerOf>
 type Burst = ReturnType<typeof burstOf>
@@ -47,7 +59,7 @@ type Sheet = {
   server: string
   decision: Decision | null
   error: string | null
-  /** What the person is answering: the option marked, the words typed, the effect picked. */
+  /** What the person is answering: the depth read, the card marked, the words typed. */
   draft: Draft
   /** What the last answer left to say, drawn over the next sheet. */
   notice: string | null
@@ -486,8 +498,48 @@ export function register(on: On, companion: Companion): void {
         if (text !== undefined) setDraft(engine, id, { text }, false)
         safely(() => answer(engine))
       },
-      effect: value => setDraft(engine, id, { effect: value }),
+      ask: () => safely(() => askAgent(engine)),
     }
+  }
+
+  /**
+   * « Poser la question »: the words of « Autre réponse ou question » go to the agent that asked,
+   * through `decision_ask_context` — the reader's right to ask for more, on the same rule as the
+   * sheet's. The decision keeps waiting; the question shows under the card, and its answer once
+   * the agent gives it.
+   */
+  async function askAgent(engine: Host): Promise<void> {
+    const shown = sheet
+    if (shown === null || shown.decision === null || shown.draft.isSending) return
+    const { id, server, decision } = shown
+
+    const request = askRequestOf(decision, shown.draft)
+    if (!request.ok) {
+      setDraft(engine, id, { error: request.fix })
+      void engine.focus(Names.SHEET_PANE_ID, Names.ANSWER_KEYS.text).catch(() => undefined)
+
+      return
+    }
+
+    setDraft(engine, id, { error: null, isSending: true })
+    let outcome: ReturnType<typeof answerOutcomeOf>
+    try {
+      outcome = answerOutcomeOf(await engine.mcpCall(server, Names.ASK_VERB, request.args))
+    } catch (error) {
+      setDraft(engine, id, { isSending: false, error: Names.UNSENT_TEXT(message(error)) })
+
+      return
+    }
+    if (!outcome.ok) {
+      setDraft(engine, id, { isSending: false, error: Names.REFUSED_TEXT(outcome.fix) })
+
+      return
+    }
+
+    const known = readerFor(engine)
+    await known.forget([known.cacheKeyOf(server, 'decision', id)]).catch(() => undefined)
+    setDraft(engine, id, { isSending: false, text: '', error: null })
+    await loadSheet(engine, id, server, Names.ASKED_TEXT(id))
   }
 
   // ── What this session filed ─────────────────────────────────────────────
@@ -691,26 +743,45 @@ export function register(on: On, companion: Companion): void {
         }
 
         const now = await engine.now()
-        const text =
-          shown.decision !== null
-            ? sheetMarkdown(shown.decision, { now })
-            : (shown.error ?? Names.SHEET_LOADING_TEXT)
-        const bar =
-          shown.decision === null
-            ? null
-            : answerBarOf(shown.decision, shown.draft, { hasField: kit.Input !== undefined && kit.Select !== undefined })
+        const decision = shown.decision
+        const bar = decision === null ? null : answerBarOf(decision, shown.draft, { hasField: kit.Input !== undefined })
+
+        // The sheet since Castalie spec 88: the question, the description at the depth the person
+        // clicked (80 words first), then the cards — which answer while it waits.
+        const view: SheetView = {
+          id: shown.id,
+          url: hrefOf(decision?.url ?? null),
+          text: decision !== null ? '' : (shown.error ?? Names.SHEET_LOADING_TEXT),
+          isLoading: decision === null,
+          notice: shown.notice,
+        }
+        if (decision !== null) {
+          const shownLevel = levelShownOf(decision, shown.draft.level)
+          view.head = sheetHeadMarkdown(decision, { now })
+          view.levels = descriptionLevelsOf(decision).map(level => ({
+            words: level.words,
+            label: Names.LEVEL_TEXT(level.words),
+            isActive: level.words === shownLevel?.words,
+          }))
+          view.description = shownLevel?.text ?? null
+          view.settled =
+            bar !== null
+              ? null
+              : {
+                  cards: (decision.shape === 'free_text' ? [] : decision.options).map((option, index) =>
+                    optionCardMarkdown(decision, option, index),
+                  ),
+                  asks: asksMarkdown(decision),
+                  answer: answerMarkdown(decision),
+                }
+        }
 
         return sheetView(
           kit,
-          {
-            id: shown.id,
-            url: hrefOf(shown.decision?.url ?? null),
-            text,
-            isLoading: shown.decision === null,
-            notice: shown.notice,
-          },
+          view,
           () => void closeSheet(engine).catch(() => undefined),
           bar === null ? null : { bar, on: answerHandlersFor(engine, shown.id) },
+          words => setDraft(engine, shown.id, { level: words }),
         )
       }
 

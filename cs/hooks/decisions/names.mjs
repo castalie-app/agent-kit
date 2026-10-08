@@ -196,5 +196,32 @@ export const EFFECT_ORDERS = {
 export const LOCAL_REFUSALS = {
   reason_required: "Dites pourquoi : un refus sans sa raison ne relance rien.",
   text_required_free: "Cette décision se tranche par écrit : écrivez la réponse.",
-  text_required: "Choisissez une option, ou écrivez la réponse et dites ce qu'elle fait.",
+  text_required: "Choisissez une carte, ou écrivez la réponse dans « Autre réponse ou question ».",
+  question_required: "Écrivez la question dans « Autre réponse ou question », puis « Poser la question ».",
 };
+
+// ── The sheet since Castalie spec 88: title, description levels, option cards ─────────────
+
+/** The depths a description is written at, in reading order: the first one shows. */
+export const DESCRIPTION_LEVELS = [80, 250, 500];
+export const DESCRIPTION_HEADING = "Descriptif";
+export const LEVEL_TEXT = (words) => `En ${words} mots`;
+
+/** The keys of the level buttons, and of the « Autre réponse ou question » card's controls. */
+export const SHEET_KEYS = {
+  level: (words) => `level-${words}`,
+  card: (id) => `card-${id}`,
+  ask: "ask",
+};
+
+export const OPTIONS_HEADING = "Options";
+export const OTHER_TITLE = "Autre réponse ou question :";
+export const OTHER_PLACEHOLDER = "Votre réponse ou votre question";
+export const ASK_TEXT = "Poser la question";
+export const ANSWER_TEXT = "Répondre";
+export const ASKING_TEXT = "Envoi de la question…";
+export const ASKED_TEXT = (id) => `✓ Question envoyée sur n° ${id} : l'agent qui l'a posée y répond sur la fiche.`;
+export const ASK_PENDING_TEXT = "en attente de réponse";
+
+/** The verb « Poser la question » sends through: the reader's right to ask for more. */
+export const ASK_VERB = "decision_ask_context";

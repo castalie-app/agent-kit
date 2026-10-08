@@ -179,7 +179,11 @@ export const inboxAnswer = {
   ],
 };
 
-/** `decision_get(77)`: a complex sheet, with exhibits, a removal, comments and a context question. */
+/**
+ * `decision_get(77)`: a sheet with its description at three depths (Castalie spec 88), exhibits, a
+ * removal, comments and a context question. It still carries the fields no surface shows any more
+ * (why this person, the former context, what waits, what carries on), to prove they stay off.
+ */
 export const sheetAnswer = {
   success: true,
   decision: {
@@ -192,6 +196,9 @@ export const sheetAnswer = {
     answer_shape: "choice",
     escalation_reason: "private_knowledge",
     why_human_md: "You hold the Northwind account: what the contract promised on contact details was agreed with you.",
+    description_80_md: "Northwind asks that the partner export carry each owner's phone number. 0 of the 18,400 listings exported last week had one.",
+    description_250_md: "Northwind asks that the partner export carry each owner's phone number. 0 of the 18,400 listings exported last week had one.\n\nThe export sends 41 fields per listing; 11,210 listings have an owner phone on file.",
+    description_500_md: "Northwind asks that the partner export carry each owner's phone number. 0 of the 18,400 listings exported last week had one.\n\nThe export sends 41 fields per listing; 11,210 listings have an owner phone on file.\n\n```mermaid\nflowchart LR\n  L[Listing] --> E[Export] --> P[Portal]\n```",
     executive_md: "Northwind asks that the partner export carry each owner's phone number. 0 of the 18,400 listings exported last week had one.",
     context_md: "## What was checked\n\n- The export sends 41 fields per listing.\n- 11,210 listings have an owner phone on file.",
     recommendation_md: "A relay number: no personal number leaves us, and every portal gets a contact.",
@@ -299,7 +306,10 @@ export const sheetAnswer = {
   },
 };
 
-/** `decision_get(81)` once answered: the recommendation taken without opening the context. */
+/**
+ * `decision_get(81)` once answered: the recommendation taken without opening the context. From a
+ * server that predates spec 88: the former summary only, which stands for the first level.
+ */
 export const answeredSheetAnswer = {
   success: true,
   decision: {

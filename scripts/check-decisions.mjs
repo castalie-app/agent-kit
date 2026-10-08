@@ -19,6 +19,7 @@ import {
   answerMessageOf,
   answerOutcomeOf,
   answerRequestOf,
+  askRequestOf,
   effectsFor,
   emptyDraft,
   isRefusalOption,
@@ -65,6 +66,8 @@ import {
   inboxMarkdown,
   metaText,
   settledNotice,
+  descriptionLevelsOf,
+  optionCardMarkdown,
   sheetMarkdown,
   summaryText,
 } from "../cs/hooks/decisions/render.mjs";
@@ -206,29 +209,32 @@ check("one waiting decision reads in the singular",
   const sheet = sheetMarkdown(decision, { now: NOW });
 
   check("the sheet opens on the question", sheet.startsWith("# Which phone number goes to the partner portals"));
-  check("the sheet's facts line names the reason, complexity, shape, asker, age and plan point",
-    sheet.includes("_savoir privé · complexe · choix · demandée par feature-implement · il y a 4 j · point 3.2 du plan_"),
-    sheet.split("\n")[2]);
-  check("the sheet says why this person", sheet.includes("**Pourquoi vous** — You hold the Northwind account"));
-  check("the sheet carries the summary under its heading", sheet.includes("## Résumé\n\nNorthwind asks"));
-  check("options come in their display order, numbered",
-    sheet.indexOf("### 1. The owner's phone") < sheet.indexOf(`### ${RECOMMENDED_MARK} 2. A relay number, always — recommandée`) &&
-      sheet.indexOf("— recommandée") < sheet.indexOf("### 3. No phone"));
-  check("an option says its risk, cost and effect",
-    sheet.includes("_risque moyen · about 6 days · le travail reprend_") && sheet.includes("_risque faible · le sujet se ferme_"));
-  check("an option says what it gives up and what it removes",
-    sheet.includes("**Renonce à** — The owner's own number") && sheet.includes("**Retire** — The `owner_phone` column"));
-  check("an exhibit keeps its fence whole, so the diagram is drawn",
-    sheet.includes("**Pièce**\n\n```mermaid\nflowchart LR\n  E[Export] --> R[Relay number] --> P[Portal]\n```"));
-  check("the recommendation is said once, quoted", sheet.includes("> **Recommandation** — A relay number"));
-  check("what waits counts its items", sheet.includes("## Ce qui attend\n\nPhase 3 of the export spec (contact fields). (3 éléments)"));
-  check("what goes on meanwhile and the context are there",
-    sheet.includes("## Pendant ce temps\n\nPhase 2") && sheet.includes("## Contexte\n\n## What was checked"));
-  check("a comment on an option names it, one on a line of the context quotes it",
-    sheet.includes("- **Sur « A relay number, always »** · 02/10\n  Northwind's own portal") &&
-      sheet.includes("- **Sur le contexte** · 02/10\n  > 11,210 listings have an owner phone on file.\n  Counted today?"));
-  check("an open context question waits visibly",
-    sheet.includes("- Does the relay provider bill per number or per minute?\n  _en attente de réponse_"));
+  check("the sheet's facts line names the asker, the age and the plan point, nothing about why",
+    sheet.includes("_demandée par feature-implement · il y a 4 j · point 3.2 du plan_"), sheet.split("\n")[2]);
+  check("the description shows its 80 words first, and says the deeper levels are there",
+    sheet.includes("## Descriptif — en 80 mots\n\nNorthwind asks") && sheet.includes("_Aussi en 250 mots et en 500 mots sur la fiche._") &&
+      !sheet.includes("11,210 listings have an owner phone"), sheet);
+  const deeper = sheetMarkdown(decision, { now: NOW, level: 500 });
+  check("the level asked for is the level shown, a fence kept whole",
+    deeper.includes("## Descriptif — en 500 mots") && deeper.includes("```mermaid\nflowchart LR\n  L[Listing] --> E[Export] --> P[Portal]\n```"));
+  check("a level identical to the one above it is not offered",
+    descriptionLevelsOf({ ...decision, description250: decision.description80, description500: null }).map((level) => level.words).join() === "80");
+  check("a server before spec 88 sends the former summary, read as the first level",
+    decisionOf(answeredSheetAnswer).description80 === "Pull request #1834 fixes the VAT rounding on credit notes.");
+  check("options come as cards, in their display order, numbered, the recommended one marked",
+    sheet.indexOf("**1. The owner's phone") < sheet.indexOf(`**${RECOMMENDED_MARK} 2. A relay number, always** — recommandée`) &&
+      sheet.indexOf("— recommandée") < sheet.indexOf("**3. No phone"));
+  check("a card says its risk, cost and effect, and what it gives up",
+    sheet.includes("_risque moyen · about 6 days · le travail reprend_") && sheet.includes("_risque faible · le sujet se ferme_") &&
+      sheet.includes("**Renonce à :** The owner's own number"));
+  check("the last card is « Autre réponse ou question », with the questions asked",
+    sheet.includes("**Autre réponse ou question :**\n\n- Does the relay provider bill per number or per minute?\n  _en attente de réponse_"), sheet);
+  for (const gone of ["Pourquoi vous", "You hold the Northwind account", "Ce qui attend", "Pendant ce temps", "## Contexte", "Recommandation", "## Commentaires", "Retire", "Pièce", "## Résumé"]) {
+    check(`the sheet no longer carries « ${gone} »`, !sheet.includes(gone));
+  }
+  const pressable = optionCardMarkdown(decision, decision.options[1], 1, "https://acme.castalie.app/decisions/77#option-302");
+  check("a card whose press answers links every line to its option's anchor",
+    pressable.split("\n\n").every((line) => line.startsWith("[") && line.endsWith("](https://acme.castalie.app/decisions/77#option-302)")), pressable);
   check("the resume state and the robot's prompt are never on the sheet",
     !sheet.includes("SECRET-RESUME"));
   check("a pending sheet carries no answer section", !sheet.includes("## Réponse"));
@@ -236,11 +242,11 @@ check("one waiting decision reads in the singular",
 
   const answered = sheetMarkdown(decisionOf(answeredSheetAnswer), { now: NOW });
   check("an answered sheet says which option, what it did, when and how it was read",
-    answered.includes("## Réponse\n\n« Merge and ship it » · le travail reprend · le 05/10 · sans ouvrir le contexte"), answered);
+    answered.includes("## Réponse\n\n« Merge and ship it » · le travail reprend · le 05/10 · sans ouvrir le descriptif détaillé"), answered);
   check("an unconfirmed answer says the agent confirms before acting",
     answered.includes("l'agent la confirme avec vous avant d'agir"));
-  check("a sheet with nothing in a section leaves the section out",
-    !answered.includes("## Contexte") && !answered.includes("## Commentaires") && !answered.includes("## Ce qui attend"));
+  check("a sheet with one level of description offers no other",
+    !answered.includes("_Aussi") && answered.includes("## Descriptif — en 80 mots"));
 }
 
 // ── The command's text, where no pane is seated ───────────────────────────
@@ -518,26 +524,35 @@ check("one waiting decision reads in the singular",
   const field = { hasField: true };
 
   const bar = answerBarOf(pending, emptyDraft(), field);
-  check("a pending sheet carries a bar: one row per option, in display order, each with its digit",
-    bar !== null && bar.options.map((option) => `${option.hotkey}:${option.id}`).join() === "1:301,2:302,3:303",
-    JSON.stringify(bar?.options));
-  check("the recommended option is marked in the bar as on the sheet",
-    bar?.options.find((option) => option.id === 302)?.label === `${RECOMMENDED_MARK} A relay number, always`);
-  check("nothing is marked yet, and the field answers otherwise or adjusts",
-    bar?.armed === null && bar?.field?.label === "Répondre autrement ou ajuster :" && bar?.canSendText === true);
-  check("a written answer offers the sheet's three effects on a spec, continue first",
-    bar?.effects?.options.map((option) => option.value).join() === "continue,take_over,close" && bar?.effects?.value === "continue");
-  check("a follow-up run offers no take-over, as the sheet",
+  check("a pending sheet carries its cards: one per option, in display order, each with its digit",
+    bar !== null && bar.cards.map((card) => `${card.hotkey}:${card.id}`).join() === "1:301,2:302,3:303",
+    JSON.stringify(bar?.cards));
+  check("the recommended card is marked as on the sheet",
+    bar?.cards.find((card) => card.id === 302)?.isRecommended === true &&
+      bar.cards.find((card) => card.id === 302)?.markdown.includes(`${RECOMMENDED_MARK} 2. A relay number, always`));
+  check("a card's press lands on its option's anchor of the sheet",
+    bar?.cards.find((card) => card.id === 302)?.href === "https://acme.castalie.app/decisions/77#option-302");
+  check("nothing is marked yet, and the last card answers or asks",
+    bar?.armed === null && bar?.other.title === "Autre réponse ou question :" && bar.other.field?.label === "Autre réponse ou question :" &&
+      bar.other.canAnswer === true && bar.other.canAsk === true && bar.other.answerLabel === "Répondre" && bar.other.askLabel === "Poser la question");
+  check("the questions already asked are read in the last card",
+    bar?.other.asks?.includes("Does the relay provider bill per number or per minute?") === true);
+  check("a follow-up run allows no take-over, as the sheet",
     effectsFor("followup_run").join() === "continue,close" && effectsFor("maturity_question").join() === "continue,close");
-  check("a decision that no longer waits has no bar", answerBarOf(decisionOf(answeredSheetAnswer), emptyDraft(), field) === null);
+  check("a decision that no longer waits has no cards to press", answerBarOf(decisionOf(answeredSheetAnswer), emptyDraft(), field) === null);
   const mobile = answerBarOf(pending, emptyDraft(), { hasField: false });
-  check("where the surface draws no field, the options stay and the bar says where to write",
-    mobile?.options.length === 3 && mobile.field === null && mobile.effects === null && mobile.fallback === NO_FIELD_TEXT);
+  check("where the surface draws no field, the cards stay and the last card says where to write",
+    mobile?.cards.length === 3 && mobile.other.field === null && !mobile.other.canAnswer && mobile.fallback === NO_FIELD_TEXT);
 
   const marked = answerBarOf(pending, { ...emptyDraft(), optionId: 302 }, field);
-  check("a digit marks its option and answers nothing: the bar says Enter answers, and drops the effect",
-    marked?.armed?.id === 302 && marked.armed.hint.includes("Entrée répond") && marked.effects === null &&
-      marked.field?.label === "Ajuster « A relay number, always » (facultatif) :");
+  check("a digit marks its card and answers nothing: Enter answers, and the field waits",
+    marked?.armed?.id === 302 && marked.armed.hint.includes("Entrée répond") && marked.other.canAnswer === false);
+
+  const ask = askRequestOf(pending, { ...emptyDraft(), text: "  Per number or per minute? " });
+  check("« Poser la question » sends the words to the agent, trimmed",
+    ask.ok && JSON.stringify(ask.args) === '{"id":77,"asked_md":"Per number or per minute?"}', JSON.stringify(ask));
+  const blank = askRequestOf(pending, emptyDraft());
+  check("an empty question leaves nothing, and says what to do", !blank.ok && blank.fix.startsWith("Écrivez la question"));
 
   const click = answerRequestOf(pending, emptyDraft(), { optionId: 302 });
   check("« Choisir » without words answers with the option, channel click",
@@ -546,19 +561,19 @@ check("one waiting decision reads in the singular",
   check("an option with words adjusts it, channel text, the words trimmed",
     adjusted.ok && JSON.stringify(adjusted.args) === '{"id":77,"option_id":302,"text_md":"Only for Northwind.","channel":"text"}',
     JSON.stringify(adjusted));
-  const written = answerRequestOf(pending, { ...emptyDraft(), text: "Ask Northwind first.", effect: "take_over" });
-  check("words without an option are the answer, with the effect picked, channel text",
-    written.ok && JSON.stringify(written.args) === '{"id":77,"text_md":"Ask Northwind first.","effect":"take_over","channel":"text"}',
+  const written = answerRequestOf(pending, { ...emptyDraft(), text: "Ask Northwind first." });
+  check("words without an option are the answer, with the subject's first effect, channel text",
+    written.ok && JSON.stringify(written.args) === '{"id":77,"text_md":"Ask Northwind first.","effect":"continue","channel":"text"}',
     JSON.stringify(written));
   const narrowed = answerRequestOf({ ...pending, subjectKind: "followup_run" }, { ...emptyDraft(), text: "ok", effect: "take_over" });
   check("an effect the subject does not know falls back to its first", narrowed.ok && narrowed.args.effect === "continue");
   const empty = answerRequestOf(pending, emptyDraft());
   check("nothing chosen and nothing written leaves nothing, and says what to do",
-    !empty.ok && empty.code === "answer_text_required" && empty.fix.startsWith("Choisissez une option"));
+    !empty.ok && empty.code === "answer_text_required" && empty.fix.startsWith("Choisissez une carte"));
   const free = answerRequestOf({ ...pending, shape: "free_text" }, emptyDraft());
   check("a free-text decision asks for its words", !free.ok && free.fix.startsWith("Cette décision se tranche par écrit"));
-  check("a free-text decision draws no option, only the field",
-    answerBarOf({ ...pending, shape: "free_text" }, emptyDraft(), field)?.options.length === 0);
+  check("a free-text decision draws no card, only the last one",
+    answerBarOf({ ...pending, shape: "free_text" }, emptyDraft(), field)?.cards.length === 0);
 
   const settled = decisionOf(answeredSheetAnswer);
   const approval = {
@@ -571,7 +586,7 @@ check("one waiting decision reads in the singular",
     ],
   };
   check("an approval reads « Oui » and « Non »",
-    answerBarOf(approval, emptyDraft(), field)?.options.map((option) => option.title).join() === "Oui,Non");
+    answerBarOf(approval, emptyDraft(), field)?.cards.map((card) => card.title).join() === "Oui,Non");
   check("an approval's second option is its « Non »",
     isRefusalOption(approval, 502) && !isRefusalOption(approval, 501) && !isRefusalOption(pending, 302));
   const bareNo = answerRequestOf(approval, emptyDraft(), { optionId: 502 });
@@ -582,7 +597,7 @@ check("one waiting decision reads in the singular",
     reasoned.ok && reasoned.args.option_id === 502 && reasoned.args.text_md === "Not before the audit." && reasoned.args.channel === "text");
   const markedNo = answerBarOf(approval, { ...emptyDraft(), optionId: 502 }, field);
   check("« Non » marked asks for its reason in the field",
-    markedNo?.armed?.needsReason === true && markedNo.field?.label === "Pourquoi « Non » :" && markedNo.armed.hint.includes("demande sa raison"));
+    markedNo?.armed?.needsReason === true && markedNo.other.field?.label === "Pourquoi « Non » :" && markedNo.armed.hint.includes("demande sa raison"));
   check("« Oui » needs no words", answerRequestOf(approval, emptyDraft(), { optionId: 501 }).ok);
 
   const accepted = answerOutcomeOf(resultOf({ success: true, decision_id: 77, status: "answered" }));

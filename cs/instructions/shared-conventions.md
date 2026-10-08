@@ -19,8 +19,8 @@ decode; two sessions ending a turn two different ways cost more than either shap
 verdicts: finished here for you, the session can be closed — only once its work item is closed
 where it is tracked and nothing is left for the user; to do: the gesture left to the user, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
-what; waiting, on what, when no agent is working on it; or, I need you: the decision, its options,
-what each costs. Never a topic name. Never two of them. Never end on a stated intention of your own
+what; waiting, on what, when no agent is working on it; or, I need you: the question, its
+description in 80 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
 ("I'll check X next", "j'enchaîne", "the loop/cron will resume it") — execute it in the same turn;
 a loop tick is a safety net for a dead turn, never a reason to defer work you can do now. A check
 the user asks for before a larger piece of work is the whole turn: deliver it and what it changes
@@ -81,9 +81,12 @@ The rules above stay in English; the verdict is written in the user's language. 
 
 ```
 > **J'ai besoin de vous : comment donner l'accès aux deux prestataires ?**
-> **A.** Acheter la licence d'annuaire : ce que ça coûte.
-> **B.** Leur créer un compte local : ce que ça coûte.
-> **C.** Attendre : ce que ça coûte.
+> Les deux prestataires commencent lundi. L'annuaire n'a plus de licence libre. Je recommande
+> d'acheter une licence : elle coûte 6 € par mois et se retire en un clic.
+> **A.** ★ Acheter la licence d'annuaire : 6 € par mois, rien d'autre à gérer.
+> **B.** Leur créer un compte local : gratuit, renonce au départ automatique.
+> **C.** Attendre : gratuit, renonce à leur première semaine.
+> **D.** Autre réponse ou question.
 ```
 
 In English the headings are **Finished here for you**, **To do**, **In progress**, **Waiting** and
@@ -108,13 +111,25 @@ render it.
 - **A gesture only the user can perform**, once everything else is delivered, ends the turn on
   *To do*, never *Finished* nor *I need you*; one another session already took on is not asked
   again.
+- **I need you is the decision sheet, and nothing else.** The question in bold; its description in
+  80 words, the fact that decides first and what you recommend; then one lettered line per option,
+  its card: what it does, what it costs or gives up, ★ on the one you recommend. The last letter is
+  always « Autre réponse ou question ». No « why you », no « what waits », no « meanwhile », no
+  context: what the person needs is in the 80 words.
+- **Where `AskUserQuestion` exists, the decision is asked with it**, so every card is clicked
+  rather than typed: one option per card (its label the option's title, its description the card's
+  cost or what it gives up, « (recommandé) » on the recommended one), plus « Autre réponse ou
+  question », whose words are the answer or a question back to you. The depth of the description
+  is a choice of its own, in the same call: « En 80 mots » (read), « En 250 mots », « En 500 mots ».
+  A person who picks a deeper level gets that text, and the same question again.
 - **I need you is also filed in Castalie, when the turn works on a tracked item.** A session on a
   spec, a brief or a ticket files the same question with `decision_create`: the complete sheet of
   `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, the work item as its subject, and a
   stable `dedupe_key` (`<subject kind>:<id>:<what is asked>`). Read
   `decision_list(dedupe_key=…, status=all)` first: the same question is never filed twice, and one
-  already answered is not asked again. The question stays in the reply, with its lettered options;
-  the decisions panel opens on its sheet by itself. The person answers in either place. An answer
+  already answered is not asked again. The three depths you file (`description_80_md`,
+  `description_250_md`, `description_500_md`) are the ones the conversation offers. The question
+  stays in the reply, with its lettered cards; the decisions panel opens on its sheet by itself. The person answers in either place. An answer
   given in the conversation is recorded with `decision_answer` before the work resumes; one given
   on the sheet comes back to the session with the person's next prompt.
 - **I need you is for a person who is there.** A session nobody is watching (a scheduled run, a

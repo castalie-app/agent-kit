@@ -57,8 +57,9 @@ the same outcome) is yours: decide it and write the option you rejected in `solu
 - **The recommended option is the one the tree draws.** "I change nothing" is then a full answer.
 - **Each option says what it does to the tree**: "the point 1.3 changes", "the point 4 goes".
 - **The sheet carries the claim**, so the person answers on the picture without opening the spec:
-  the claim's number in `plan_point` ("1.2"), its sentence opening `executive_md`, each option's
-  picture in its `exhibit_md` and what it removes from the tree in its `removes_md`.
+  the claim's number in `plan_point` ("1.2"), its sentence opening `description_80_md` and the
+  tree's picture in `description_500_md`, each option's picture in its `exhibit_md` and what it
+  removes from the tree in its `removes_md`.
 - **An answer taken without reading is not yet an answer.** `decision_get` says how the person
   answered (`answer.read`); when `answer.confirmed` is false, confirm with them before redrawing
   the tree (`decision-resume`).
