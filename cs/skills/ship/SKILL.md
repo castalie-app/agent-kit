@@ -78,17 +78,18 @@ Run the merge path, then the release path when `ship`/`release_trigger` says a s
 (on `merge-ships` the merge already did). Follow it to its end — the merge commit on the default
 branch, the release run finished — and report what you observed, not what you launched.
 
-**It stops before the merge or the release only when:**
+**A red gate is fixed, and a merge conflict on business logic becomes a decision while the rest
+carries on. Beyond those, it stops before the merge or the release only when:**
 
 - the person asked it **in the current turn** — then end at "PR ready" and say what is left;
 - the workspace's administrator denied it: `mcp__castalie__workflow_policy_resolve` on the
   door's own `merge_mode` (or `ship`/`auto_ship`), or on `ship`/`release_hold` for the release,
   answers `effective: "deny"`, `decided_by: "admin"`. Stop at the gesture denied, say in one line
   that the workspace decided, give `settings_url`;
-- the host's gate refused it, or a merge conflict on business logic needs a person's answer — that
-  answer is a decision, and the rest of the work carries on.
+- the host declares no merge path — step 3 above.
 
-No stored per-user value stops it, and `ask` or an absent value reads as shipping
+No stored per-user value stops it: `ask`, an absent value or one the instance no longer accepts
+reads as shipping
 (`${CLAUDE_PLUGIN_ROOT}/instructions/workflow-defaults.md`). **A risk is a flag, never a wait**: a
 change you judge risky ships with that risk in the pull-request body, in one sentence, with how it
 is reverted.

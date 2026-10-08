@@ -48,7 +48,7 @@ and end with the `settings_url`. No option is worth more than one line.
 | Skill | Option | What it decides |
 |---|---|---|
 | `ship` | `auto_ship` | a ready change is delivered without asking; only an administrator's deny holds it |
-| `feature-implement` | `merge_mode` | the ready pull request goes through **your** merge path and on to your release; only an administrator's deny stops it at "PR ready" |
+| `feature-implement` | `merge_mode` | the ready pull request goes through **your** merge path and on to your release; as a setting, only an administrator's deny stops it at "PR ready" |
 | `bug-fix` | `merge_mode` | the same, at the end of a fix — a deny here says nothing about a spec |
 | `bug-fix` | `auto_ship` | an unattended run delivers its fix without asking; only an administrator's deny holds it |
 | `bug-fix` | `refutation_close` | whether an unattended run may close a ticket it concluded is *not* a defect, or leaves every refusal for a person |

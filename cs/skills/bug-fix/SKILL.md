@@ -232,7 +232,7 @@ quality gate are the review.
 
 Resolve `bug-fix`/`merge_mode` and, on an unattended run, `bug-fix`/`auto_ship` following
 `${CLAUDE_PLUGIN_ROOT}/instructions/workflow-defaults.md`: their only value ships, and an absent
-or stored `ask` reads as that same value. The fix stops at "PR ready" in two cases only: the
+or stored `ask` reads as that same value. The fix stops at "PR ready" on two requests only: the
 workspace's administrator denied them (`effective: "deny"`, `decided_by: "admin"`) — say so in one
 line with `settings_url` — or the person in front of you asked, in this turn, to stop before the
 merge. A fix you judge risky ships with that risk written in the pull request, in one
