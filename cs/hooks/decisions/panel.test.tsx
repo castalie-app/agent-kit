@@ -58,7 +58,9 @@ const SHEET = {
     answer_shape: 'choice',
     escalation_reason: 'private_knowledge',
     why_human_md: 'You hold the Northwind account.',
-    executive_md: 'Northwind asks for the owner phone.',
+    description_80_md: 'Northwind asks for the owner phone.',
+    description_250_md: 'Northwind asks for the owner phone. 0 of 18,400 listings carry one.',
+    description_500_md: 'Northwind asks for the owner phone. 0 of 18,400 listings carry one.\n\n```mermaid\nflowchart LR\n  A --> B\n```',
     asked_by_agent: 'feature-implement',
     resume_state_md: 'SECRET-RESUME-STATE',
     date_created: '2026-10-01T15:40:00',
@@ -203,13 +205,22 @@ test('the inbox is drawn as cards per agent, and a card opens whole, on the term
     })
     const body = await sheet.find({ key: 'sheet-77' })
 
-    expect(body?.text).toMatch(/Pourquoi vous/)
-    expect(body?.text).toMatch(/A relay number, always — recommandée/)
-    expect(body?.text).toMatch(/```mermaid/)
-    expect(body?.text).toMatch(/Sur « A relay number, always »/)
+    // Spec 88: the question, the description at 80 words, the cards — and nothing else.
+    expect(body?.text).toMatch(/# Which phone number goes to the partner portals\?/)
+    expect(body?.text).not.toMatch(/Pourquoi vous|You hold the Northwind account/)
     expect(body?.text).not.toMatch(/SECRET-RESUME/)
+    expect((await sheet.find({ key: 'description-77' }))?.text).toBe('Northwind asks for the owner phone.')
+    expect((await sheet.find({ key: 'level-80' }))?.props.label).toBe('[En 80 mots]')
+    expect((await sheet.find({ key: 'text-302' }))?.text).toMatch(/A relay number, always\*\* — recommandée/)
+    // A depth is a press: the sheet is drawn again on the 500 words.
+    await sheet.press({ key: 'level-500' })
+    await clock.advance(200)
+    await sheet.unmount()
+    const deeper = await $.ui.mount({ plugin: 'cs', surface, component: 'Pane', requestId: 'cs-decision', props: PANE_PROPS('Décision n° 77') })
+    expect((await deeper.find({ key: 'description-77' }))?.text).toMatch(/```mermaid/)
+    expect((await deeper.find({ key: 'level-500' }))?.props.label).toBe('[En 500 mots]')
 
-    await sheet.press({ key: 'back' })
+    await deeper.press({ key: 'back' })
   }
 })
 
@@ -252,7 +263,8 @@ test('a press anywhere on a card opens its sheet at once, instead of the browser
     requestId: 'cs-decision',
     props: PANE_PROPS('Décision n° 77'),
   })
-  expect((await sheet.find({ key: 'sheet-77' }))?.text).toMatch(/Pourquoi vous/)
+  expect((await sheet.find({ key: 'sheet-77' }))?.text).toMatch(/Which phone number/)
+  expect((await sheet.find({ key: 'sheet-77' }))?.text).not.toMatch(/Pourquoi vous/)
 })
 
 test('a session the desktop app hosts binds when the desktop attaches, and a headless one never reads', async ($, on) => {
@@ -326,7 +338,9 @@ test('where no pane can be seated, the command prints the cards, and a number pr
 
   const sheet = await $.command.run({ command: 'cs:decisions-panel', args: '77', origin, presentation })
   expect(sheet.text).toMatch(/# Which phone number goes to the partner portals\?/)
-  expect(sheet.text).toMatch(/Pourquoi vous/)
+  expect(sheet.text).toMatch(/## Descriptif — en 80 mots\n\nNorthwind asks for the owner phone\./)
+  expect(sheet.text).toMatch(/\*\*Autre réponse ou question :\*\*/)
+  expect(sheet.text).not.toMatch(/Pourquoi vous/)
   expect(sheet.text).not.toMatch(/SECRET-RESUME/)
 })
 
@@ -505,6 +519,7 @@ async function answering(
   mock.store(on)
 
   const answers: Record<string, unknown>[] = []
+  const asked: Record<string, unknown>[] = []
   const opened: string[] = []
   const submitted: string[] = []
   on('tool.list', () => ({
@@ -524,6 +539,7 @@ async function answering(
   })
   on('mcp.call', ($, e) => {
     if (e.tool === 'decision_answer') answers.push(e.args)
+    if (e.tool === 'decision_ask_context') asked.push(e.args)
     const body =
       e.tool === 'decision_list'
         ? { ...INBOX, objective_id: e.args.objective_id }
@@ -533,7 +549,9 @@ async function answering(
             : SHEET
           : e.tool === 'decision_answer'
             ? reply(e.args)
-            : NAMES[e.tool]
+            : e.tool === 'decision_ask_context'
+              ? { success: true, context_ask: { id: 6, decision_id: e.args.id, asked_md: e.args.asked_md } }
+              : NAMES[e.tool]
     if (body === undefined) throw new Error(`${e.tool} is not served here`)
 
     return { value: { content: [{ type: 'text', text: JSON.stringify(body) }] } } as never
@@ -580,16 +598,17 @@ async function answering(
     drawn = null
   }
 
-  return { answers, opened, submitted, sheet, done }
+  return { answers, asked, opened, submitted, sheet, done }
 }
 
 for (const surface of SURFACES) {
-  test(`an option is answered by « Choisir », or by its digit then « Répondre », and the next card opens — ${surface}`, async ($, on) => {
+  test(`a press on a card answers, its digit marks it then « Répondre » answers, and the next card opens — ${surface}`, async ($, on) => {
     const { answers, opened, submitted, sheet } = await answering($, on, { id: 77, surface })
 
     const bar = await sheet()
     expect((await bar.find({ key: 'option-302' }))?.props.hotkey).toBe('1')
-    expect((await bar.find({ key: 'option-302' }))?.props.label).toBe('★ A relay number, always')
+    expect((await bar.find({ key: 'option-302' }))?.props.label).toBe('Choisir')
+    expect((await bar.find({ key: 'text-302' }))?.text).toMatch(/★ 1\. A relay number, always/)
 
     // The digit only marks: nothing leaves, and « Répondre » names what Enter will send.
     await bar.press({ key: 'option-302' })
@@ -610,25 +629,40 @@ for (const surface of SURFACES) {
     expect(submitted[0]).toMatch(/decision-resume 77/)
     expect((await next.find({ key: 'sheet-81' }))?.text).toMatch(/Merge the VAT fix/)
 
-    // « Choisir » answers at once.
-    await next.press({ key: 'choose-501' })
+    // A press on the card answers at once.
+    await next.press({ key: 'text-501', link: { href: 'https://acme.castalie.app/decisions/81#option-501' } as never })
     await sheet(81)
     expect(answers.at(-1)).toEqual({ id: 81, option_id: 501, channel: 'click' })
   })
 }
 
-test('typed words with the effect picked are the answer, channel text', async ($, on) => {
+test('words typed in « Autre réponse ou question » are the answer, channel text, or a question to the agent', async ($, on) => {
   const { answers, submitted, sheet } = await answering($, on, { id: 77 })
 
   const bar = await sheet()
-  expect((await bar.find({ key: 'answer-text' }))?.props.label).toBe('Répondre autrement ou ajuster :')
-  await bar.select({ key: 'effect', value: 'take_over' })
+  expect((await bar.find({ key: 'answer-text' }))?.props.label).toBe('Autre réponse ou question :')
+  expect((await bar.find({ key: 'ask' }))?.props.label).toBe('Poser la question')
   await bar.input({ key: 'answer-text', text: 'Ask Northwind first.' })
   await sheet()
 
-  expect(answers).toEqual([{ id: 77, text_md: 'Ask Northwind first.', effect: 'take_over', channel: 'text' }])
+  expect(answers).toEqual([{ id: 77, text_md: 'Ask Northwind first.', effect: 'continue', channel: 'text' }])
   expect(submitted.join('\n')).toMatch(/Their answer, in their words: Ask Northwind first\./)
-  expect(submitted.join('\n')).toMatch(/Effect: take_over — the person takes the subject over/)
+  expect(submitted.join('\n')).toMatch(/Effect: continue — carry on/)
+})
+
+test('« Poser la question » sends the words to the agent that asked, and the decision keeps waiting', async ($, on) => {
+  const { answers, asked, submitted, sheet } = await answering($, on, { id: 77 })
+
+  const bar = await sheet()
+  await bar.input({ key: 'answer-text', text: 'Per number or per minute?', kind: 'change' })
+  await bar.press({ key: 'ask' })
+  const after = await sheet()
+
+  expect(asked).toEqual([{ id: 77, asked_md: 'Per number or per minute?' }])
+  expect(answers).toHaveLength(0)
+  expect(submitted).toHaveLength(0)
+  expect((await after.find({ key: 'answered' }))?.text).toBe("✓ Question envoyée sur n° 77 : l'agent qui l'a posée y répond sur la fiche.")
+  expect((await after.find({ key: 'answer-text' }))?.props.value).toBe('')
 })
 
 test("a refusal shows the server's fix, keeps the typed words, and the card stays", async ($, on) => {
@@ -655,8 +689,8 @@ test("an approval's « Non » without its reason is refused before anything leav
   const { answers, sheet } = await answering($, on, { id: 81, surface: 'desktop' })
 
   const bar = await sheet()
-  expect((await bar.find({ key: 'option-502' }))?.props.label).toBe('Non')
-  await bar.press({ key: 'choose-502' })
+  expect((await bar.find({ key: 'text-502' }))?.text).toMatch(/2\. Non/)
+  await bar.press({ key: 'text-502', link: { href: 'https://acme.castalie.app/decisions/81#option-502' } as never })
   const refused = await sheet()
 
   expect(answers).toHaveLength(0)

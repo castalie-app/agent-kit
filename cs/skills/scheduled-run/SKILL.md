@@ -120,12 +120,9 @@ same key, character for character. `asked_by_agent` is `scheduled-task:<task id>
 | `title` | the question, ending with `?`: « Switch invoice-export to the new model before the old one retires? » |
 | `subject_kind`, `subject_id` | `scheduled_task_run` and this run's id. Refused `subject_kind_unavailable`: the brief or spec the prompt names |
 | `escalation_reason` | `money`, `public_voice`, `shareholder`, `private_knowledge`, `irreversible`, `authorization` or `external_gesture`; none fits → the decision is yours, take it and write why in the notes |
-| `complexity`, `executive_md` | `standard` as a rule; the summary opens on the fact that decides, with the figures |
-| `why_human_md` | one or two sentences on why this person decides |
-| `answer_shape`, `options` | `choice`, two or three options on different axes, each with `gives_up_md`, its `cost_text` when there is one (on every option when `money`), its `effect`, one `is_recommended` |
-| `recommendation_md` | what you recommend and why |
-| `blocked_md`, `blocked_items` | the gestures that wait for the answer, and how many |
-| `continuing_md` | what this run does meanwhile |
+| `description_80_md`, `description_250_md`, `description_500_md` | the description at three depths (80, 250, 500 words at most): the first opens on the fact that decides, with the figures, and says what you recommend; the deeper ones add what was measured and what each option leads to |
+| `answer_shape`, `options` | `choice`, two or three options on different axes, each a card the person clicks: `gives_up_md`, its `cost_text` when there is one (on every option when `money`), its `effect`, one `is_recommended` |
+| `blocked_items` | how many gestures wait for the answer |
 | `addressee_user_id` | the responsible person: the one the prompt names (resolve an address with `user_lookup(email)`), else the task's last editor (`updated_by_user_id`, else `created_by_user_id`, from `scheduled_task_get`) |
 | `resume_mode`, `resume_prompt_md` | `robot_prompt`, with a prompt a robot plays alone: the task id, this run's id, the figures, and what to do with each answer. Refused `resume_mode_unavailable` (no robot resumes on this workspace): `asker`, the same content in `resume_state_md`, and the next run of this task applies it (step 1) |
 | `dedupe_key`, `asked_by_agent` | the key above, `scheduled-task:<task id>` |

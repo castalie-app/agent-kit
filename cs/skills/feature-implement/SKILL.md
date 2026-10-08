@@ -93,8 +93,8 @@ logic, an action only a person can take — file it with `decision_create`, on t
 (`subject_kind="feature_spec_phase"`) or on the spec, written by
 `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`: `resume_mode="asker"` with the branch, the
 phase and what each answer changes in `resume_state_md` (`robot_prompt` with
-`/feature-implement <specId> --continue` where the workspace lets a robot resume), and in
-`continuing_md` the phases and cases that do not depend on it. Then go on with exactly those. On
+`/feature-implement <specId> --continue` where the workspace lets a robot resume). Then go on with
+the phases and cases that do not depend on it, exactly those. On
 `--continue`, `decision_list(asked_by_agent="feature-implement", status=answered)`, kept to this
 spec and its phases, returns what was settled: build each answer as an instruction, then
 `decision_mark_applied`. The only stops left are a hard build/test failure you cannot fix, or

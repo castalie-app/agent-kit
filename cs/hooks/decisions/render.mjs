@@ -11,8 +11,11 @@
 import { hrefOf } from "../where/render.mjs";
 import { groupsOf } from "./inbox.mjs";
 import {
+  APPROVAL_TITLES,
   APPROXIMATE_TEXT,
-  COMPLEXITIES,
+  ASK_PENDING_TEXT,
+  DESCRIPTION_HEADING,
+  DESCRIPTION_LEVELS,
   EFFECTS,
   EMPTY_TEXT,
   HOTKEY_CARDS,
@@ -20,10 +23,12 @@ import {
   NO_OBJECTIVE_TEXT,
   NO_SERVER_TEXT,
   OBJECTIVE_TEXT,
+  OPTIONS_HEADING,
+  OTHER_TITLE,
+  LEVEL_TEXT,
   REASONS,
   RECOMMENDED_MARK,
   RISKS,
-  SHAPES,
   UNOPENED_MARK,
   UNREAD_OBJECTIVE_TEXT,
 } from "./names.mjs";
@@ -265,40 +270,58 @@ export function inboxMarkdown(model, view) {
   return lines.join("\n").trim();
 }
 
-/** A labelled paragraph, or nothing when there is nothing to say. */
-const said = (label, text) => (text ? [`**${label}** — ${text}`, ""] : []);
-
-/** A section with its heading, or nothing when it is empty. */
-const section = (heading, text) => (text ? [`## ${heading}`, "", text, ""] : []);
-
-/** A block of markdown nested under a label, kept whole: a fenced exhibit stays a fence. */
-const block = (label, text) => (text ? [`**${label}**`, "", text, ""] : []);
-
-/** What reading the context before answering came to, in words. */
+/** What reading the 250 or 500 words before answering came to, in words. */
 const READS = {
-  after_reading: "après avoir lu le contexte",
-  without_opening: "sans ouvrir le contexte",
-  read_after_answering: "contexte lu après la réponse",
-  no_context: "pas de contexte à lire",
+  after_reading: "après avoir lu le descriptif détaillé",
+  without_opening: "sans ouvrir le descriptif détaillé",
+  read_after_answering: "descriptif détaillé lu après la réponse",
+  no_context: "pas de descriptif détaillé à lire",
 };
 
 /**
- * The whole sheet, as model-style markdown: the question, why this person, the summary, every
- * option with what it does, gives up, removes and its exhibit, the recommendation, what waits,
- * what goes on meanwhile, the context, the readers' comments and questions, and the answer once
- * there is one. The resume state an agent left itself is never on it.
+ * The depths of the description a reader can open, in order (Castalie spec 88): 80, 250 and 500
+ * words. A level identical to the one above it adds nothing and is left out, as on the sheet.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @returns {{ words: number, text: string }[]}
+ */
+export function descriptionLevelsOf(decision) {
+  const levels = [];
+  let previous = null;
+  for (const [words, text] of [
+    [DESCRIPTION_LEVELS[0], decision.description80],
+    [DESCRIPTION_LEVELS[1], decision.description250],
+    [DESCRIPTION_LEVELS[2], decision.description500],
+  ]) {
+    const trimmed = typeof text === "string" && text.trim() !== "" ? text.trim() : null;
+    if (trimmed === null || trimmed === previous) continue;
+    levels.push({ words, text: trimmed });
+    previous = trimmed;
+  }
+  return levels;
+}
+
+/**
+ * The level shown: the one asked for when the sheet has it, else the first.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @param {number | null | undefined} asked
+ */
+export function levelShownOf(decision, asked) {
+  const levels = descriptionLevelsOf(decision);
+  return levels.find((level) => level.words === asked) ?? levels[0] ?? null;
+}
+
+/**
+ * The top of the sheet: the question, then one line of who asks, since when and by when.
  *
  * @param {import("./inbox.mjs").Decision} decision
  * @param {{ now: number }} view
  * @returns {string}
  */
-export function sheetMarkdown(decision, view) {
-  const lines = [`# ${decision.title ?? `Décision n° ${decision.id}`}`, ""];
-
+export function sheetHeadMarkdown(decision, view) {
+  const lines = [`# ${decision.title ?? `Décision n° ${decision.id}`}`];
   const facts = [];
-  if (decision.reason) facts.push(REASONS[decision.reason] ?? decision.reason);
-  if (decision.complexity) facts.push(COMPLEXITIES[decision.complexity] ?? decision.complexity);
-  if (decision.shape) facts.push(SHAPES[decision.shape] ?? decision.shape);
   const asker = decision.agent ?? (decision.origin === "migration" ? "l'ancienne file" : null);
   if (asker) facts.push(`demandée par ${asker}`);
   const age = ageText(decision.createdAt, view.now);
@@ -306,76 +329,115 @@ export function sheetMarkdown(decision, view) {
   const by = dayText(decision.decideBy);
   if (by) facts.push(`à trancher avant le ${by}`);
   if (decision.planPoint) facts.push(`point ${decision.planPoint} du plan`);
-  if (facts.length > 0) lines.push(`_${facts.join(" · ")}_`, "");
+  if (facts.length > 0) lines.push("", `_${facts.join(" · ")}_`);
+  return lines.join("\n");
+}
 
-  lines.push(...said("Pourquoi vous", decision.whyHuman));
-  lines.push(...section("Résumé", decision.executive));
+/**
+ * One option as its card reads: the recommended mark, the title, its traits (risk, cost, what
+ * the answer does to the work), its consequence and what it gives up. On the sheet the card is
+ * the answer: a press on it answers.
+ *
+ * Where `href` is given, every line is a link to it: a press anywhere on the card's text is the
+ * press that answers, as a press anywhere on an inbox card opens it.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @param {import("./inbox.mjs").Decision["options"][number]} option
+ * @param {number} index
+ * @param {string | null} [href]
+ * @returns {string}
+ */
+export function optionCardMarkdown(decision, option, index, href = null) {
+  const title = decision.shape === "approve" ? (APPROVAL_TITLES[option.title ?? ""] ?? option.title) : option.title;
+  const mark = option.isRecommended ? `${RECOMMENDED_MARK} ` : "";
+  const lines = [`**${mark}${index + 1}. ${title ?? "Option"}**${option.isRecommended ? " — recommandée" : ""}`];
+  const traits = [];
+  if (option.risk) traits.push(RISKS[option.risk] ?? option.risk);
+  if (option.cost) traits.push(option.cost);
+  if (option.effect && EFFECTS[option.effect]) traits.push(EFFECTS[option.effect]);
+  if (traits.length > 0) lines.push(`_${traits.join(" · ")}_`);
+  if (option.body) lines.push(option.body);
+  if (option.givesUp) lines.push(`**Renonce à :** ${option.givesUp}`);
+  return (href === null ? lines : lines.map((line) => `[${linkText(line)}](${href})`)).join("\n\n");
+}
 
-  if (decision.options.length > 0) {
-    lines.push("## Options", "");
-    decision.options.forEach((option, index) => {
-      const mark = option.isRecommended ? `${RECOMMENDED_MARK} ` : "";
-      const tail = option.isRecommended ? " — recommandée" : "";
-      lines.push(`### ${mark}${index + 1}. ${option.title ?? "Option"}${tail}`, "");
-      const traits = [];
-      if (option.risk) traits.push(RISKS[option.risk] ?? option.risk);
-      if (option.cost) traits.push(option.cost);
-      if (option.effect) traits.push(EFFECTS[option.effect] ?? option.effect);
-      if (traits.length > 0) lines.push(`_${traits.join(" · ")}_`, "");
-      if (option.body) lines.push(option.body, "");
-      lines.push(...said("Renonce à", option.givesUp));
-      lines.push(...said("Retire", option.removes));
-      lines.push(...block("Pièce", option.exhibit));
-    });
+/**
+ * The questions readers asked the agent, and its answers: read in the « Autre réponse ou
+ * question » card.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @returns {string | null}
+ */
+export function asksMarkdown(decision) {
+  if (decision.contextAsks.length === 0) return null;
+  const lines = [];
+  for (const ask of decision.contextAsks) {
+    lines.push(`- ${ask.asked ?? "?"}`);
+    lines.push(`  ${ask.answered ? `→ ${ask.answered}` : `_${ASK_PENDING_TEXT}_`}`);
   }
+  return lines.join("\n");
+}
 
-  if (decision.recommendation) lines.push(`> **Recommandation** — ${decision.recommendation}`, "");
-
-  const blocked =
-    decision.blocked && decision.blockedItems !== null && decision.blockedItems > 0
-      ? `${decision.blocked} (${countOf(decision.blockedItems, "élément", "éléments")})`
-      : decision.blocked;
-  lines.push(...section("Ce qui attend", blocked));
-  lines.push(...section("Pendant ce temps", decision.continuing));
-  lines.push(...section("Contexte", decision.context));
-
-  if (decision.comments.length > 0) {
-    lines.push(`## Commentaires (${decision.comments.length})`, "");
-    for (const comment of decision.comments) {
-      const on = decision.options.find((option) => option.id !== null && option.id === comment.optionId);
-      const where = on ? `Sur « ${on.title} »` : comment.quote ? "Sur le contexte" : "Sur la fiche";
-      const day = dayText(comment.createdAt);
-      lines.push(`- **${where}**${day ? ` · ${day}` : ""}`);
-      if (comment.quote) lines.push(`  > ${comment.quote}`);
-      if (comment.body) lines.push(`  ${comment.body.replace(/\n/g, "\n  ")}`);
-    }
-    lines.push("");
-  }
-
-  if (decision.contextAsks.length > 0) {
-    lines.push("## Questions de contexte", "");
-    for (const ask of decision.contextAsks) {
-      lines.push(`- ${ask.asked ?? "?"}`);
-      lines.push(`  ${ask.answered ? `→ ${ask.answered}` : "_en attente de réponse_"}`);
-    }
-    lines.push("");
-  }
-
+/**
+ * The answer once there is one.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @returns {string | null}
+ */
+export function answerMarkdown(decision) {
   const answer = decision.answer;
-  if (answer !== null) {
-    lines.push("## Réponse", "");
-    const facts = [];
-    if (answer.optionTitle) facts.push(`« ${answer.optionTitle} »`);
-    if (answer.effect) facts.push(EFFECTS[answer.effect] ?? answer.effect);
-    const day = dayText(answer.answeredAt);
-    if (day) facts.push(`le ${day}`);
-    if (answer.read) facts.push(READS[answer.read] ?? answer.read);
-    if (facts.length > 0) lines.push(facts.join(" · "), "");
-    if (answer.text) lines.push(answer.text, "");
-    if (answer.confirmed === false) {
-      lines.push("_Recommandation prise sans ouvrir le contexte : l'agent la confirme avec vous avant d'agir._", "");
-    }
+  if (answer === null) return null;
+  const lines = ["## Réponse", ""];
+  const facts = [];
+  if (answer.optionTitle) facts.push(`« ${answer.optionTitle} »`);
+  if (answer.effect) facts.push(EFFECTS[answer.effect] ?? answer.effect);
+  const day = dayText(answer.answeredAt);
+  if (day) facts.push(`le ${day}`);
+  if (answer.read) facts.push(READS[answer.read] ?? answer.read);
+  if (facts.length > 0) lines.push(facts.join(" · "), "");
+  if (answer.text) lines.push(answer.text, "");
+  if (answer.confirmed === false) {
+    lines.push("_Recommandation prise sans ouvrir le descriptif détaillé : l'agent la confirme avec vous avant d'agir._", "");
   }
+  return lines.join("\n").trim();
+}
+
+/**
+ * The whole sheet as one markdown text — what the command prints where no pane can be seated:
+ * the question, the description at the level asked for (80 words unless told otherwise), every
+ * option as its card, the last card « Autre réponse ou question », the readers' questions and the
+ * answer once there is one. Nothing else: why this person, what waits, what carries on and the
+ * former context are not on the sheet (Castalie spec 88). The resume state an agent left itself
+ * is never on it.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @param {{ now: number, level?: number | null }} view
+ * @returns {string}
+ */
+export function sheetMarkdown(decision, view) {
+  const lines = [sheetHeadMarkdown(decision, view), ""];
+
+  const levels = descriptionLevelsOf(decision);
+  const shown = levelShownOf(decision, view.level);
+  if (shown !== null) {
+    const others = levels.filter((level) => level.words !== shown.words).map((level) => LEVEL_TEXT(level.words).toLowerCase());
+    lines.push(`## ${DESCRIPTION_HEADING} — ${LEVEL_TEXT(shown.words).toLowerCase()}`, "");
+    lines.push(shown.text, "");
+    if (others.length > 0) lines.push(`_Aussi ${others.join(" et ")} sur la fiche._`, "");
+  }
+
+  const options = decision.shape === "free_text" ? [] : decision.options;
+  if (options.length > 0) {
+    lines.push(`## ${OPTIONS_HEADING}`, "");
+    options.forEach((option, index) => lines.push(optionCardMarkdown(decision, option, index), ""));
+  }
+
+  lines.push(`**${OTHER_TITLE}**`, "");
+  const asks = asksMarkdown(decision);
+  if (asks !== null) lines.push(asks, "");
+
+  const answer = answerMarkdown(decision);
+  if (answer !== null) lines.push(answer, "");
 
   return lines.join("\n").trim();
 }
@@ -414,7 +476,7 @@ export function settledNotice(decision) {
     if (answer.optionTitle) lines.push(`Option chosen: « ${answer.optionTitle} »${answer.effect ? ` (effect: ${answer.effect})` : ""}.`);
     if (answer.text) lines.push(`The person's words, which count over the option: ${answer.text}`);
     if (answer.confirmed === false) {
-      lines.push("They took the recommendation without opening the context: confirm it with them in this turn before acting on it.");
+      lines.push("They took the recommendation without opening the 250- or 500-word description: confirm it with them in this turn before acting on it.");
     }
   }
   lines.push(

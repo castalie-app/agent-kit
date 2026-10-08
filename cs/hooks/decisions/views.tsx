@@ -14,18 +14,20 @@ import type { BoxProps, ButtonProps, InputProps, LinkProps, MarkdownProps, Selec
 import { cardMarkdown } from './render.mjs'
 import {
   ALL_IN_CASTALIE_TEXT,
-  ANSWER_HEADING,
   ANSWER_KEYS,
   BACK_TEXT,
   CHOOSE_TEXT,
+  DESCRIPTION_HEADING,
   DISARM_TEXT,
-  SEND_TEXT,
   SENDING_TEXT,
   CARDS_PANE_TITLE,
   IN_CASTALIE_TEXT,
   OPEN_TEXT,
+  OPTIONS_HEADING,
+  OTHER_TITLE,
   RECOMMENDED_MARK,
   REFRESH_TEXT,
+  SHEET_KEYS,
 } from './names.mjs'
 
 /**
@@ -226,52 +228,87 @@ export function cardsView(kit: Kit, panel: PanelView, on: CardsHandlers): Render
 export type SheetView = {
   id: number
   url: string | null
-  /** The sheet as markdown, or the line that says why it is not here yet. */
+  /** While it loads, or once gone: the line that says why the sheet is not here yet. */
   text: string
   isLoading: boolean
   /** What the last answer left to say — « ✓ Réponse enregistrée sur n° 77. 2 à répondre. » */
   notice?: string | null
+  /** The question and the line of who asks, since when, by when. */
+  head?: string
+  /** The depths of the description (Castalie spec 88): a button each, the one shown marked. */
+  levels?: { words: number; label: string; isActive: boolean }[]
+  /** The description at the depth shown. */
+  description?: string | null
+  /** A sheet that no longer waits: its cards as text, the readers' questions and the answer. */
+  settled?: { cards: string[]; asks: string | null; answer: string | null } | null
 }
 
-/** What `answerBarOf` answers: the bar under a pending sheet. */
+/** What `answerBarOf` answers: the cards of a pending sheet, then « Autre réponse ou question ». */
 export type AnswerBarView = {
   error: string | null
   isSending: boolean
-  options: { id: number; title: string; label: string; hotkey: string | undefined; isRecommended: boolean; isArmed: boolean }[]
+  cards: { id: number; title: string; href: string | null; markdown: string; hotkey: string | undefined; isRecommended: boolean; isArmed: boolean }[]
   armed: { id: number; title: string; needsReason: boolean; hint: string; confirm: string } | null
-  field: { label: string; placeholder: string; value: string; submitLabel: string } | null
-  effects: { label: string; value: string; options: { value: string; label: string }[] } | null
-  canSendText: boolean
+  other: {
+    title: string
+    asks: string | null
+    field: { label: string; placeholder: string; value: string; submitLabel: string } | null
+    answerLabel: string
+    askLabel: string
+    canAnswer: boolean
+    canAsk: boolean
+  }
   fallback: string | null
 }
 
 export type AnswerHandlers = {
-  /** A digit, or a press on the option's own title: marks it, answers nothing. */
+  /** A digit: marks the card, answers nothing. */
   arm: (optionId: number) => void
-  /** « Choisir »: answers with that option at once. */
+  /** A press on the card: answers with that option at once. */
   choose: (optionId: number) => void
-  /** « Répondre « … » », the marked option's Enter. */
+  /** « Répondre « … » », the marked card's Enter. */
   confirm: () => void
   disarm: () => void
   /** Every change of the field: the draft keeps it across redraws. */
   type: (text: string) => void
-  /** Enter in the field, or « Répondre avec ce texte ». */
+  /** Enter in the field, or « Répondre »: the words are the answer. */
   send: (text?: string) => void
-  effect: (value: string) => void
+  /** « Poser la question »: the words go to the agent that asked, as a question. */
+  ask: () => void
+}
+
+/** A framed card, as the cards pane draws its own. */
+function framed(kit: Kit, key: string, children: (RenderElement | null)[], isRecommended = false): RenderElement {
+  const { Box } = kit
+  return (
+    <Box
+      key={key}
+      flexDirection="column"
+      marginTop={1}
+      borderStyle="round"
+      borderDimColor={!isRecommended}
+      borderColor={isRecommended ? 'green' : undefined}
+      paddingX={1}
+      hover={{ borderColor: 'blue', borderDimColor: false }}
+    >
+      {children}
+    </Box>
+  )
 }
 
 /**
- * The bar under a pending sheet, as Castalie's own: a row per option — its title, which a digit
- * marks, and « Choisir », which answers — then the marked option's « Répondre », the field to
- * answer otherwise or adjust, and the effect a written answer has.
+ * The cards of a pending sheet, as Castalie's own (spec 88): a framed card per option, whose
+ * every line is a press that answers with it, and its digit, which only marks it; then the marked
+ * card's « Répondre », and the last card, « Autre réponse ou question : », with its field,
+ * « Répondre » and « Poser la question ».
  */
-function answerBar(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderElement {
-  const { Box, Text, Button, Input, Select } = kit
+function answerCards(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderElement {
+  const { Box, Text, Button, Input } = kit
 
   return (
-    <Box key="answer" flexDirection="column" marginTop={1} borderStyle="round" borderDimColor paddingX={1}>
+    <Box key="answer" flexDirection="column" marginTop={1}>
       <Text key="heading" bold>
-        {ANSWER_HEADING}
+        {OPTIONS_HEADING}
       </Text>
       {bar.error === null ? null : (
         <Box key="error">
@@ -287,26 +324,29 @@ function answerBar(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderElem
           </Text>
         </Box>
       ) : null}
-      {bar.options.map(option => (
-        <Box key={`row-${option.id}`} flexDirection="row" justifyContent="space-between">
-          <Button
-            key={ANSWER_KEYS.option(option.id)}
-            plain
-            hotkey={option.hotkey}
-            dimColor={!option.isArmed}
-            label={option.isArmed ? `› ${option.label}` : option.label}
-            onPress={() => on.arm(option.id)}
-          />
-          <Button
-            key={ANSWER_KEYS.choose(option.id)}
-            variant={option.isRecommended ? 'primary' : 'secondary'}
-            label={CHOOSE_TEXT}
-            onPress={() => on.choose(option.id)}
-          />
-        </Box>
-      ))}
+      {bar.cards.map(card =>
+        framed(
+          kit,
+          SHEET_KEYS.card(card.id),
+          [
+            card.href === null
+              ? markdownOf(kit, `text-${card.id}`, card.markdown)
+              : markdownOf(kit, `text-${card.id}`, card.markdown, { hrefs: [card.href], press: () => on.choose(card.id) }),
+            // Its digit, or a press on « Choisir », only marks it: Enter on « Répondre « … » » answers.
+            <Button
+              key={ANSWER_KEYS.option(card.id)}
+              plain
+              hotkey={card.hotkey}
+              dimColor={!card.isArmed}
+              label={card.isArmed ? `› ${CHOOSE_TEXT}` : CHOOSE_TEXT}
+              onPress={() => on.arm(card.id)}
+            />,
+          ],
+          card.isRecommended,
+        ),
+      )}
       {bar.armed === null ? null : (
-        <Box key="armed" flexDirection="column">
+        <Box key="armed" flexDirection="column" marginTop={1}>
           <Box key="hint">
             <Text dimColor wrap="wrap">
               {bar.armed.hint}
@@ -318,56 +358,61 @@ function answerBar(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderElem
           </Box>
         </Box>
       )}
-      {bar.field === null || Input === undefined ? null : (
-        <Input
-          key={ANSWER_KEYS.text}
-          label={bar.field.label}
-          placeholder={bar.field.placeholder}
-          value={bar.field.value}
-          submitLabel={bar.field.submitLabel}
-          onInput={value => on.type(value)}
-          onSubmit={value => on.send(value)}
-        />
-      )}
-      {bar.effects === null || Select === undefined ? null : (
-        <Select
-          key={ANSWER_KEYS.effect}
-          label={bar.effects.label}
-          options={bar.effects.options}
-          value={bar.effects.value}
-          onSelect={value => on.effect(value)}
-        />
-      )}
-      {bar.canSendText && Input !== undefined ? (
-        <Button key={ANSWER_KEYS.send} variant="secondary" label={SEND_TEXT} onPress={() => on.send()} />
-      ) : null}
-      {bar.fallback === null ? null : (
-        <Box key="fallback">
-          <Text dimColor wrap="wrap">
+      {framed(kit, 'other', [
+        <Text key="title" bold>
+          {bar.other.title}
+        </Text>,
+        bar.other.asks === null ? null : markdownOf(kit, 'asks', bar.other.asks),
+        bar.other.field === null || Input === undefined ? null : (
+          <Input
+            key={ANSWER_KEYS.text}
+            label={bar.other.field.label}
+            placeholder={bar.other.field.placeholder}
+            value={bar.other.field.value}
+            submitLabel={bar.other.field.submitLabel}
+            onInput={value => on.type(value)}
+            onSubmit={value => on.send(value)}
+          />
+        ),
+        bar.other.canAnswer || bar.other.canAsk ? (
+          <Box key="other-actions" flexDirection="row">
+            {bar.other.canAnswer ? (
+              <Button key={ANSWER_KEYS.send} variant="primary" label={bar.other.answerLabel} onPress={() => on.send()} />
+            ) : null}
+            {bar.other.canAsk ? (
+              <Button key={SHEET_KEYS.ask} variant="secondary" label={bar.other.askLabel} onPress={() => on.ask()} />
+            ) : null}
+          </Box>
+        ) : null,
+        bar.fallback === null ? null : (
+          <Text key="fallback" dimColor wrap="wrap">
             {bar.fallback}
           </Text>
-        </Box>
-      )}
+        ),
+      ])}
     </Box>
   )
 }
 
 /**
- * The pane one card opens into: a way back, the decision's own page, the whole sheet, and — while
- * it waits — the bar that answers it.
+ * The pane one card opens into: a way back, the decision's own page, the question, the
+ * description with its three depths, and the cards — which answer while it waits.
  *
  * @param kit the elements `$.ui.resolve(e)` handed out
  * @param sheet what the pane holds
  * @param back what « ← cartes » runs: the sheet closes, the cards stay
- * @param answer the bar and what it runs; absent while the sheet loads or once nothing waits
+ * @param answer the cards and what they run; absent while the sheet loads or once nothing waits
+ * @param level what a depth's button runs
  */
 export function sheetView(
   kit: Kit,
   sheet: SheetView,
   back: () => void,
   answer?: { bar: AnswerBarView; on: AnswerHandlers } | null,
+  level?: (words: number) => void,
 ): RenderElement {
   const { Box, Text, Button, Link } = kit
+  const levels = sheet.levels ?? []
 
   return (
     <Box flexDirection="column">
@@ -387,15 +432,57 @@ export function sheetView(
         </Box>
       )}
       <Box key="body" flexDirection="column" marginTop={1}>
-        {sheet.isLoading ? (
+        {sheet.isLoading || sheet.head === undefined ? (
           <Text key="loading" dimColor wrap="wrap">
             {sheet.text}
           </Text>
         ) : (
-          markdownOf(kit, `sheet-${sheet.id}`, sheet.text)
+          markdownOf(kit, `sheet-${sheet.id}`, sheet.head)
         )}
       </Box>
-      {answer === null || answer === undefined || sheet.isLoading ? null : answerBar(kit, answer.bar, answer.on)}
+      {sheet.isLoading || sheet.description === undefined || sheet.description === null ? null : (
+        <Box key="description" flexDirection="column" marginTop={1}>
+          <Box key="levels" flexDirection="row">
+            <Text key="heading" bold>
+              {`${DESCRIPTION_HEADING}  `}
+            </Text>
+            {levels.length < 2
+              ? null
+              : levels.map(item => (
+                  <Button
+                    key={SHEET_KEYS.level(item.words)}
+                    plain
+                    dimColor={!item.isActive}
+                    label={item.isActive ? `[${item.label}]` : item.label}
+                    onPress={() => level?.(item.words)}
+                  />
+                ))}
+          </Box>
+          {markdownOf(kit, `description-${sheet.id}`, sheet.description)}
+        </Box>
+      )}
+      {sheet.isLoading || sheet.settled === null || sheet.settled === undefined ? null : (
+        <Box key="settled" flexDirection="column" marginTop={1}>
+          <Text key="heading" bold>
+            {OPTIONS_HEADING}
+          </Text>
+          {sheet.settled.cards.map((text, index) => framed(kit, `settled-${index}`, [markdownOf(kit, `settled-text-${index}`, text)]))}
+          {sheet.settled.asks === null
+            ? null
+            : framed(kit, 'settled-other', [
+                <Text key="title" bold>
+                  {OTHER_TITLE}
+                </Text>,
+                markdownOf(kit, 'settled-asks', sheet.settled.asks),
+              ])}
+          {sheet.settled.answer === null ? null : (
+            <Box key="settled-answer" marginTop={1}>
+              {markdownOf(kit, 'settled-answer-text', sheet.settled.answer)}
+            </Box>
+          )}
+        </Box>
+      )}
+      {answer === null || answer === undefined || sheet.isLoading ? null : answerCards(kit, answer.bar, answer.on)}
     </Box>
   )
 }

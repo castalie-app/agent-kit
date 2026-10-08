@@ -3122,7 +3122,7 @@
     {
       "name": "decision_create",
       "kind": "write",
-      "description": "Ask a person to decide something you cannot settle yourself, tied to the work it blocks — a ticket, a spec, a phase, a brief, a follow-up run, an acceptance remark. Then CARRY ON with everything that does not depend on the answer. Each option says what the answer does to that work (effect), and Castalie applies it as soon as the person answers. Returns decision_id and the url of the sheet, or a refusal saying what to fix. The sheet must read in under a minute (simple), three (standard) or seven (complex): the title is the QUESTION, 12 to 160 characters, ending with \"?\"; executive_md is capped at 80/200/400 words and context_md at 150/600/1500 (a fenced block does not count); a choice carries 2 to 4 options on different axes, each saying what it gives up; one option is recommended and recommendation_md says why; money needs a cost on every option. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
+      "description": "Ask a person to decide something you cannot settle yourself, tied to the work it blocks — a ticket, a spec, a phase, a brief, a follow-up run, an acceptance remark. Then CARRY ON with everything that does not depend on the answer. Each option says what the answer does to that work (effect), and Castalie applies it as soon as the person answers. Returns decision_id and the url of the sheet, or a refusal saying what to fix. The sheet keeps three things, and nothing else: the title (the QUESTION, 12 to 160 characters, ending with \"?\"), the description and the options. The description is written at three depths the reader clicks between: description_80_md (at most 80 words, shown first), description_250_md (at most 250) and description_500_md (at most 500) — a fenced block does not count; each over its cap is refused with description_<n>_too_long and its cap, a missing one with description_required. The options show as cards and one click answers: a choice carries 2 to 4 options on different axes, each saying what it gives up; exactly one is_recommended; money needs a cost on every option. The sheet always ends on a card « Autre réponse ou question » with a free field. why_human_md, context_md, blocked_md, continuing_md and recommendation_md are optional and no longer shown. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
       "params": [
         {
           "name": "title",
@@ -3131,27 +3131,22 @@
           "description": "The question to settle, 12 to 160 characters, ending with \"?\": \"Merge the VAT fix on credit notes?\", never \"VAT fix\"."
         },
         {
-          "name": "complexity",
+          "name": "description_80_md",
           "type": "string",
           "required": true,
-          "description": "simple | standard | complex — it sets the length caps. simple: an approval or at most two options. complex: needs context_md.",
-          "enum": [
-            "simple",
-            "standard",
-            "complex"
-          ]
+          "description": "The description in at most 80 words, shown first: it opens on the fact that decides and says what you recommend. Rich markdown."
         },
         {
-          "name": "executive_md",
+          "name": "description_250_md",
           "type": "string",
           "required": true,
-          "description": "The summary, opening on the fact that decides. Rich markdown: a ```mermaid block when the choice is about a flow."
+          "description": "The description in at most 250 words, for a reader who wants more: what you checked, what each option leads to."
         },
         {
-          "name": "why_human_md",
+          "name": "description_500_md",
           "type": "string",
           "required": true,
-          "description": "Why THIS person is needed, at most 400 characters."
+          "description": "The description in at most 500 words, the deepest level: the figures, the history, a ```mermaid diagram. A fact added later with decision_add_context lands here."
         },
         {
           "name": "escalation_reason",
@@ -3198,6 +3193,24 @@
           ]
         },
         {
+          "name": "complexity",
+          "type": "string",
+          "required": false,
+          "description": "Optional, standard by default: simple | standard | complex. It no longer sets any length; a simple sheet is an approval or at most two options.",
+          "enum": [
+            "simple",
+            "standard",
+            "complex"
+          ],
+          "default": "standard"
+        },
+        {
+          "name": "why_human_md",
+          "type": "string",
+          "required": false,
+          "description": "Optional, not shown since the description replaced it: why THIS person is needed, at most 400 characters."
+        },
+        {
           "name": "subject_id",
           "type": "int",
           "required": false,
@@ -3213,19 +3226,19 @@
           "name": "recommendation_md",
           "type": "string",
           "required": false,
-          "description": "What you recommend and why. Required for choice and approve."
+          "description": "Optional, not shown: the recommended card carries the mark (is_recommended) and the description says why."
         },
         {
           "name": "context_md",
           "type": "string",
           "required": false,
-          "description": "The detailed context, folded away on a phone. Required for complex."
+          "description": "Optional, not shown: the 250- and 500-word descriptions replaced the detailed context."
         },
         {
           "name": "blocked_md",
           "type": "string",
           "required": false,
-          "description": "What waits on the answer, in real work."
+          "description": "Optional, not shown: what waits on the answer, in real work."
         },
         {
           "name": "blocked_items",
@@ -3238,7 +3251,7 @@
           "name": "continuing_md",
           "type": "string",
           "required": false,
-          "description": "What you carry on with meanwhile. Required when an agent asks."
+          "description": "Optional, not shown: what you carry on with meanwhile. Asking is still not stopping."
         },
         {
           "name": "addressee_user_id",
@@ -3310,6 +3323,12 @@
           "type": "int",
           "required": false,
           "description": "The automation's OWN account to file under, by user id. Reserved for a service token."
+        },
+        {
+          "name": "executive_md",
+          "type": "string",
+          "required": false,
+          "description": "Replaced by description_80_md, description_250_md and description_500_md: a call that sends only this is refused with description_required."
         }
       ],
       "returns": {
@@ -3324,7 +3343,7 @@
     {
       "name": "decision_get",
       "kind": "read",
-      "description": "Read one decision: the sheet, its options and their effects (with exhibit_md and removes_md), the point of the plan it changes (plan_point), the answer and who gave it, whether the context was opened before answering (answer.read: after_reading | without_opening | read_after_answering | no_context | not_tracked; answer.confirmed false = an important decision whose recommendation was taken without opening the context: confirm with the person before acting), the readers' comments (comments[]), the resume state you left yourself, the reader's questions (context_asks), and the journal of what happened to it (events).",
+      "description": "Read one decision: the sheet, its options and their effects (with exhibit_md and removes_md), the point of the plan it changes (plan_point), the answer and who gave it, whether the 250- or 500-word description was opened before answering (answer.read: after_reading | without_opening | read_after_answering | no_context | not_tracked; answer.confirmed false = an important decision whose recommendation was taken without opening the context: confirm with the person before acting), the readers' comments (comments[]), the resume state you left yourself, the reader's questions (context_asks), and the journal of what happened to it (events).",
       "params": [
         {
           "name": "id",
@@ -3335,7 +3354,7 @@
       ],
       "returns": {
         "success": "bool",
-        "decision": "object — with url, plan_point, context_opened_at, options[] (exhibit_md, removes_md), answer (read, confirmed), comments[] (id, option_id, quote, body_md, author_user_id, date_created), resume_state_md, resume_prompt_md, resume_job_state, context_asks[], events[]"
+        "decision": "object — with url, description_80_md, description_250_md, description_500_md (executive_md repeats the 80-word level for an older reader), plan_point, context_opened_at, options[] (exhibit_md, removes_md), answer (read, confirmed), comments[] (id, option_id, quote, body_md, author_user_id, date_created), resume_state_md, resume_prompt_md, resume_job_state, context_asks[], events[]"
       }
     },
     {
@@ -3659,7 +3678,7 @@
     {
       "name": "decision_add_context",
       "kind": "write",
-      "description": "Add context to a decision you filed: in answer to a reader's question (context_ask_id), or on your own initiative while it still waits — the fact you found afterwards. The length caps apply to the RESULT (context_too_long): the fact earns its place by replacing something. A decision already answered is not added to (decision_not_pending): if the new fact overturns it, supersede it.",
+      "description": "Add context to a decision you filed: in answer to a reader's question (context_ask_id), or on your own initiative while it still waits — the fact you found afterwards. Without context_ask_id the fact lands at the end of the 500-word description, and its cap applies to the RESULT (description_500_too_long): the fact earns its place by replacing something. A decision already answered is not added to (decision_not_pending): if the new fact overturns it, supersede it.",
       "params": [
         {
           "name": "id",
@@ -3671,7 +3690,7 @@
           "name": "context_md",
           "type": "string",
           "required": true,
-          "description": "What you add, written out. Appended to the context, or given as the answer to the reader's question."
+          "description": "What you add, written out: the answer to the reader's question, or, without context_ask_id, appended to the 500-word description."
         },
         {
           "name": "context_ask_id",
@@ -3688,7 +3707,7 @@
     {
       "name": "decision_supersede",
       "kind": "write",
-      "description": "Replace a waiting decision with a complete new sheet — the same subject unless you name another. The old one becomes superseded and points at the new one; a reader's open question follows it. Takes the same fields as decision_create. The sheet must read in under a minute (simple), three (standard) or seven (complex): the title is the QUESTION, 12 to 160 characters, ending with \"?\"; executive_md is capped at 80/200/400 words and context_md at 150/600/1500 (a fenced block does not count); a choice carries 2 to 4 options on different axes, each saying what it gives up; one option is recommended and recommendation_md says why; money needs a cost on every option. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
+      "description": "Replace a waiting decision with a complete new sheet — the same subject unless you name another. The old one becomes superseded and points at the new one; a reader's open question follows it. Takes the same fields as decision_create. The sheet keeps three things, and nothing else: the title (the QUESTION, 12 to 160 characters, ending with \"?\"), the description and the options. The description is written at three depths the reader clicks between: description_80_md (at most 80 words, shown first), description_250_md (at most 250) and description_500_md (at most 500) — a fenced block does not count; each over its cap is refused with description_<n>_too_long and its cap, a missing one with description_required. The options show as cards and one click answers: a choice carries 2 to 4 options on different axes, each saying what it gives up; exactly one is_recommended; money needs a cost on every option. The sheet always ends on a card « Autre réponse ou question » with a free field. why_human_md, context_md, blocked_md, continuing_md and recommendation_md are optional and no longer shown. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
       "params": [
         {
           "name": "id",
@@ -3703,27 +3722,22 @@
           "description": "The question to settle, 12 to 160 characters, ending with \"?\": \"Merge the VAT fix on credit notes?\", never \"VAT fix\"."
         },
         {
-          "name": "complexity",
+          "name": "description_80_md",
           "type": "string",
           "required": true,
-          "description": "simple | standard | complex — it sets the length caps. simple: an approval or at most two options. complex: needs context_md.",
-          "enum": [
-            "simple",
-            "standard",
-            "complex"
-          ]
+          "description": "The description in at most 80 words, shown first: it opens on the fact that decides and says what you recommend. Rich markdown."
         },
         {
-          "name": "executive_md",
+          "name": "description_250_md",
           "type": "string",
           "required": true,
-          "description": "The summary, opening on the fact that decides. Rich markdown: a ```mermaid block when the choice is about a flow."
+          "description": "The description in at most 250 words, for a reader who wants more: what you checked, what each option leads to."
         },
         {
-          "name": "why_human_md",
+          "name": "description_500_md",
           "type": "string",
           "required": true,
-          "description": "Why THIS person is needed, at most 400 characters."
+          "description": "The description in at most 500 words, the deepest level: the figures, the history, a ```mermaid diagram. A fact added later with decision_add_context lands here."
         },
         {
           "name": "escalation_reason",
@@ -3752,6 +3766,24 @@
           ]
         },
         {
+          "name": "complexity",
+          "type": "string",
+          "required": false,
+          "description": "Optional, standard by default: simple | standard | complex. It no longer sets any length; a simple sheet is an approval or at most two options.",
+          "enum": [
+            "simple",
+            "standard",
+            "complex"
+          ],
+          "default": "standard"
+        },
+        {
+          "name": "why_human_md",
+          "type": "string",
+          "required": false,
+          "description": "Optional, not shown since the description replaced it: why THIS person is needed, at most 400 characters."
+        },
+        {
           "name": "subject_kind",
           "type": "string",
           "required": false,
@@ -3773,19 +3805,19 @@
           "name": "recommendation_md",
           "type": "string",
           "required": false,
-          "description": "What you recommend and why. Required for choice and approve."
+          "description": "Optional, not shown: the recommended card carries the mark (is_recommended) and the description says why."
         },
         {
           "name": "context_md",
           "type": "string",
           "required": false,
-          "description": "The detailed context, folded away on a phone. Required for complex."
+          "description": "Optional, not shown: the 250- and 500-word descriptions replaced the detailed context."
         },
         {
           "name": "blocked_md",
           "type": "string",
           "required": false,
-          "description": "What waits on the answer, in real work."
+          "description": "Optional, not shown: what waits on the answer, in real work."
         },
         {
           "name": "blocked_items",
@@ -3798,7 +3830,7 @@
           "name": "continuing_md",
           "type": "string",
           "required": false,
-          "description": "What you carry on with meanwhile. Required when an agent asks."
+          "description": "Optional, not shown: what you carry on with meanwhile. Asking is still not stopping."
         },
         {
           "name": "addressee_user_id",
@@ -3870,6 +3902,12 @@
           "type": "int",
           "required": false,
           "description": "The automation's OWN account to file under, by user id. Reserved for a service token."
+        },
+        {
+          "name": "executive_md",
+          "type": "string",
+          "required": false,
+          "description": "Replaced by description_80_md, description_250_md and description_500_md: a call that sends only this is refused with description_required."
         }
       ],
       "returns": {

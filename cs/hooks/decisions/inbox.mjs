@@ -171,8 +171,10 @@ const listOf = (record, snake, of) => {
 };
 
 /**
- * The whole sheet, from `decision_get`: what the card says, and everything the card leaves out.
- * The resume state an agent left itself is NOT read — the sheet a person reads never shows it.
+ * The whole sheet, from `decision_get`: the title, the description at its three depths, the
+ * options and the readers' questions. Why this person, what waits, what carries on meanwhile and
+ * the former context are not read (Castalie spec 88): no surface shows them any more. The resume
+ * state an agent left itself is NOT read either — the sheet a person reads never shows it.
  *
  * @param {any} answer
  */
@@ -183,12 +185,11 @@ export function decisionOf(answer) {
     ...cardOf(record),
     complexity: textOf(pick(record, "complexity")),
     shape: textOf(pick(record, "answer_shape")),
-    whyHuman: textOf(pick(record, "why_human_md")),
-    executive: textOf(pick(record, "executive_md")),
-    context: textOf(pick(record, "context_md")),
-    recommendation: textOf(pick(record, "recommendation_md")),
-    blocked: textOf(pick(record, "blocked_md")),
-    continuing: textOf(pick(record, "continuing_md")),
+    // The description at its three depths (Castalie spec 88). A server that predates it sends
+    // the former summary only: it stands for the first level.
+    description80: textOf(pick(record, "description_80_md")) ?? textOf(pick(record, "executive_md")),
+    description250: textOf(pick(record, "description_250_md")),
+    description500: textOf(pick(record, "description_500_md")),
     options,
     recommended: options.find((option) => option.isRecommended)?.title ?? null,
     optionCount: options.length,

@@ -352,36 +352,38 @@ follow their most urgent card. `●` marks a card never opened, `★` the recomm
 
 **A card opens whole, at once.** A click anywhere on its text (every line of a card is a link
 the pane takes over, and its frame lights under the pointer), its « voir en grand », or its digit
-once the panel holds the keyboard opens `decision_get(id)` in a pane of its own: why you, the summary, every option with
-its risk, cost, effect, what it gives up, what it removes and its exhibit (a Mermaid block stays
-a diagram), the recommendation, what waits, what goes on meanwhile, the context, the readers'
-comments and questions, and the answer once there is one. Escape or « ← cartes » closes it, and
+once the panel holds the keyboard opens `decision_get(id)` in a pane of its own — the sheet
+Castalie draws, and nothing else: the question, its description with « En 80 mots » shown and
+« En 250 mots », « En 500 mots » a click away (a Mermaid block stays a diagram), one card per
+option with its risk, cost, effect and what it gives up, ★ on the recommended one, the last card
+« Autre réponse ou question » with the readers' questions, and the answer once there is one. Escape or « ← cartes » closes it, and
 « ouvrir dans Castalie » opens the decision's own page. `/cs:decisions-panel 42`
 opens decision 42 the same way. The resume state an agent left itself is never shown.
 
-**And it answers there.** Under a pending sheet sits Castalie's own answer bar:
+**And it answers there.** On a pending sheet, the cards are the answer:
 
 ```
-╭ Votre réponse ─────────────────────────────╮
-│ 1: The owner's phone, where they  [Choisir]│
-│ 2: ★ A relay number, always       [Choisir]│
-│ 3: No phone, and say so           [Choisir]│
-│ Répondre autrement ou ajuster : ▏          │
-│ Si vous répondez par écrit : Le robot …    │
-│ [ Répondre avec ce texte ]                 │
-╰────────────────────────────────────────────╯
+╭──────────────────────────────────────────────╮
+│ ★ 1. A relay number, always — recommandée    │
+│ risque moyen · about 6 days · le travail …   │
+│ Renonce à : the owner's own number.          │
+│ [1] Choisir                                  │
+╰──────────────────────────────────────────────╯
+╭──────────────────────────────────────────────╮
+│ Autre réponse ou question :                  │
+│ ▏                                            │
+│ [ Répondre ]  [ Poser la question ]          │
+╰──────────────────────────────────────────────╯
 ```
 
-- **An option** answers with one deliberate gesture: a click on its « Choisir », or its digit —
-  which only marks it, never answers — then Enter on « Répondre « … » », where the ring goes. Two
-  quick digits (one opening the card, one picking) therefore never answer by accident; nothing
-  answers on hover.
-- **Your own words** go in the field: with an option marked they adjust it, without one they are
-  the answer, and the effect beside them says what then — the robot carries on with your
-  instruction, you take it over, or it closes (no take-over on a follow-up run, a maturity
-  question or a knowledge review, as on the sheet). Enter, or « Répondre avec ce texte », sends.
+- **A card** answers with a click anywhere on its text. Its digit, or its « Choisir », only marks
+  it, and Enter on « Répondre « … » » answers: two quick digits (one opening the card, one
+  picking) never answer by accident; nothing answers on hover.
+- **Your own words** go in « Autre réponse ou question »: with a card marked they adjust it;
+  without one, « Répondre » makes them the answer and the work restarts from them, and « Poser la
+  question » sends them to the agent that asked (`decision_ask_context`) while the decision waits.
 - **An approval's « Non » needs its reason**, as on the sheet: without words nothing leaves, the
-  bar says so, and the ring goes to the field.
+  card says so, and the ring goes to the field.
 
 It goes out as `decision_answer` on the workspace the decision lives in, with the session's own
 credentials — `channel: "click"` for an option alone, `"text"` once words are typed. The server
@@ -395,8 +397,8 @@ agent that filed the decision is usually waiting on it — that message starts i
 while a turn runs, it goes in the moment that turn ends, before anything you type next. Where it
 cannot enter, it goes back on the list the next prompt reads, as before. The card leaves the list
 at once and the next one opens, under « ✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 2 à
-répondre. »; with none left the sheet closes. The mobile app draws no field: there, the options
-answer and the bar points at Castalie for words.
+répondre. »; with none left the sheet closes. The mobile app draws no field: there, the cards
+answer and the last card points at Castalie for words.
 
 **A decision this session files opens by itself.** When `decision_create` answers, the panel
 opens on that decision's sheet without a command, even where the cards were closed, and without

@@ -1,6 +1,6 @@
 ---
 name: decisions-panel
-description: Show or hide, beside the transcript, the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — open one card whole with "/cs:decisions-panel <number>", and answer it there, by an option or in your own words. A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
+description: Show or hide, beside the transcript, the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — open one card whole with "/cs:decisions-panel <number>" — its question, its description in 80, 250 or 500 words, its options as cards — and answer it there, with a click on a card or in your own words. A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
 ---
 
 # decisions-panel — what your agents are waiting on, as cards
@@ -17,9 +17,10 @@ objective, as cards, grouped by the agent that asked (`asked_by_agent`; else the
 groups and cards in the order the inbox ranks them. A card carries the question, why a person is
 asked, the reading time, what waits on it, its deadline, how long it has waited, and the
 recommended option. A click anywhere on a card's text, « voir en grand », or its digit (1 to 9) once
-the panel holds the keyboard opens the whole sheet in a pane of its own, at once: why you, the summary, every
-option with its risk, cost, effect, what it gives up, what it removes and its exhibit, the
-recommendation, what waits, what goes on meanwhile, the context, the readers' comments and
+the panel holds the keyboard opens the whole sheet in a pane of its own, at once — the sheet Castalie draws since its spec 88,
+and nothing else: the question, its description with « En 80 mots » shown and « En 250 mots »,
+« En 500 mots » a click away, then one card per option (its risk, cost, effect, what it gives up,
+★ on the recommended one), the last card « Autre réponse ou question » with the readers'
 questions, and the answer once there is one. Escape closes it; the cards stay.
 
 The objective is the one the strategy pane and the status line name: the leaf of the chain that
@@ -32,12 +33,13 @@ A decision this session filed comes back once it is settled, wherever it was ans
 person's next prompt, the model reads the answer beside it (the option, the person's words, and
 `decision-resume <id>` to pick the work up).
 
-**A pending sheet answers.** Under it, Castalie's own answer bar: each option has its digit and
-« Choisir ». A click on « Choisir » answers with that option; a digit only marks it, and Enter on
-« Répondre « … » » answers — nothing answers on hover or on one stray key. The field takes the
-person's own words: with an option marked they adjust it; without one they are the answer, with
-the effect picked beside them (the robot carries on, I take it over, close it). An approval's
-« Non » needs its reason, as on the sheet. The answer goes out as `decision_answer` on the
+**A pending sheet answers.** A click anywhere on a card's text answers with that option. Its digit,
+or its « Choisir », only marks it, and Enter on « Répondre « … » » answers — nothing answers on
+hover or on one stray key. The last card, « Autre réponse ou question », takes the person's own
+words: with a card marked they adjust it; without one, « Répondre » makes them the answer (the
+work restarts from them) and « Poser la question » sends them to the agent that asked
+(`decision_ask_context`), the decision still waiting. An approval's « Non » needs its reason, as on
+the sheet. The answer goes out as `decision_answer` on the
 decision's workspace, with the session's own credentials (`channel` `click` for an option alone,
 `text` once words are typed); a refusal of the server — a viewer, a service token — is shown as its
 `fix`, the words kept. Accepted, the answer is handed at once to the agent working in this
