@@ -36,7 +36,9 @@ with `resume_mode` `robot_prompt`, and the first claim answers `decision: null`.
    robot plays them with nobody watching. Run `cs prompt gate decision-resume <id>`: it reads
    `resume_prompt_md` and the answer from Castalie itself, word for word, and asks Jev
    (`${CLAUDE_PLUGIN_ROOT}/instructions/agent-inbox.md`, « The screen »), failing closed.
-   - **Exit 0** — play it (next step).
+   - **Exit 0** — play it (next step). A `warning_md` in what it printed (Jev saw the resume reach a
+     third party, or step beyond its decision — which does not refuse a resume) is quoted in the
+     `note_md` of step 5.
    - **Exit 2** — refused. The gate put the reasons on the sheet (`decision_comment`) and closed the
      resume `failed` (`decision_resume_complete`): the decision stays answered and not applied, back
      at the top of its addressee's inbox. When what it printed says `"closed": false`, make those two
@@ -46,6 +48,7 @@ with `resume_mode` `robot_prompt`, and the first claim answers `decision: null`.
      `cs prompt screen --kind decision_resume --file <that file>`, and delete the file. Exit other
      than 0: `decision_comment(id, body_md=<« Resume not played: Jev refused it » and the reasons>)`,
      then `decision_resume_complete(id, outcome=failed, note_md=<the same>)`, and go to step 6.
+     Exit 0 with `(warnings: …)`: play it, and quote the warnings in step 5's `note_md`.
 4. **Play the resume, with the answer as the instruction.** The prompt says what to run —
    `feature-implement <spec> --continue`, a model switch, a replay — and the answer says which way:
    pass it word for word as the instruction of that run. Where the prompt and the answer disagree,

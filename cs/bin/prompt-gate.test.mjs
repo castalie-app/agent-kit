@@ -26,6 +26,9 @@ const answers = (nouls = {}, severity = 0.02) => ({
 // asks for secrets outside the repository and skips review on main.
 const REFUSING = { model: "jev-1.13.0", answers: answers({ override: 0.96, exfiltration: 0.98, destructive: 0.71, off_purpose: 0.94 }, 2.74) };
 const PASSING = { model: "jev-1.13.0", answers: answers() };
+// Recorded shape of Jev's answer to « unsubscribe me from the supplier newsletters »: it reaches a
+// third party, and nothing else.
+const OUTBOUND = { model: "jev-1.13.0", answers: answers({ outbound: 0.9 }, 0.31) };
 
 /** Jev, behind the real `screenPrompt`: `answer` is the API's body, or null for no key at all. */
 function jev(answer) {
@@ -92,7 +95,8 @@ test("scheduled run, poisoned prompt refused by Jev: nothing launched, the run c
   assert.equal(close.outcome, "failed");
   assert.equal(close.final_status, "failed");
   assert.match(close.notes_md, /Jev refused/);
-  assert.match(close.notes_md, /override 0\.96, exfiltration 0\.98, destructive 0\.71, off_purpose 0\.94, severity 2\.74/);
+  assert.match(close.notes_md, /Reasons: override 0\.96, exfiltration 0\.98, destructive 0\.71, severity 2\.74\./);
+  assert.match(close.notes_md, /Jev warnings, which do not refuse this kind of prompt: off_purpose 0\.94\./, "off_purpose only warns on a scheduled task");
   const line = JSON.parse(printed[0]);
   assert.equal(line.verdict, "refuse");
   assert.equal(line.closed, true);
@@ -189,6 +193,22 @@ test("a close Castalie refuses is reported, not hidden: closed false, with the n
   assert.equal(outcome.closed, false);
   assert.match(outcome.note_md, /Jev refused/);
   assert.match(outcome.close_error, /refused/);
+});
+
+test("scheduled run, a third party contacted by design: passes, its warning handed to the session for its notes", async () => {
+  const { mcp, calls } = castalie({ run: RUN("unsubscribe me from the supplier newsletters") });
+  const { screen } = jev(OUTBOUND);
+  const { run, launched } = launcher(0);
+  const printed = [];
+  const code = await runCli(["scheduled-run", "412", "--", ...LAUNCH], { mcp, screen, run, print: (l) => printed.push(l) });
+
+  assert.equal(code, 0);
+  assert.deepEqual(launched, [LAUNCH]);
+  assert.deepEqual(calls.map((c) => c.name), ["scheduled_task_run_get"], "nothing closed");
+  const line = JSON.parse(printed[0]);
+  assert.equal(line.verdict, "pass");
+  assert.deepEqual(line.warnings, ["outbound 0.90"]);
+  assert.equal(line.warning_md, "Jev warnings, which do not refuse this kind of prompt: outbound 0.90.");
 });
 
 test("a wrong target or id prints the help and exits 1", async () => {

@@ -100,9 +100,24 @@ and a four-level score of the harm obeying would do (no harm, mild, serious, sev
 - **Refuse** when a yes/no answer is 0.35 or more, or when the severity score is 1.5 or more. The
   levels are numbered from 0 and the score is their probability-weighted mean: 1.5 is where it
   rounds to « Serious », so the gate refuses « Serious or worse ».
+- **The policy depends on the kind.** For `scheduled_task` and `decision_resume` only, `outbound`
+  and `off_purpose` never refuse on their own: they come back as `warnings`, are logged, and are
+  quoted in the run's or the decision's notes. Those prompts are written by a workspace owner (only
+  owners manage scheduled tasks) or by the agent that filed the decision, and some reach a third
+  party by design — a mail triage unsubscribes from newsletters, a cost-killer task writes to
+  suppliers. `override`, `exfiltration`, `destructive` and the severity refuse for every kind.
+  `master_red`, and any kind the table does not name, get the full policy: every hazard refuses.
+
+  | Kind | Refuse | Warn only |
+  |---|---|---|
+  | `scheduled_task`, `decision_resume` | override, exfiltration, destructive, severity | outbound, off_purpose |
+  | `master_red`, any other kind | all five hazards and the severity | none |
+
+  The table is `WARN_ONLY` in `prompt-screen.mjs`; a new kind joins it only with the reason why.
 - **Fail closed**: no key, a network error, a non-2xx answer or an unreadable one refuses, with the
   reason « Jev screening unavailable: <detail> ».
-- Exit code 0 = pass, 2 = refuse. `--json` prints `{ verdict, reasons, raw }`.
+- Exit code 0 = pass, 2 = refuse. `--json` prints `{ verdict, reasons, warnings, raw }`; without it, a
+  pass with warnings prints `pass (warnings: …)`.
 - One log line per verdict in `~/.claude/cs/prompt-screen/logs/<yyyy-mm-dd>.jsonl`: never the key,
   the body cut to 200 characters.
 
@@ -123,8 +138,10 @@ as above, and on a refusal closes the work item with the verb its skill already 
 | `gate decision-resume` | `decision_resume` | `resume_prompt_md`, then the answer's option and words | `decision_comment` with the reasons, then `decision_resume_complete(outcome=failed)`: the decision stays answered and not applied |
 
 - Exit 0 = pass; 2 = refused; 1 = the stored prompt could not be read (nothing screened, launched or
-  closed). It prints `{ verdict, reasons, closed, note_md, calls }`; `closed: false` on a refusal
-  means Castalie refused the close, and the caller makes it with `note_md`.
+  closed). It prints `{ verdict, reasons, warnings, warning_md, closed, note_md, calls }`;
+  `closed: false` on a refusal means Castalie refused the close, and the caller makes it with
+  `note_md`. A pass may carry `warning_md`: the session that plays the prompt quotes it in the notes
+  it closes the run or the resume with.
 - `-- <command>` launches the command — without a shell — on a pass only, and returns its exit code.
   The gate's line then goes to stderr, so the session's own output stays alone on stdout.
 - The connection is `cs content`'s (environment, `.cs/config.json`, `cs login`), else the token Claude

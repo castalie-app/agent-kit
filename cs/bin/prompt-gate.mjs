@@ -17,7 +17,9 @@
 // Exit code: 0 = pass (or, with `-- <command>`, the command's own exit code, the command being
 // launched only on a pass); 2 = refused; 1 = the stored text could not be read, so nothing was
 // screened, nothing was launched and nothing was closed. It prints one JSON object on stdout:
-// { verdict, reasons, closed, note_md, calls }.
+// { verdict, reasons, warnings, warning_md, closed, note_md, calls }. For these two kinds `outbound`
+// and `off_purpose` only warn (prompt-screen.mjs, WARN_ONLY): a pass may carry `warning_md`, which
+// the session quotes in the notes it closes with.
 
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
@@ -43,6 +45,9 @@ export function decisionResumeText(decision) {
 }
 
 const reasonsLine = (reasons) => reasons.join(", ");
+
+/** The warnings of a kind whose policy only warns on them (prompt-screen.mjs, WARN_ONLY). */
+export const warningLine = (warnings) => `Jev warnings, which do not refuse this kind of prompt: ${warnings.join(", ")}.`;
 
 /** What each gate reads, screens and closes. */
 export const GATES = {
@@ -117,15 +122,21 @@ export async function gate(target, id, deps) {
   } catch (e) {
     result = { verdict: "refuse", reasons: [`Jev screening unavailable: ${e?.message || e}`] };
   }
-  if (result?.verdict === "pass") return { verdict: "pass", reasons: [], closed: false, note_md: null, calls: [] };
+  const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+  if (result?.verdict === "pass") {
+    // A pass with warnings is still a pass: the session plays the prompt and quotes this line in
+    // the notes it closes the run or the resume with.
+    const warning_md = warnings.length ? warningLine(warnings) : null;
+    return { verdict: "pass", reasons: [], warnings, warning_md, closed: false, note_md: null, calls: [] };
+  }
 
   const reasons = result?.reasons?.length ? result.reasons : ["Jev screening unavailable: no verdict"];
-  const note = spec.noteMd(reasons);
+  const note = spec.noteMd(reasons) + (warnings.length ? ` ${warningLine(warnings)}` : "");
   try {
     const calls = await spec.close(mcp, id, note);
-    return { verdict: "refuse", reasons, closed: true, note_md: note, calls };
+    return { verdict: "refuse", reasons, warnings, closed: true, note_md: note, calls };
   } catch (e) {
-    return { verdict: "refuse", reasons, closed: false, note_md: note, calls: [], close_error: String(e?.message || e) };
+    return { verdict: "refuse", reasons, warnings, closed: false, note_md: note, calls: [], close_error: String(e?.message || e) };
   }
 }
 
@@ -184,7 +195,8 @@ export const HELP = `cs prompt gate — screen a prompt stored in Castalie befor
 Reads the run's prompt_snapshot_md (and continuation_md), or the decision's resume_prompt_md with the
 person's answer, and screens it with Jev (cs prompt screen, fails closed). Refused: the run is closed
 failed (scheduled_task_run_complete), the resume failed (decision_comment, decision_resume_complete),
-and the command after -- is never launched. Prints { verdict, reasons, closed, note_md, calls }.
+and the command after -- is never launched. Prints { verdict, reasons, warnings, warning_md, closed,
+note_md, calls }: outbound and off_purpose only warn for these two kinds; quote warning_md in the notes.
 Exit 0 = pass (or the command's own exit code), 2 = refused, 1 = the stored prompt could not be read.`;
 
 /** `cs prompt gate <target> <id>`: returns the exit code, never throws. */

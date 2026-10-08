@@ -117,18 +117,34 @@ export function readApiKey({ env = process.env, platform = process.platform, hom
   }
 }
 
-/** The answers, turned into a verdict. Throws on an answer that is missing or not of its type. */
-export function verdictFrom(answers) {
+/**
+ * Which hazards only WARN, by kind. A scheduled task's prompt is written by a workspace owner (only
+ * owners manage scheduled tasks) and a robot resume prompt by the agent that filed the decision; some
+ * of them reach a third party by design — a mail triage unsubscribes from newsletters, a cost-killer
+ * task writes to suppliers. For those kinds, `outbound` and `off_purpose` are kept as warnings
+ * (logged, quoted in the run's or the decision's notes) and never refuse on their own; `override`,
+ * `exfiltration`, `destructive` and the severity refuse as everywhere. Any other kind — `master_red`,
+ * a kind this table does not name — gets the full policy: every hazard refuses.
+ */
+export const WARN_ONLY = {
+  scheduled_task: ["outbound", "off_purpose"],
+  decision_resume: ["outbound", "off_purpose"],
+};
+
+/** The answers, turned into a verdict under the kind's policy. Throws on an answer that is missing or not of its type. */
+export function verdictFrom(answers, kind) {
+  const warnOnly = new Set(Object.hasOwn(WARN_ONLY, String(kind)) ? WARN_ONLY[kind] : []);
   const reasons = [];
+  const warnings = [];
   for (const id of NOULS) {
     const value = answers?.[id]?.noul;
     if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) throw new Error(`no noul for ${id}`);
-    if (value >= NOUL_THRESHOLD) reasons.push(`${id} ${value.toFixed(2)}`);
+    if (value >= NOUL_THRESHOLD) (warnOnly.has(id) ? warnings : reasons).push(`${id} ${value.toFixed(2)}`);
   }
   const severity = answers?.severity?.score;
   if (typeof severity !== "number" || !Number.isFinite(severity)) throw new Error("no score for severity");
   if (severity >= SEVERITY_THRESHOLD) reasons.push(`severity ${severity.toFixed(2)}`);
-  return { verdict: reasons.length ? "refuse" : "pass", reasons };
+  return { verdict: reasons.length ? "refuse" : "pass", reasons, warnings };
 }
 
 function logLine(logDir, now, line) {
@@ -142,7 +158,7 @@ function logLine(logDir, now, line) {
  * Screens one message. Never throws: anything but a well-formed answer is a refusal.
  *
  * @param {{ kind: string, sender_label?: string|null, subject?: string|null, body: string }} message
- * @returns {Promise<{ verdict: "pass"|"refuse", reasons: string[], raw: any }>}
+ * @returns {Promise<{ verdict: "pass"|"refuse", reasons: string[], warnings: string[], raw: any }>}
  */
 export async function screenPrompt(message, deps = {}) {
   const {
@@ -182,10 +198,10 @@ export async function screenPrompt(message, deps = {}) {
     let raw;
     try { raw = JSON.parse(text); } catch { throw new Error("the answer is not JSON"); }
     let decided;
-    try { decided = verdictFrom(raw.answers); } catch (e) { throw new Error(`unparsable answer (${e.message})`); }
+    try { decided = verdictFrom(raw.answers, state.kind); } catch (e) { throw new Error(`unparsable answer (${e.message})`); }
     result = { ...decided, raw };
   } catch (e) {
-    result = { verdict: "refuse", reasons: [`Jev screening unavailable: ${e?.message || e}`], raw: null };
+    result = { verdict: "refuse", reasons: [`Jev screening unavailable: ${e?.message || e}`], warnings: [], raw: null };
   }
 
   logLine(logDir, now(), {
@@ -196,6 +212,7 @@ export async function screenPrompt(message, deps = {}) {
     body: state.body.slice(0, 200),
     verdict: result.verdict,
     reasons: result.reasons,
+    warnings: result.warnings,
     model: result.raw?.model ?? null,
     usage: result.raw?.usage ?? null,
   });
@@ -258,6 +275,9 @@ export async function runCli(argv) {
     result = { verdict: "refuse", reasons: [`Jev screening unavailable: ${e?.message || e}`], raw: null };
   }
   if (args.json) console.log(JSON.stringify(result, null, 2));
-  else console.log(result.verdict === "pass" ? "pass" : `refuse: ${result.reasons.join(", ")}`);
+  else {
+    const warned = result.warnings?.length ? ` (warnings: ${result.warnings.join(", ")})` : "";
+    console.log(result.verdict === "pass" ? `pass${warned}` : `refuse: ${result.reasons.join(", ")}${warned}`);
+  }
   return result.verdict === "pass" ? 0 : 2;
 }
