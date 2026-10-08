@@ -48,7 +48,8 @@ synced by the CLI.
    delivery requires — publishing, granting access, tagging, changing a setting, writing to someone
    else — naming the gesture, its exact target (repository, package, environment, recipient) and the
    phase that performs it. A listed line is the user's consent to that gesture; one left out stays
-   under the usual rules, and the implementer stops on it.
+   under the usual rules, and the implementer stops on it. Merging and releasing the change itself
+   are never listed: the implementer ships its own work through the host's path without asking.
    Read `${CLAUDE_PLUGIN_ROOT}/instructions/acceptance-criteria.md` and define each phase's **Cases to
    cover** before its action plan: concrete states, expected outcomes, forbidden effects, verification
    level and existing coverage. Resolve meaningful business ambiguities before handoff. Plan scenarios,

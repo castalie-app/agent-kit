@@ -318,11 +318,11 @@ Objectif : Croissance : dix locataires par mois
 
 bug-fix · 2
 ╭────────────────────────────────────────────╮
-│ ● Merge the VAT fix on credit notes and    │
-│ ship it to production?                     │
+│ ● Correct the VAT on the 37 credit notes   │
+│ issued since 1 October?                    │
 │ autorisation · ~1 min · bloque 1 · avant   │
 │ le 09/10 · il y a 2 j                      │
-│ ★ Merge and ship it                        │
+│ ★ Play the script tonight                  │
 │ 1: voir en grand                           │
 ╰────────────────────────────────────────────╯
 feature-implement · 1
@@ -480,14 +480,25 @@ called `feature-spec` and `feature-implement` too. `adapt` never overwrites one.
 yours — saying what Castalie would have added — or ships its own under a `castalie-` prefix, and tells you
 how to tell them apart.
 
-No workflow is edited, no command renamed, no `.mcp.json` touched, and **the pull request is never
-merged**. Your review is the point.
+No workflow is edited, no command renamed, no `.mcp.json` touched, and **this pull request is never
+merged by the kit**: it rewrites your root instruction file and installs the commands that will
+merge and release for you, and adopting that is your team's decision. It is the one pull request
+the kit leaves at "PR ready"; everything delivered after it ships on its own.
 
-## What the skills do on their own, and what they stop to ask
+## What the skills do on their own
 
-Every preference answers one question: when a skill reaches a step it could take unattended —
-committing a reviewed change, opening the pull request, moving to the next phase — does it take it,
-or does it stop and ask you?
+**The agent ships its own work.** Once its self-review panel and your quality gate are green, it
+hands the ready pull request to your merge path, then your release path, and follows it to the
+release — without asking anyone: no "shall I merge?", no "do you want to review it?", no "shall I
+deploy?". It stops before the merge or the release only when you ask it in the current turn, or
+when your workspace's administrator has denied it. A person is asked a business decision, an
+infrastructure decision with a real doubt, or a gesture no session can perform — never an
+authorisation to deliver. The merge and release run **your** commands (the ones `adapt` wrote
+against your pipeline); a repository that declares none gets one line saying so, and the pull
+request stays ready.
+
+The other preferences answer one question: when a skill reaches a step it could take unattended —
+putting a branch on a preview, closing a ticket it found is not a defect — what does it do?
 
 Two layers decide, and the top one wins: your **administrator's policy** for the whole workspace —
 `allow`, `deny`, or `user_choice`, set per skill and per option — and, under `user_choice`, **your
@@ -496,11 +507,9 @@ a local `.cs/workflow-defaults.json` mirrors the user layer for headless runs, a
 committed.
 
 Ask "quels réglages Castalie sont actifs ?" and the `workflows` skill shows the table, says who decided
-each line, and links the page on your account. `ask` is always a real answer, never a fallback: a
-developer who wants the question every time has decided to stay in the loop.
-
-None of it makes the kit merge or deploy. It **stops at "PR ready"** — a documented boundary, not a
-gap — and the merge stays with the process you already have.
+each line, and links the page on your account. On those preferences `ask` is a real answer, never a
+fallback: a developer who wants the question every time has decided to stay in the loop. Merging
+and releasing have no `ask` and no personal setting; only the administrator's `deny` holds them.
 
 ### Whose name the work carries when nobody is watching
 
@@ -557,13 +566,13 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | Skill | What it does |
 |---|---|
 | `audit` | Where your practices stand, first pass and every one after: audit how you already track work, open the adapting pull request, observe the twenty criteria, record what was seen. Applies nothing. |
-| `adapt` | Turn the kit's generic skills into skills bound to your environment, as a pull request. Never overwrites, never merges. |
+| `adapt` | Turn the kit's generic skills into skills bound to your environment — your merge and release included — as a pull request your team adopts. Never overwrites, never merges that pull request. |
 | `connect` | Wire a repository to your workspace, or diagnose a connection that answers nothing. |
 | `onboard-team` | For a leader who is not a technician: the company's shared GitHub space that installs its practices in one gesture, recorded in Castalie, the first colleagues invited into Castalie and GitHub with their referents, and the email that links them to Castalie's public collaborator guide, drafted and never sent. |
 | `join` | For each colleague the leader invited: why the company does it, their GitHub account and sign-in handled end to end, the company's practices installed from the space Castalie names and each of its skills explained, a personal CLAUDE.md that says they are not a technician, their work recorded in their Castalie profile and a first quick win done together, a first real use of the writing skill, and `/cs:analyse` to correct Claude. |
 | `site` | For a leader who is not a technician, the company's first project: two new home pages built in parallel from a four-question interview (« Sublimer » inside the current brand, « Réinventer » free to rework it), plain HTML and LESS with a three.js hero, each refined by a contrarian review and published together by Castalie at the workspace's `castalie.page` address in about fifteen minutes, with no GitHub account asked; then the chosen one is iterated at the root, and put on the company's own domain, or on its own GitHub Pages, only on the leader's explicit request. |
 | `workflows` | See and change what the skills may do on your behalf — and what your administrator decided for everyone. |
-| `bug-fix` | A bug from report to pull request: reproduce first, fix the cause, prove it on the user's own path, leave a follow-up check. |
+| `bug-fix` | A bug from report to released fix: reproduce first, fix the cause, prove it on the user's own path, ship it through your own merge and release, leave a follow-up check. |
 | `bug-bash` | Hunt bugs on a running app before its users do: five to ten explorers at once, one area and one posture each (or one goal, for a quick sweep), every finding sorted against the source and proved by a test that fails for the reason reported; only the proved ones become tickets. |
 | `report` | Receive a bug report or improvement request from an agent, find or create its ticket, and return the link. |
 | `acceptance` | Sit in front of the running product and fire remarks: each is queued the instant it lands, then coded one at a time in the order received — one commit per remark, a single PR. |
@@ -571,10 +580,10 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `okr-review` | Where the objectives stand: the tree with its progress, off-track and unreported key results first, and the pace each one now demands, then the key results that read off no report. Reads only. |
 | `okr-checkin` | The check-in ritual: one pass over the key results you own, one question, a dated trace on every figure that moved. A key result measured by a workspace report is recalculated, not asked. |
 | `okr-key-result` | Give an objective its one key result, read off a report that tracks the metric over time: a report of your workspace, or the address of one elsewhere. The target is proposed from the data and confirmed by you; a key result with no report is refused. |
-| `feature-single-deliverable` | One deliverable, one pull request: brief, single story and one-phase spec in a single gesture, then the implementation loop to "PR ready". |
+| `feature-single-deliverable` | One deliverable, one pull request: brief, single story and one-phase spec in a single gesture, then the implementation loop, shipped through your own merge and release. |
 | `feature-brief` | Frame a business need into a brief — problem, vision, user stories, success criteria. |
 | `feature-spec` | Turn a brief into a technical spec — explore your codebase, design, phases, risks, acceptance tests. Its summary is a tree of claims read in a minute, and the choices that are yours land in your « Décisions » inbox, on the point they change. |
-| `feature-implement` | Implement a spec autonomously in your repo, phase by phase, ending at "PR ready". |
+| `feature-implement` | Implement a spec autonomously in your repo, phase by phase, then ship it through your own merge and release. |
 | `brief-acceptance` | Replay a delivered brief as its customer would: a verdict per criterion, the gaps fixed on one PR, the owner asked about the disproportionate ones, and the brief accepted only when it conforms. |
 | `feature-followup` | Replay a delivered spec's checks in production and reschedule the next horizon. |
 | `decisions-panel` | The decisions waiting for you on this working copy's objective, beside the conversation, as cards grouped by the agent that asked, each opening whole in a pane of its own, where you answer it — an option, or your own words — in the terminal and in the desktop app. |
@@ -584,11 +593,13 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `contrarian` | Challenge an idea before you commit — adversarial sub-agents + a verdict you own. |
 | `plain-french` | Write and check French in a controlled style modelled on ASD-STE100: short sentences, active voice, no conditional hedging, one name per thing, French typography. Ships a check that finds what a machine can see. |
 | `analyse` | Meta-reflection on the assistant's own behavior, producing concrete rule edits. |
-| `ship` | Commit, open a PR, run a self-review panel, fix blockers — ends at "PR ready" (never merges). |
+| `ship` | Commit, open a PR, run a self-review panel, fix blockers, then merge and release through your own path — without asking anyone's authorisation. |
 | `end` | Celebrate a verified delivery with a live deep link. |
 
-The kit **stops at "PR ready"** on purpose. Merging and deploying stay with your own CI/process — a
-documented extension point, not a gap.
+The kit **ships its own work**: the panel and your quality gate are the review, and your own merge
+and release commands carry it to production. It stops at "PR ready" only when you ask it in the
+current turn, when your workspace's administrator denied it, or when your repository declares no
+merge path.
 
 ## The `cs` CLI
 

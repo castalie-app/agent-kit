@@ -1,6 +1,6 @@
 ---
 name: adapt
-description: Turn the kit's generic skills into skills bound to this team's own environment — including a merge skill and a release skill written against the pipeline the delivery pass actually read — and propose them as a pull request together with an added CLAUDE.md section. Runs right after the project-management and delivery audits of the first pass, or on its own with "adapte les skills Castalie à notre environnement". It opens a branch and a pull request; it never merges, never deploys, never rewrites an existing skill, and never changes an existing process.
+description: Turn the kit's generic skills into skills bound to this team's own environment — including a merge skill and a release skill written against the pipeline the delivery pass actually read — and propose them as a pull request together with an added CLAUDE.md section. Runs right after the project-management and delivery audits of the first pass, or on its own with "adapte les skills Castalie à notre environnement". It opens a branch and a pull request the team adopts — the one pull request of the kit it never merges itself, because it writes the team's own instruction file and the commands that will merge and release for them; it never deploys, never rewrites an existing skill, and never changes an existing process.
 ---
 
 # adapt — make the kit fit this repository, as a pull request
@@ -126,6 +126,10 @@ on n'y ajoute rien.
 <fusionner suffit-il à livrer, ou faut-il un appel distinct — et lequel>
 <le retour arrière, ou le trou en toutes lettres : « je n'ai trouvé aucun retour arrière écrit »>
 
+L'agent fusionne et met en production son propre travail sans demander d'autorisation, une fois
+sa revue et la porte de qualité au vert. Il s'arrête avant seulement si on le lui demande dans le
+tour, ou si l'administrateur de l'espace Castalie l'a refusé.
+
 - <fusionner un changement prêt> → `<la skill de fusion>`
 - <mettre en production> → `<la skill de mise en production>`
 <!-- castalie:end -->
@@ -249,6 +253,12 @@ or names, which belong to them:
 - **the release skill is a separate call.** A step that reaches users is never a side effect of
   the step before it, even on a chain where merging happens to ship: there, the skill's job is to
   say that plainly, because the pause the team thinks it has does not exist.
+- **neither asks anyone's authorisation.** The agent runs both on its own work once its review
+  panel and their quality gate are green — no "shall I merge?", no "shall I release?". Each stops
+  only when the person asked it in the current turn, or when the workspace's administrator denied
+  it (`mcp__castalie__workflow_policy_resolve`: `effective: "deny"`, `decided_by: "admin"`), and
+  says which in one line. Write that rule into both, in their language; a generated skill that
+  asks before merging puts back the gate the kit removed.
 
 Every sentence in both is anchored on a fact:
 
@@ -279,8 +289,10 @@ The skills are theirs and speak only of theirs.
 
 #### What the skills read at run time, rather than bake in
 
-Three of these answers are settings, not facts, and a setting changes without a pull request:
-`ship`/`release_trigger`, `ship`/`release_hold`, `ship`/`rollback_mode`. Write the generated
+Three of these answers are settings, and a setting changes without a pull request:
+`ship`/`release_trigger`, `ship`/`release_hold` (whose only value releases on green — what is read
+at run time is an administrator's deny), `ship`/`rollback_mode`, and the merge skill reads the
+door's `merge_mode` the same way. Write the generated
 skills to **resolve them at run time** — `mcp__castalie__workflow_policy_resolve` — instead of
 freezing today's answer in their text. A team that changes its mind on the settings page and
 sees nothing change has been given a control that is not one.
@@ -302,7 +314,7 @@ invention in the one place inventions cost most.
 - `rollback_procedure` came back `non constaté` → propose the value that says **there is no way
   back yet**. Recording the hole is the point; it is what stops the next session inventing one.
 
-Ask once, for the three together, in the user's language, and say where the observation came
+Ask once, for both together, in the user's language, and say where the observation came
 from. On a yes, write them with `mcp__castalie__workflow_default_set` — canonical values, exactly as
 the catalogue spells them, never a label you displayed. On a no, or on silence, write nothing and
 say in one line what stayed unset: an unanswered question is not an answer.
@@ -339,9 +351,11 @@ The holes go in the body on purpose. A reviewer who finds them there reads them 
 addressed to them, which is what they are; a reviewer who discovers them inside a skill three
 weeks later reads them as sloppiness.
 
-**Never merge it.** Not with a flag, not because the checks are green, not because the user said
-"vas-y" about the previous step. Their review is the point: it is the first time their team sees
-what an agent proposes, and the impression it leaves decides everything that follows.
+**Never merge it.** This is the one pull request of the kit that stays at "PR ready" by design,
+and the reason is not a review owed to anyone: it rewrites the team's own root instruction file and
+installs the commands that will merge and release for them. Adopting a process is the team's
+decision, and until it lands no merge path is declared to run. Everything the kit delivers after
+it ships on its own.
 
 ## What you hand back
 

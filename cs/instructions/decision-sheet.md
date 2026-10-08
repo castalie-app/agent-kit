@@ -20,7 +20,7 @@ mandatory:
 | `shareholder` | it belongs to the owners: pricing policy, a partnership, equity |
 | `private_knowledge` | the answer lives in someone's head: what a customer really needs, a promise made orally |
 | `irreversible` | no revert takes it back: data deleted, a message sent, a column dropped |
-| `authorization` | merging where the workflow does not allow it, playing a script in production, opening an access |
+| `authorization` | playing a script in production, opening an access — never merging or releasing the agent's own work, which it does without asking |
 | `external_gesture` | a gesture an agent cannot make: a provider console, a phone call, a signature |
 
 **If none fits, the decision is yours: make it.** Naming, file layout, which seam to cut, a change
@@ -140,11 +140,8 @@ nothing can move, write that, and why.
 `asked_by_agent` names you — the skill, or your robot's name — so the answer and a reader's
 questions find their way back to you (`decision-resume --context`).
 
-## Two kinds of sheets carry facts of their own
+## One kind of sheet carries facts of its own
 
-- **A merge authorisation** carries the link to the pull request, the state of the quality gate
-  (checks, review), and the risk of the change in one sentence: what it touches and how it is
-  reverted.
 - **A script to play in production** carries the number of rows it touches **in production**,
   counted today by a read-only query, and the query that counted them.
 
@@ -180,37 +177,38 @@ work settled on its own is withdrawn with `decision_cancel` and its reason.
 Each one passes the server's admission as written. Replace `subject_id` and `addressee_user_id`
 with ids of your workspace.
 
-### A merge authorisation — `simple`
+### A script to play in production — `simple`
 
 ```json
 {
-  "title": "Merge the VAT fix on credit notes and ship it to production?",
+  "title": "Correct the VAT on the 37 credit notes issued since 1 October?",
   "complexity": "simple",
-  "executive_md": "Pull request [#1834](https://github.com/acme/billing/pull/1834) fixes the VAT rounding on credit notes. Quality gate green: 214 tests pass, the review panel found no blocker. Risk low: one function changed, six new tests, reverted in one commit. Merging deploys here. 37 credit notes issued since 1 October carry a wrong VAT amount; this fix stops new ones, it does not correct them.",
-  "why_human_md": "Merging ships to production on this repository, and its bug-fix merge setting stops before every merge: a person authorises it.",
+  "executive_md": "The VAT rounding fix on credit notes is released. 37 credit notes issued since 1 October still carry a wrong VAT amount, 0.71 € in all, counted today on production. The script writes a corrective line on each, so the ledger keeps both amounts. Tonight's accounting export sends those lines out, and no revert brings them back.",
+  "context_md": "Rows counted today, read-only, on production:\n\n```sql\nSELECT COUNT(*) FROM credit_note_lines\nWHERE issued_at >= '2026-10-01' AND vat_amount <> ROUND(net_amount * vat_rate, 2);\n```\n\nResult: 37.",
+  "why_human_md": "The script writes to production accounting, and the corrective lines leave in tonight's export: no revert brings them back.",
   "escalation_reason": "authorization",
   "answer_shape": "approve",
   "subject_kind": "bug",
   "subject_id": 412,
   "options": [
     {
-      "title": "Merge and ship it",
-      "body_md": "The fix reaches production with the next deployment, about ten minutes after the merge.",
+      "title": "Play the script tonight",
+      "body_md": "The 37 credit notes are corrected before the export, and tonight's file carries the corrective lines.",
       "risk": "low",
       "is_recommended": true,
       "effect": "continue"
     },
     {
-      "title": "Do not merge, I take the ticket over",
-      "body_md": "The pull request stays open and the ticket is assigned to you.",
+      "title": "Do not play it, I take the ticket over",
+      "body_md": "The 37 credit notes keep their wrong amount and the ticket is assigned to you.",
       "risk": "low",
       "effect": "take_over"
     }
   ],
-  "recommendation_md": "Merge: the change is small, covered and revertible, and every day without it issues about four more wrong credit notes.",
-  "blocked_md": "The VAT fix of this ticket.",
+  "recommendation_md": "Play it: 37 rows counted today, each one kept beside its correction, and every day without it leaves the next export carrying the wrong totals.",
+  "blocked_md": "The correction of the 37 existing credit notes.",
   "blocked_items": 1,
-  "continuing_md": "I write the script that corrects the 37 existing credit notes. It comes as its own decision, with its production row count.",
+  "continuing_md": "Nothing else waits on this answer: the fix itself is already released.",
   "addressee_user_id": 7,
   "resume_mode": "subject",
   "asked_by_agent": "bug-fix"

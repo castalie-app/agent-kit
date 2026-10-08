@@ -345,7 +345,8 @@ Once `cs:project-management` **and `cs:delivery`** have returned, run **`cs:adap
 opens a branch and a pull request carrying an added, delimited section in the root instruction
 file, skills bound to their environment beside their existing ones, and — when the delivery facts
 came back — a merge skill and a release skill written against their own pipeline, holes and all.
-Nothing existing is touched, and it never merges.
+Nothing existing is touched, and it never merges that pull request: adopting it is the team's
+decision, and the merge path it installs is what every later delivery runs.
 
 Waiting for the second agent is not caution, it is the difference between a pull request they can
 use and one that describes somebody else's chain.

@@ -1,6 +1,6 @@
 ---
 name: brief-acceptance
-description: Replay a delivered brief as its customer would, before it closes — each user story on the running product, each Given/When/Then criterion with a verdict written back, the gaps coded on one pull request through the acceptance queue, a disproportionate gap put to the brief's owner, and the brief accepted only when the replay conforms. Fires when a brief enters Acceptance (its last spec closed), on "recette du brief", "le brief est-il vraiment livré ?", "accept brief <id>". Never merges and never deploys; it ends on feature_brief_accept or on a decision filed for the owner.
+description: Replay a delivered brief as its customer would, before it closes — each user story on the running product, each Given/When/Then criterion with a verdict written back, the gaps coded on one pull request through the acceptance queue, a disproportionate gap put to the brief's owner, and the brief accepted only when the replay conforms. Fires when a brief enters Acceptance (its last spec closed), on "recette du brief", "le brief est-il vraiment livré ?", "accept brief <id>". Its fix pull request ships through the host's own merge and release path without asking anyone; it ends on feature_brief_accept or on a decision filed for the owner.
 allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill, mcp__castalie__whoami, mcp__castalie__feature_brief_get, mcp__castalie__feature_spec_get, mcp__castalie__feature_brief_acceptance_pick, mcp__castalie__feature_brief_acceptance_release, mcp__castalie__feature_brief_set_acceptance_test_status, mcp__castalie__feature_brief_update_user_story, mcp__castalie__feature_brief_accept, mcp__castalie__acceptance_open, mcp__castalie__acceptance_add_remark, mcp__castalie__acceptance_list, mcp__castalie__acceptance_close, mcp__castalie__decision_create, mcp__castalie__decision_list, mcp__castalie__decision_get, mcp__castalie__decision_mark_applied
 ---
 
@@ -84,7 +84,8 @@ it and closes the brief in one call. What the server cannot do is the replay —
 - It never moves the brief to `Done` any other way than `feature_brief_accept`.
 - It never measures the brief's business outcome: that is the follow-up checks' work, at their horizon
   (`feature-followup`). Acceptance says the need was delivered as asked, not that it moved the number.
-- It never merges or deploys. The fix pull request goes through the environment's own process.
+- It never asks anyone to merge or deploy. The fix pull request ships through `ship` § Delivery —
+  the host's own merge and release path — like any other.
 
 ## Report
 
