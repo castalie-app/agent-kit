@@ -37,58 +37,34 @@
 //   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
+//   cs attach <brief|spec|bug> <id> <file...>   # join local files to a thread (attach.mjs)
+//   cs login [<workspace url>]         # sign this machine in when it has no token (auth.mjs)
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { findConfig } from "./config.mjs";
+import { defaultEndpoint, loginCommand, NO_ENDPOINT_HELP, openBrowser, renew, resolveConnection, startLogin } from "./auth.mjs";
+import { attachFiles } from "./attach.mjs";
 
 const TYPES = new Set(["feature-brief", "feature-spec", "bug"]);
 
 // ── Config ────────────────────────────────────────────────────────────────
-// `.cs/` is the folder; `.bg/` and the first name's folder are what it was called under the two names the kit
-// carried before Castalie. A setup run before either rename left its token there, and a CLI that
-// stopped reading it would answer "No token" on a workstation that has one — so the former names
-// stay readable, after the new one, at each level of the walk up. Newest first: a workstation that
-// has run setup twice holds both, and the current one is the one that was written last.
-// The kit's first name, assembled from two halves so the repository never spells it. Its variables
-// (`<FIRST>_ENDPOINT`, `<FIRST>_TOKEN`) and its config folder are still read, after the current
-// ones, so an environment set up before the rename keeps its token.
-const FIRST_NAME = "g" + "aly";
-const env = (name) => process.env[`CASTALIE_${name}`] || process.env[`${FIRST_NAME.toUpperCase()}_${name}`];
-const CONFIG_DIRS = [".cs", ".bg", `.${FIRST_NAME}`];
-
-function findConfig(startDir) {
-  let dir = resolve(startDir);
-  for (;;) {
-    for (const folder of CONFIG_DIRS) {
-      const candidate = join(dir, folder, "config.json");
-      if (existsSync(candidate)) return candidate;
-    }
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
+// The resolution lives in config.mjs, shared with the plugin's local `castalie-files` MCP server, and
+// the sign-in in auth.mjs: a token written by hand (environment, .cs/config.json) first, else the one
+// `cs login` stored and renews by itself.
+async function connection() {
+  try {
+    return await resolveConnection();
+  } catch (e) {
+    die(e.message);
   }
-}
-
-function loadConfig() {
-  let fromFile = {};
-  const path = findConfig(process.cwd());
-  if (path) {
-    try { fromFile = JSON.parse(readFileSync(path, "utf8")); }
-    catch (e) { die(`Cannot parse ${path}: ${e.message}`); }
-  }
-  let endpoint = env("ENDPOINT") || fromFile.endpoint;
-  const token = env("TOKEN") || fromFile.token;
-  if (!endpoint) die("No endpoint. Set CASTALIE_ENDPOINT or .cs/config.json { \"endpoint\": ... }.");
-  if (!token) die("No token. Set CASTALIE_TOKEN or .cs/config.json { \"token\": ... }. Get one from castalie.app → Settings → Connect your assistant.");
-  endpoint = endpoint.replace(/\/+$/, "").replace(/\/mcp$/i, ""); // tolerate a pasted MCP url
-  return { endpoint, token };
 }
 
 // ── HTTP ──────────────────────────────────────────────────────────────────
 async function request(method, path, { json, raw } = {}) {
-  const { endpoint, token } = loadConfig();
-  const res = await fetch(`${endpoint}${path}`, {
+  let conn = await connection();
+  const send = (token) => fetch(`${conn.endpoint}${path}`, {
     method,
     headers: {
       "Authorization": `Bearer ${token}`,
@@ -97,11 +73,16 @@ async function request(method, path, { json, raw } = {}) {
     },
     body: json ? JSON.stringify(json) : undefined,
   });
+  let res = await send(conn.token);
+  if (res.status === 401 && conn.oauth) {
+    try { conn = await renew(conn.endpoint, { path: conn.source, spent: conn.token }); } catch (e) { die(e.message); }
+    res = await send(conn.token);
+  }
   const text = await res.text();
   if (!res.ok) {
     let msg = text.slice(0, 300);
     try { msg = JSON.parse(text).error || msg; } catch { /* keep raw */ }
-    if (res.status === 401) msg = "unauthorized — check your token (castalie.app → Settings → Connect your assistant)";
+    if (res.status === 401) msg = `unauthorized — sign in again with '${loginCommand(conn.endpoint)}', or replace CASTALIE_TOKEN`;
     die(`${method} ${path} → HTTP ${res.status}: ${msg}`);
   }
   return raw ? text : (text ? JSON.parse(text) : {});
@@ -187,6 +168,51 @@ function cmdOnBehalf() {
   });
 }
 
+// Joins files from this machine to a brief, spec or bug thread. The same module as the plugin's
+// `castalie-files` MCP server: the bytes are read here, images made lighter first unless told not to.
+async function cmdAttach(args) {
+  const [entityType, entityId, ...files] = args._;
+  if (!["brief", "spec", "bug"].includes(entityType) || !entityId || files.length === 0) {
+    die("Usage: cs attach <brief|spec|bug> <id> <file...> [--name <shown name>] [--message <id>] [--no-compress] [--max-width <px>] [--quality <1-100>]");
+  }
+  try {
+    print(await attachFiles({
+      entityType,
+      entityId: Number(entityId),
+      filePaths: files,
+      fileName: typeof args.name === "string" ? args.name : undefined,
+      messageId: args.message ? Number(args.message) : undefined,
+      compress: args["no-compress"] ? false : undefined,
+      maxWidth: args["max-width"],
+      quality: args.quality,
+    }));
+  } catch (e) {
+    die(e.code === "login_required" ? `${e.message} Run '${loginCommand(e.endpoint)}' first.` : e.message);
+  }
+}
+
+// Signs this machine in to the workspace when it has no token: opens the browser on the workspace's
+// own sign-in, waits for the approval on a loopback address, and stores the sign-in for the kit to renew.
+async function cmdLogin(args) {
+  const endpoint = args._[0] || defaultEndpoint();
+  if (!endpoint) die(NO_ENDPOINT_HELP);
+  let login;
+  try { login = await startLogin(endpoint); } catch (e) { die(`The sign-in could not start: ${e.message}`); }
+  console.log(`Opening the browser to sign in to ${endpoint}. If it does not open, visit:\n${login.url}`);
+  openBrowser(login.url);
+  // The loopback listener is unref'd so it never holds the MCP server open; here the CLI has nothing
+  // else to wait on, so this keeps the process alive until the browser comes back.
+  const keepAlive = setInterval(() => {}, 1000);
+  try {
+    await login.done;
+    console.log(`Signed in to ${endpoint}. 'cs attach' and the castalie-files tools can reach it now.`);
+  } catch (e) {
+    die(`The sign-in did not complete: ${e.message}`);
+  } finally {
+    clearInterval(keepAlive);
+  }
+}
+
 // ── arg parsing / output ────────────────────────────────────────────────────
 function parseArgs(argv) {
   const out = { _: [] };
@@ -213,7 +239,12 @@ const HELP = `cs — Castalie project-management CLI
   cs content pull <type> <id>       # type = feature-brief | feature-spec | bug
   cs content push <type> <id>
   cs on-behalf                      # unattended or not, and the workspace's robot account
-  cs agent-tasks help               # declare this workstation's agent tasks to Castalie
+  cs attach <brief|spec|bug> <id> <file...>
+                                    # join local files to a thread; images made lighter first
+                                    #   (--no-compress, --max-width <px>, --quality <1-100>,
+                                    #    --name <shown name>, --message <id>)
+  cs login [<workspace url>]        # sign this machine in when it has no token
+  cs agent-tasks help              # declare this workstation's agent tasks to Castalie
   cs version                        # the version of the kit that is running
   cs codex [--verify|--check]       # project this kit's skills, instructions and agents into
                                     #   .agents/ and .codex/ here, for a Codex session
@@ -250,6 +281,8 @@ async function main() {
     case "spec": return cmdSpec(args);
     case "content": return cmdContent(args);
     case "on-behalf": return cmdOnBehalf();
+    case "attach": return cmdAttach(args);
+    case "login": return cmdLogin(args);
     // What `kit_feedback_send` reports as `kit_version`: read from the manifest beside this file,
     // so a Claude and a Codex session name the same number without knowing where the plugin sits.
     case "version": return console.log(installedVersion());

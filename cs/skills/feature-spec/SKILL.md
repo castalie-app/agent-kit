@@ -144,8 +144,8 @@ What each field of a spec renders — read from what Castalie serves, not from w
 - **Raw HTML** is kept to text tags (`p`, lists, tables, `a`, `img`, headings…): **no `svg`,
   `iframe`, `style` nor `script`** — anything else comes back as text. Draw with Mermaid or an
   illustration instead.
-- **A screenshot** of the running product: attach it to the spec's thread with
-  `discussion_attachment_upload` (base64, 16 MiB at most), then
+- **A screenshot** of the running product: attach it to the spec's thread with `attach_file`
+  (the plugin's local `castalie-files` server, given the file's path), then
   `![alt](/Product/FeatureSpec/DownloadAttachment/<spec_id>/<attachment_id>)` in any rendered field.
 
 The same table for briefs and tickets is in `${CLAUDE_PLUGIN_ROOT}/instructions/rich-content.md`.
