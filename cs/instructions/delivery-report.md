@@ -17,7 +17,9 @@ Reports are **written in the user's language**, in full sentences readable by a 
 - **Naked verdict line.** The status is its own line, prefixed with its state emoji; the "why" sits
   just below it. Never bury the verdict inside prose.
 - **The status word reflects the real end state, never the intention** — `Merged`, `Deployed` (released
-  and verified), or `PR ready` (a human merges). Never say "Delivered" for a PR that only opened.
+  and verified), or `PR ready` (stopped before the merge: the person asked it in this turn, the
+  workspace's administrator denied it, or no merge path is declared — the line below says which).
+  Never say "Delivered" for a PR that only opened.
 - **Every entity reference is a clickable link** (the Castalie detail page, or your PR) — never a bare id,
   and never a bare route: give the full address the product returned, never one you assembled.
 - **`👁️ <live link>` on the very last line** — the running page that shows the change working. Not

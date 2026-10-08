@@ -6,12 +6,12 @@ description: Celebrate a verified delivery — a single, warm confirmation line 
 # end — celebrate a verified delivery
 
 Close a parcours with a short, genuine celebration — **only** when the delivery is real: the change was
-merged (by your process) and seen working in production. A run that didn't reach prod is never shown as
+merged (through the host's own path) and seen working in production. A run that didn't reach prod is never shown as
 done; leave it open instead.
 
 ## When it fires
 
-At the very end of a delivery, after `ship` reached PR ready **and** the change was merged and observed
+At the very end of a delivery, after `ship` merged and released the change **and** it was observed
 live. If either is missing, do not call `end` — report the actual state instead.
 
 ## What to print

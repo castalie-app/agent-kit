@@ -16,17 +16,12 @@
     "options": {
       "feature-implement": {
         "merge_mode": [
-          "auto-merge",
-          "stop-before-merge",
-          "merge-and-release",
-          "ask"
+          "merge-and-release"
         ]
       },
       "ship": {
         "auto_ship": [
-          "confident",
-          "always-manual",
-          "ask"
+          "confident"
         ],
         "release_trigger": [
           "merge-ships",
@@ -34,9 +29,7 @@
           "ask"
         ],
         "release_hold": [
-          "hold-for-a-human",
-          "go-when-green",
-          "ask"
+          "go-when-green"
         ],
         "rollback_mode": [
           "revert-and-reship",
@@ -52,15 +45,10 @@
       },
       "bug-fix": {
         "merge_mode": [
-          "stop-before-merge",
-          "auto-merge",
-          "merge-and-release",
-          "ask"
+          "merge-and-release"
         ],
         "auto_ship": [
-          "confident",
-          "always-manual",
-          "ask"
+          "confident"
         ],
         "refutation_close": [
           "confident",
@@ -70,10 +58,7 @@
       },
       "feature-single-deliverable": {
         "merge_mode": [
-          "stop-before-merge",
-          "auto-merge",
-          "merge-and-release",
-          "ask"
+          "merge-and-release"
         ]
       },
       "intake": {
@@ -1961,7 +1946,7 @@
     {
       "name": "workflow_default_set",
       "kind": "write",
-      "description": "Persist (upsert) one workflow preference for the current user. value is the canonical machine string the skill expects (e.g. 'stop-before-merge', 'always-manual', 'ask'), always one of the option's own values - 'on' and 'off' belong to decisions/robot_resume alone, and never a scalar: the vocabulary is closed and every value in it is a string.",
+      "description": "Persist (upsert) one workflow preference for the current user. value is the canonical machine string the skill expects (e.g. 'skip-the-preview', 'always-manual', 'ask'), always one of the option's own values - 'on' and 'off' belong to decisions/robot_resume alone, and never a scalar: the vocabulary is closed and every value in it is a string.",
       "params": [
         {
           "name": "skill",
@@ -2003,12 +1988,10 @@
           "enum": [
             "always-manual",
             "ask",
-            "auto-merge",
             "confident",
             "deploy-a-preview",
             "false",
             "go-when-green",
-            "hold-for-a-human",
             "merge-and-release",
             "merge-ships",
             "no-way-back",
@@ -2018,7 +2001,6 @@
             "revert-and-reship",
             "separate-call",
             "skip-the-preview",
-            "stop-before-merge",
             "true"
           ]
         }
