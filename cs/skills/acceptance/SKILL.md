@@ -1,6 +1,6 @@
 ---
 name: acceptance
-description: Run an acceptance pass on a running feature — you fire remarks in rapid succession while you click through the product, each one is written to a local queue the instant it lands and then pushed to Castalie, then coded one at a time in the order received, one commit per remark, a single PR. Trivia is decided on the spot; a real product decision goes to a person as a decision on the remark, without stopping the queue. Ends by invoking the environment's release step on the drained pass; it merges nothing directly.
+description: Run an acceptance pass on a running feature — you fire remarks in rapid succession while you click through the product, each one is written to a local queue the instant it lands and then pushed to Castalie, then coded one at a time in the order received, one commit per remark, a single PR. Trivia is decided on the spot; a real product decision goes to a person as a decision on the remark, without stopping the queue. Ends by shipping the drained pass through the host's own merge and release path, without asking anyone's authorisation.
 allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill, mcp__castalie__whoami, mcp__castalie__acceptance_open, mcp__castalie__acceptance_add_remark, mcp__castalie__acceptance_list, mcp__castalie__acceptance_claim_next, mcp__castalie__acceptance_resolve, mcp__castalie__decision_create, mcp__castalie__decision_get, mcp__castalie__decision_answer, mcp__castalie__acceptance_set_pr, mcp__castalie__acceptance_close
 ---
 
@@ -153,10 +153,12 @@ person gave still holds.
    thing this skill exists to prevent.
 3. Drain what is left. If items are still `awaiting_user`, surface them and stop there: they are the only
    other thing that legitimately blocks.
-4. Hand the single PR to `ship` — the review panel runs on the whole session's diff at once.
-5. `acceptance_close(castalie_session, status="merged")`, and print the Castalie link to the pass.
-6. Invoke the environment's release step. The kit merges nothing **directly** — that step does, on
-   its own gate. Having one is not a reason to stop: not invoking it is stopping.
+4. Hand the single PR to `ship` — the review panel runs on the whole session's diff at once, then
+   `ship` § Delivery merges and releases it through the host's own path, on the host's own gate.
+   Nobody is asked: having a release step is not a reason to stop, and not invoking it is stopping.
+5. `acceptance_close(castalie_session, status="merged")` once the merge is observed, and print the
+   Castalie link to the pass. When `ship` stopped at "PR ready" — the person asked it in this turn,
+   the workspace's administrator denied it, or no merge path is declared — say which in one line.
 
 ## Discipline
 
