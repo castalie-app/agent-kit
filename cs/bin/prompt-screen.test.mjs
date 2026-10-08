@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
-  MODEL, NOUL_THRESHOLD, QUESTIONS, SEVERITY_THRESHOLD, TYPESAFE_URL, readApiKey, screenPrompt, verdictFrom,
+  MODEL, NOUL_THRESHOLD, QUESTIONS, SEVERITY_THRESHOLD, TYPESAFE_URL, WARN_ONLY, readApiKey, screenPrompt, verdictFrom,
 } from "./prompt-screen.mjs";
 
 const answers = (nouls = {}, severity = 0.02) => ({
@@ -131,4 +131,49 @@ test("the key is read by name: the variable, else the Windows credential, else n
   assert.equal(readApiKey({ env: {}, platform: "win32", home, run }), "from-credential");
   assert.deepEqual(runs.map((r) => [r[0], r.at(-1)]), [["pwsh", "typesafe"], ["powershell.exe", "typesafe"]]);
   assert.equal(readApiKey({ env: {}, platform: "win32", home, run: () => ({ status: 1, stdout: "", stderr: "introuvable" }) }), null);
+});
+
+// Recorded shape of Jev's answer to « unsubscribe me from the supplier newsletters »: it reaches a
+// third party, and nothing else.
+const UNSUBSCRIBE = "unsubscribe me from the supplier newsletters";
+const outboundOnly = () => ({ model: "jev-1.13.0", answers: answers({ outbound: 0.9 }, 0.31) });
+
+test("the policy by kind: a scheduled task that contacts a third party passes, with a warning", async () => {
+  const { fetch } = stand([reply(200, outboundOnly())]);
+  const result = await screenPrompt({ kind: "scheduled_task", sender_label: "scheduled task #7", subject: "Mail triage", body: UNSUBSCRIBE },
+    { fetch, apiKey: "k", logDir: logDir() });
+  assert.equal(result.verdict, "pass");
+  assert.deepEqual(result.reasons, []);
+  assert.deepEqual(result.warnings, ["outbound 0.90"]);
+});
+
+test("the policy by kind: the same answer under master_red refuses", async () => {
+  const { fetch } = stand([reply(200, outboundOnly())]);
+  const result = await screenPrompt({ ...message, body: UNSUBSCRIBE }, { fetch, apiKey: "k", logDir: logDir() });
+  assert.equal(result.verdict, "refuse");
+  assert.deepEqual(result.reasons, ["outbound 0.90"]);
+  assert.deepEqual(result.warnings, []);
+});
+
+test("the policy by kind: an unknown kind gets the full policy, and only two hazards ever warn", () => {
+  for (const kind of ["release_note", undefined, "", "__proto__", "toString"]) {
+    assert.deepEqual(verdictFrom(answers({ outbound: 0.9, off_purpose: 0.8 }), kind),
+      { verdict: "refuse", reasons: ["outbound 0.90", "off_purpose 0.80"], warnings: [] }, `kind ${String(kind)}`);
+  }
+  assert.deepEqual(Object.keys(WARN_ONLY).sort(), ["decision_resume", "scheduled_task"]);
+  for (const ids of Object.values(WARN_ONLY)) assert.deepEqual([...ids].sort(), ["off_purpose", "outbound"]);
+  for (const kind of Object.keys(WARN_ONLY)) {
+    const decided = verdictFrom(answers({ override: 0.5, exfiltration: 0.6, destructive: 0.7, outbound: 0.9, off_purpose: 0.8 }, 1.6), kind);
+    assert.deepEqual(decided.reasons, ["override 0.50", "exfiltration 0.60", "destructive 0.70", "severity 1.60"], `${kind} still refuses the rest`);
+    assert.deepEqual(decided.warnings, ["outbound 0.90", "off_purpose 0.80"]);
+  }
+});
+
+test("a warning is logged with the verdict", async () => {
+  const dir = logDir();
+  const { fetch } = stand([reply(200, outboundOnly())]);
+  await screenPrompt({ kind: "decision_resume", body: UNSUBSCRIBE }, { fetch, apiKey: "k", logDir: dir, now: () => new Date("2026-10-08T12:00:00Z") });
+  const line = JSON.parse(readFileSync(join(dir, "2026-10-08.jsonl"), "utf8").trim());
+  assert.equal(line.verdict, "pass");
+  assert.deepEqual(line.warnings, ["outbound 0.90"]);
 });

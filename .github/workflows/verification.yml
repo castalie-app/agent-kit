@@ -66,8 +66,10 @@ jobs:
       # The agents' inbox: which path a message takes, that a live session is never resumed, that
       # the Jev screen fails closed. Stand-ins for the inbox, the MCP verbs, Jev, the processes and
       # the clock: no network, no Claude, no wall-clock wait.
+      # And the stored prompts (a scheduled run's, a decision's robot resume): read from Castalie,
+      # screened, and the run or the resume closed on a refusal, the session never launched.
       - name: The agents' inbox screens, then relays, resumes or opens a session
-        run: node --test cs/bin/prompt-screen.test.mjs cs/bin/inbox.test.mjs
+        run: node --test cs/bin/prompt-screen.test.mjs cs/bin/inbox.test.mjs cs/bin/prompt-gate.test.mjs
 
       # What a local file becomes before it leaves the machine (format, secrets, ceiling, image
       # compression) and the MCP exchange that carries it, against stand-ins: no network, no sharp.
