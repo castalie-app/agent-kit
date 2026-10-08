@@ -63,6 +63,12 @@ jobs:
       - name: The workstation report selects and never sends arguments
         run: node cs/bin/agent-tasks.test.mjs
 
+      # The agents' inbox: which path a message takes, that a live session is never resumed, that
+      # the Jev screen fails closed. Stand-ins for the inbox, the MCP verbs, Jev, the processes and
+      # the clock: no network, no Claude, no wall-clock wait.
+      - name: The agents' inbox screens, then relays, resumes or opens a session
+        run: node --test cs/bin/prompt-screen.test.mjs cs/bin/inbox.test.mjs
+
       # What a local file becomes before it leaves the machine (format, secrets, ceiling, image
       # compression) and the MCP exchange that carries it, against stand-ins: no network, no sharp.
       - name: castalie-files attaches a local file, lighter, through one MCP session

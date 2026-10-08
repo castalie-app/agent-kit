@@ -35,6 +35,8 @@
 //   cs content push <type> <id>
 //   cs on-behalf                       # attended or not, and the workspace's robot account
 //   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
+//   cs prompt screen --kind <k> ...    # screen a text written elsewhere with Jev (prompt-screen.mjs)
+//   cs inbox watch|install             # hand this workstation's agent messages to their sessions (inbox.mjs)
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
 //   cs attach <brief|spec|bug> <id> <file...>   # join local files to a thread (attach.mjs)
@@ -244,7 +246,11 @@ const HELP = `cs — Castalie project-management CLI
                                     #   (--no-compress, --max-width <px>, --quality <1-100>,
                                     #    --name <shown name>, --message <id>)
   cs login [<workspace url>]        # sign this machine in when it has no token
-  cs agent-tasks help              # declare this workstation's agent tasks to Castalie
+  cs agent-tasks help               # declare this workstation's agent tasks to Castalie
+  cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
+                                    # screen a text written elsewhere with Jev before an unattended
+                                    #   agent reads it; exit 0 = pass, 2 = refuse (fails closed)
+  cs inbox help                     # the round that hands Castalie's agent messages to their sessions
   cs version                        # the version of the kit that is running
   cs codex [--verify|--check]       # project this kit's skills, instructions and agents into
                                     #   .agents/ and .codex/ here, for a Codex session
@@ -269,6 +275,16 @@ async function main() {
   if (cmd === "agent-tasks") {
     const agentTasks = await import("./agent-tasks.mjs");
     return agentTasks.runCli(rest);
+  }
+  // `prompt` answers with an exit code (0 = pass, 2 = refuse) that a caller's script branches on.
+  if (cmd === "prompt") {
+    const screen = await import("./prompt-screen.mjs");
+    process.exitCode = await screen.runCli(rest);
+    return;
+  }
+  if (cmd === "inbox") {
+    const inbox = await import("./inbox.mjs");
+    return inbox.runCli(rest);
   }
   if (cmd === "codex") {
     const projection = await import("./build-codex.mjs");
