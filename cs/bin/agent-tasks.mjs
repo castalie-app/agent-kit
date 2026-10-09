@@ -431,10 +431,11 @@ function schtasks(...args) {
 }
 
 /**
- * Registers (or replaces) a current-user task running `conhost.exe <argument>` every `every`
- * minutes, then starts it once. Shared by `cs agent-tasks install` and `cs inbox install`.
+ * Registers (or replaces) a current-user task running `<command> <argument>` (conhost.exe unless
+ * told otherwise) every `every` minutes, then starts it once. Shared by `cs agent-tasks install`
+ * and `cs inbox install`.
  */
-export function registerScheduledTask({ name, every, argument, workingDirectory, description, elevated = false, limit }) {
+export function registerScheduledTask({ name, every, argument, workingDirectory, description, elevated = false, limit, command = "conhost.exe" }) {
   // Registered from an XML through schtasks, not with Register-ScheduledTask: that cmdlet answers
   // "access denied" unelevated on some profiles, where schtasks registers a current-user task fine.
   // The token's own name: an SSH session sets USERDOMAIN to the workgroup, which the scheduler cannot map.
@@ -446,7 +447,7 @@ export function registerScheduledTask({ name, every, argument, workingDirectory,
   const now = new Date(Date.now() + 60_000);
   const pad = (n) => String(n).padStart(2, "0");
   const start = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:00`;
-  const xml = taskXml({ identity, every, command: "conhost.exe", argument, workingDirectory, description, start, elevated, limit });
+  const xml = taskXml({ identity, every, command, argument, workingDirectory, description, start, elevated, limit });
   const file = join(tmpdir(), `cs-task-${process.pid}.xml`);
   try {
     writeFileSync(file, Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(xml, "utf16le")]));

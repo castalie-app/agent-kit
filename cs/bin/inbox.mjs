@@ -36,7 +36,7 @@ import {
   closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, appendFileSync,
 } from "node:fs";
 import { homedir, hostname as osHostname } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   mainCheckout, normalisePath, parseAgentTaskArgs, quote, readConfigFrom, registerScheduledTask, resolveToken, stableCliPath,
 } from "./agent-tasks.mjs";
@@ -513,11 +513,17 @@ function cmdInstall(args) {
   const every = Math.max(1, Math.min(60, Number(args.everyMinutes) || 1));
   const name = args.taskName && args.taskName !== true ? String(args.taskName) : DEFAULT_TASK_NAME;
   const cli = stableCliPath();
-  const argument = ["--headless", quote(process.execPath), quote(cli), "inbox", "watch", "--endpoint", quote(endpoint), "--repo", quote(repo)].join(" ");
+  // Through wscript and run-hidden.vbs, never `conhost --headless`: the round launches `claude -p` and
+  // the host's tab opener, and under a headless console both stalled — the relay printed nothing for
+  // 180 s and the opener reported success without opening anything. wscript is a GUI host, so the
+  // console the round gets is a real one, created hidden (spec 89, PC-BG-Bureau, 9 October 2026: the
+  // same relay then reached the open tab in seconds).
+  const vbs = join(dirname(cli), "run-hidden.vbs");
+  const argument = ["//nologo", "//B", quote(vbs), quote(process.execPath), quote(cli), "inbox", "watch", "--endpoint", quote(endpoint), "--repo", quote(repo)].join(" ");
   const description = `Castalie: every ${every} minute(s), hands the messages Castalie holds for this workstation's agent `
     + "sessions to them, after a Jev screen (cs inbox watch). Polls a path Castalie does not count as activity.";
   // Nine minutes at most: under the lock's ten, so a pass the scheduler stops never holds the next one off for long.
-  registerScheduledTask({ name, every, argument, workingDirectory: repo, description, limit: "PT9M" });
+  registerScheduledTask({ name, every, argument, workingDirectory: repo, description, limit: "PT9M", command: "wscript.exe" });
   console.log(`Installed '${name}': every ${every} min, from ${repo}, polling ${endpoint}.`);
   console.log(`It runs ${cli}. Check a pass without launching anything: node ${quote(cli)} inbox watch --dry-run --endpoint ${quote(endpoint)} --repo ${quote(repo)}`);
 }

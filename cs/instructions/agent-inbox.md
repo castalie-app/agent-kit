@@ -78,6 +78,11 @@ What opens a tab belongs to the host: only it knows its terminal and its worktre
 node <plugin>/bin/cs.mjs inbox install --endpoint https://<workspace>.castalie.app --repo <main checkout> [--every-minutes 1]
 ```
 
+The task runs through `wscript.exe` and the kit's `bin/run-hidden.vbs`, which starts the round in a
+real console window that is never shown. Never `conhost --headless`: under a headless console the
+relay (`claude -p`) and the host's tab opener stall — the relay prints nothing until its timeout, and
+the opener reports success without opening anything.
+
 The task « Castalie - agent inbox » runs every minute with no window (`conhost.exe --headless`),
 from the marketplace copy of the kit, nine minutes at most per pass. `cs inbox uninstall` removes it.
 The token is read as `cs agent-tasks` reads it (`agent-tasks.md`).
