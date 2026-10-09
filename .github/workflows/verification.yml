@@ -71,6 +71,11 @@ jobs:
       - name: The agents' inbox screens, then relays, resumes or opens a session
         run: node --test cs/bin/prompt-screen.test.mjs cs/bin/inbox.test.mjs cs/bin/prompt-gate.test.mjs
 
+      # French typography as a script: the no-break spaces inside « » and before : ; ! ?, put in
+      # place on a decision's text before it is sent, with code, links and URLs left alone.
+      - name: plain-french puts the no-break spaces in place
+        run: node --test cs/skills/plain-french/typography.test.mjs
+
       # What a local file becomes before it leaves the machine (format, secrets, ceiling, image
       # compression) and the MCP exchange that carries it, against stand-ins: no network, no sharp.
       - name: castalie-files attaches a local file, lighter, through one MCP session

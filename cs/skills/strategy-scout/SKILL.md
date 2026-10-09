@@ -181,6 +181,15 @@ The sheet is written in **the leader's language**; French follows the `plain-fre
 it and run its check on the three levels before filing. A refusal is corrected and filed again, as
 the sheet's table of refusals says; never more than once per refusal code.
 
+**French typography is applied by a script, never by hand.** A French sheet is first written as the
+JSON arguments of the call, in a file of the run's scratch folder, then passed through
+`node ${CLAUDE_PLUGIN_ROOT}/skills/plain-french/typography.mjs --json <file>`; the call sends what it
+prints, every text field exactly as it came out — the title, the three levels, each option's title,
+body, cost and what it gives up. That puts the no-break spaces inside « » and before : ; ! ?, so a
+lead never shows « alone at the end of a line, or a colon at the start of the next. The same step
+runs before `decision_add_context` and `decision_supersede`, and on a French `note_md`. A sheet in
+another language skips it.
+
 ## 7. The signature
 
 `author_kind="agent"` on every decision. When `cs on-behalf` names a `robot_user_id`, also pass
