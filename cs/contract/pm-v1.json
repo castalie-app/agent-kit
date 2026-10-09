@@ -465,6 +465,25 @@
       }
     },
     {
+      "name": "strategy_get_full_strategy",
+      "kind": "read",
+      "description": "The complete strategy in one reading: every active period with its vision, the objectives under each with their progress, owner, team and key results, then the teams with their members. A period_id scopes the answer to that period and the periods it contains. summary.total_key_results counts visible key results only (active, on an active objective). One call for a pass over the whole strategy; strategy_navigate_children stays the lighter door for a question about one branch.",
+      "params": [
+        {
+          "name": "period_id",
+          "type": "int",
+          "required": false,
+          "description": "Scope to one period and the periods it contains. Omitted, every active period."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "periods": "[{ period, vision, objectives: [{ objective, progress, owner_user_id, team_id, key_results }] }]",
+        "teams": "object[]",
+        "summary": "object"
+      }
+    },
+    {
       "name": "strategy_navigate_children",
       "kind": "read",
       "description": "Drill down one level (or up to depth=3) inside the objectives tree without loading the whole strategy. Pass periodId for the period's root objectives, OR objectiveId for that objective's children. Mutually exclusive.",
@@ -639,6 +658,22 @@
         "success": "bool",
         "key_result_id": "int",
         "check_ins": "[{ id, previous_value, new_value, confidence, comment, author_user_id, author_name, date_created }]"
+      }
+    },
+    {
+      "name": "strategy_key_result_history",
+      "kind": "read",
+      "description": "The measured history of one key result, oldest first: one point per period (day, or first day of a closed week or month), with where each value came from. What the key result sheet's history curve plots; check-ins are strategy_check_in_history.",
+      "params": [
+        {
+          "name": "key_result_id",
+          "type": "int",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "points": "[{ date, value, source }]"
       }
     },
     {
@@ -873,6 +908,36 @@
         "key_result_id": "int",
         "value": "decimal",
         "computed_progress": "decimal"
+      }
+    },
+    {
+      "name": "strategy_list_swot",
+      "kind": "read",
+      "description": "The workspace's SWOT board: strengths, weaknesses, opportunities and threats, in reading order. Every quadrant is returned even when empty: an absent quadrant would read as 'nothing to report there', which is a different statement.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "strengths": "object[]",
+        "weaknesses": "object[]",
+        "opportunities": "object[]",
+        "threats": "object[]"
+      }
+    },
+    {
+      "name": "hfpn_list",
+      "kind": "read",
+      "description": "Every weekly point handed in across the workspace for a week, with its lines (highlight, fire, progress, run, next) and the objective each line names: the team view of the weekly ritual. People who opened nothing do not appear.",
+      "params": [
+        {
+          "name": "week_start_date",
+          "type": "string",
+          "required": false,
+          "description": "yyyy-MM-dd. Any day is brought back to its Monday. Left out, the week the screen opens by default."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "entries": "object[]"
       }
     },
     {
@@ -1174,6 +1239,22 @@
         "returned": "int",
         "truncated": "bool",
         "briefs": "object[]"
+      }
+    },
+    {
+      "name": "feature_brief_list_key_results",
+      "kind": "read",
+      "description": "What this brief is expected to move, and what it actually moved: the key results it is attached to. An empty list is a brief that serves no measured objective.",
+      "params": [
+        {
+          "name": "feature_brief_id",
+          "type": "int",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "key_results": "object[]"
       }
     },
     {
@@ -2215,6 +2296,40 @@
       }
     },
     {
+      "name": "followup_run_list",
+      "kind": "read",
+      "description": "List follow-up runs: one check's when followup_check_id is given, the whole workspace's when it is omitted. status filters pending, due, passed, failed or skipped. Open runs come first, oldest due date first; the history follows, most recent first. take above 200 is clamped to 200.",
+      "params": [
+        {
+          "name": "followup_check_id",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "description": "pending | due | passed | failed | skipped. Omit for all."
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false,
+          "default": 0
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "default": 50
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "runs": "object[]"
+      }
+    },
+    {
       "name": "followup_run_reschedule",
       "kind": "write",
       "description": "Hand a follow-up run back with a later due date, without a verdict — for a check played before the change it verifies is in production.",
@@ -3152,7 +3267,7 @@
           "name": "escalation_reason",
           "type": "string",
           "required": true,
-          "description": "Why an agent cannot settle it. If none fits, the decision is yours — make it.",
+          "description": "Why an agent cannot settle it. If none fits, the decision is yours — make it. idea is a lead an agent raised on the strategy unprompted (strategy-scout); an instance that does not know it yet refuses it, and the lead is filed as private_knowledge.",
           "enum": [
             "money",
             "public_voice",
@@ -3160,7 +3275,8 @@
             "private_knowledge",
             "irreversible",
             "authorization",
-            "external_gesture"
+            "external_gesture",
+            "idea"
           ]
         },
         {

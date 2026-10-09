@@ -130,3 +130,18 @@ Close the run with a verdict in figures.
 A run that needs to come back later — a job to finish, a release to land — closes with
 `follow_up_not_before` and `follow_up_md`: Castalie creates the follow-up run in the same gesture,
 and the session that plays it does only what `follow_up_md` says.
+
+## A ready-made task: the strategy scout, every weekday morning
+
+The kit's `strategy-scout` skill digs the strategy and files a few leads a day for the leader to
+judge. A workspace owner schedules it once:
+
+| Field | Value |
+|---|---|
+| title | « Propose each morning a few leads on the strategy », in the workspace's language |
+| cron | `0 7 * * 1-5` (07:00 on weekdays, in the task's time zone) |
+| maximum duration | 30 minutes |
+| prompt | `/cs:strategy-scout`, then `Leads to: <the leader's address>.` |
+
+The launcher plays it like any other run, through `/cs:scheduled-run <run_id>`. The leads land in
+the leader's decisions inbox; the run closes `passed` with the first lead as its outcome.

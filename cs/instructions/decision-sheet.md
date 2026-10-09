@@ -39,6 +39,12 @@ under a minute. A gesture the spec's `Authorisations` section lists, or a workfl
 answers, is not a question either. A sheet that asks what you could have decided costs a person
 three minutes and teaches them to stop reading your sheets.
 
+**One more reason, for a question nobody blocked on: `idea`.** A lead an agent raised on the
+strategy unprompted, which the leader judges good or not (`strategy-scout`). It is never a way to
+ask what one of the seven reasons above does not cover: a skill blocked on its own work uses those
+seven or decides. An instance that does not know `idea` yet refuses it; the lead is then filed as
+`private_knowledge`, since what the leader alone knows is what settles it.
+
 **With the person in front of you, ask in the turn** (the *I need you* verdict of
 `shared-conventions.md`). A sheet is for the person who is not there.
 
