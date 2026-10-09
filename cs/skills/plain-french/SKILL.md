@@ -50,6 +50,11 @@ Run `node ${CLAUDE_PLUGIN_ROOT}/skills/plain-french/check.mjs --mode <procedural
 or pipe the text on standard input. Exit code 0 means no finding. Correct each finding and run it
 again. The check reads the same replacement table you do.
 
+The no-break spaces are not typed by hand:
+`node ${CLAUDE_PLUGIN_ROOT}/skills/plain-french/typography.mjs <file>` prints the text with them in
+place (inside « », before : ; ! ?), code, links and URLs untouched. With `--json`, it does the same
+to every string value of a JSON file, ready to send to an MCP call.
+
 It cannot judge meaning: two names for one thing, a sentence with two ideas, a report turned into
 orders, an uncertainty turned into a decision. Read the text once more for those.
 
