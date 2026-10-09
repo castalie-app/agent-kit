@@ -31,7 +31,7 @@ One pass, every minute once installed:
 
    | Path | When | How |
    |---|---|---|
-   | `live_tab` | a `~/.claude/sessions/*.json` names the session (or names it among its `formerNames`) and its `pid` runs | a headless `claude -p --model claude-haiku-5-5` calls `SendMessage` to that session with the text verbatim, then answers `RELAYED`; 120 s at most |
+   | `live_tab` | a `~/.claude/sessions/*.json` names the session (or names it among its `formerNames`) and its `pid` runs | a headless `claude -p --model claude-haiku-5-5` calls `SendMessage` to that session with the text verbatim, then answers `RELAYED`; 180 s at most |
    | `resumed` | the session is closed, its worktree exists, and no live session works in it | the host's `inbox.openTab` reopens it there with `claude --resume` |
    | `new_session` | otherwise; or the relay failed; or the message was handed over and not taken | the host's `inbox.openFreshTab` opens a new session |
 

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
-  DEFAULT_OPEN_TAB, choosePath, deliveredText, expandTemplate, findTranscript, readSessions, relaySucceeded, runWatch,
+  DEFAULT_OPEN_TAB, RELAY_TIMEOUT_MS, choosePath, deliveredText, expandTemplate, findTranscript, readSessions, relaySucceeded, runWatch,
   sessionMatches, tokenizeTemplate,
 } from "./inbox.mjs";
 import { screenPrompt } from "./prompt-screen.mjs";
@@ -114,7 +114,7 @@ test("P2/T2 a healthy message for a live session is relayed, then marked live_ta
   assert.deepEqual(args.slice(2), ["--model", "claude-haiku-5-5", "--allowedTools", "ToolSearch,ListAgents,SendMessage"]);
   assert.match(args[1], /named "Order fixes"/);
   assert.ok(args[1].includes(deliveredText(message())), "the exact delivered text");
-  assert.equal(runOptions.timeoutMs, 120_000);
+  assert.equal(runOptions.timeoutMs, RELAY_TIMEOUT_MS);
   assert.deepEqual(calls.mcp, [{ name: "agent_message_delivered", args: { id: 17, how: "live_tab", session_id: SESSION } }]);
 });
 

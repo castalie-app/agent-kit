@@ -17,7 +17,8 @@ decode; two sessions ending a turn two different ways cost more than either shap
 
 **A turn ends** only on a delivered result or a cited legitimate stop, and names one of five
 verdicts: finished here for you, the session can be closed — only once its work item is closed
-where it is tracked and nothing is left for the user; to do: the gesture left to the user, where it
+where it is tracked, its code is merged into the main branch, its working copy is clean and parked
+on that branch's head, and nothing is left for the user; to do: the gesture left to the user, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
 what; waiting, on what, when no agent is working on it; or, I need you: the question, its
 description in 80 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
@@ -101,7 +102,8 @@ render it.
   background command. The heading tells the person that nothing is stuck and nobody needs them.
   *Waiting* is kept for what no agent moves: a person, a release pipeline, an outside event, a
   decision. When the turn waits on both, *In progress* wins, and the line names the agent first.
-- **Finished waits for the tracker**: while the work item is still open where it is tracked, the
+- **Finished waits for the tracker**: while the work item is still open where it is tracked, its code
+  unmerged into the main branch, or its working copy dirty or off that branch's head, the
   verdict is *In progress* or *Waiting*, on whatever closes it. One exception: when all that is left is a production
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played

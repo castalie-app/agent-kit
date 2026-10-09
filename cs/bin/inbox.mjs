@@ -47,7 +47,7 @@ export const FRESH_DELIVERY_MS = 3 * 60_000;
 export const MAX_ATTEMPTS = 3;
 export const LOCK_STALE_MS = 10 * 60_000;
 export const RELAY_MODEL = "claude-haiku-5-5";
-export const RELAY_TIMEOUT_MS = 120_000;
+export const RELAY_TIMEOUT_MS = 180_000;
 export const LAUNCH_TIMEOUT_MS = 120_000;
 const PROMPT_RETENTION_MS = 7 * 24 * 3600_000;
 
@@ -262,7 +262,10 @@ export function runProcess(command, args, { cwd, timeoutMs = LAUNCH_TIMEOUT_MS }
     let stderr = "";
     let child;
     try {
-      child = spawn(command, args, { cwd, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+      // Its own hidden console on Windows. The round runs under `conhost --headless`, and a child
+      // that inherits that console answers slowly or not at all: a relay that takes 22 s from a
+      // terminal took over 120 s there, and the host's tab opener never returned (spec 89, 9 Oct 2026).
+      child = spawn(command, args, { cwd, windowsHide: true, detached: process.platform === "win32", stdio: ["ignore", "pipe", "pipe"] });
     } catch (error) {
       done({ code: null, stdout, stderr, error: error.message });
       return;
@@ -355,9 +358,12 @@ export async function runWatch(options, deps = {}) {
         const target = { name: plan.live.name || null, sessionId: plan.live.sessionId };
         const result = await run("claude", ["-p", relayInstruction(target, deliveredText(item)), "--model", RELAY_MODEL,
           "--allowedTools", "ToolSearch,ListAgents,SendMessage"], { cwd: home, timeoutMs: RELAY_TIMEOUT_MS });
+        // What the relay printed before it stopped goes into the log with the failure: a timeout alone
+        // says nothing about where it hung (spec 89, 9 Oct 2026).
+        const tail = String(result.stdout || "").slice(-300) + (result.stderr ? ` | stderr: ${String(result.stderr).slice(-300)}` : "");
         return relaySucceeded(result)
           ? { ok: true, sessionId: plan.live.sessionId }
-          : { ok: false, detail: result.error || `relay exit ${result.code}: ${String(result.stdout || result.stderr).slice(-300)}` };
+          : { ok: false, detail: `${result.error || `relay exit ${result.code}`}: ${tail}` };
       }
       if (how === "resumed") {
         const template = config.inbox?.openTab || (platform === "win32" ? DEFAULT_OPEN_TAB : null);
