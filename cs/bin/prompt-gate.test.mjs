@@ -157,15 +157,15 @@ test("decision resume, poisoned prompt refused: a comment with the reasons, the 
   assert.equal(requests[0].state.kind, "decision_resume");
   assert.ok(requests[0].state.body.startsWith(POISONED));
   assert.match(requests[0].state.body, /Go ahead, keep the old model as fallback\./, "the answer is screened with the prompt it steers");
-  assert.deepEqual(calls.map((c) => c.name), ["decision_get", "decision_comment", "decision_resume_complete"]);
-  assert.match(calls[1].args.body_md, /override 0\.96/);
-  assert.deepEqual({ id: calls[2].args.id, outcome: calls[2].args.outcome }, { id: 88, outcome: "failed" });
-  assert.match(calls[2].args.note_md, /answer stands and is not applied/);
+  assert.deepEqual(calls.map((c) => c.name), ["decision_get", "decision_resume_complete"]);
+  assert.match(calls[1].args.note_md, /override 0\.96/);
+  assert.deepEqual({ id: calls[1].args.id, outcome: calls[1].args.outcome }, { id: 88, outcome: "failed" });
+  assert.match(calls[1].args.note_md, /answer stands and is not applied/);
   assert.ok(!calls.some((c) => c.name === "decision_mark_applied"), "answered, never applied");
 });
 
-test("decision resume, Jev unavailable and the comment refused: the resume is still closed failed", async () => {
-  const { mcp, calls } = castalie({ decision: DECISION(HEALTHY), refuse: ["decision_comment"] });
+test("decision resume, Jev unavailable: the resume is closed failed", async () => {
+  const { mcp, calls } = castalie({ decision: DECISION(HEALTHY) });
   const { screen } = jev(null);
   const outcome = await gate("decision-resume", 88, { mcp, screen });
 

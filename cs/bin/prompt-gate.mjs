@@ -11,7 +11,7 @@
 //
 // Refused → nothing is played, and the work item is closed by the verb its skill already uses for a
 // failure: the run with `scheduled_task_run_complete` (failed, the Jev reasons in its notes); the
-// decision with `decision_comment` (the reasons, on the sheet) then `decision_resume_complete`
+// decision with `decision_resume_complete` (the reasons in its note)
 // (failed), which leaves it answered and not applied, back at the top of its addressee's inbox.
 //
 // Exit code: 0 = pass (or, with `-- <command>`, the command's own exit code, the command being
@@ -82,12 +82,6 @@ export const GATES = {
       + `the resume prompt, or a person applies the answer by hand.`,
     close: async (mcp, id, note) => {
       const made = [];
-      // The comment puts the reasons on the sheet a person reads. Castalie refuses it to a service
-      // token and on some settled decisions: that refusal never keeps the resume from being closed.
-      try {
-        await mcp("decision_comment", { id, body_md: note.slice(0, 2000) });
-        made.push("decision_comment");
-      } catch { /* the resume's own close below carries the same note */ }
       await mcp("decision_resume_complete", { id, outcome: "failed", note_md: note });
       made.push("decision_resume_complete");
       return made;
@@ -194,7 +188,7 @@ export const HELP = `cs prompt gate — screen a prompt stored in Castalie befor
 
 Reads the run's prompt_snapshot_md (and continuation_md), or the decision's resume_prompt_md with the
 person's answer, and screens it with Jev (cs prompt screen, fails closed). Refused: the run is closed
-failed (scheduled_task_run_complete), the resume failed (decision_comment, decision_resume_complete),
+failed (scheduled_task_run_complete), the resume failed (decision_resume_complete),
 and the command after -- is never launched. Prints { verdict, reasons, warnings, warning_md, closed,
 note_md, calls }: outbound and off_purpose only warn for these two kinds; quote warning_md in the notes.
 Exit 0 = pass (or the command's own exit code), 2 = refused, 1 = the stored prompt could not be read.`;

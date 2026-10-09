@@ -138,7 +138,7 @@ as above, and on a refusal closes the work item with the verb its skill already 
 | Target | Kind | What is screened | Refused |
 |---|---|---|---|
 | `gate scheduled-run` | `scheduled_task` | the run's `prompt_snapshot_md`, then its `continuation_md` | `scheduled_task_run_complete(outcome=failed, final_status=failed)`, Jev's reasons in `notes_md` |
-| `gate decision-resume` | `decision_resume` | `resume_prompt_md`, then the answer's option and words | `decision_comment` with the reasons, then `decision_resume_complete(outcome=failed)`: the decision stays answered and not applied |
+| `gate decision-resume` | `decision_resume` | `resume_prompt_md`, then the answer's option and words | `decision_resume_complete(outcome=failed)`, the reasons in its `note_md`: the decision stays answered and not applied |
 
 - Exit 0 = pass; 2 = refused; 1 = the stored prompt could not be read (nothing screened, launched or
   closed). It prints `{ verdict, reasons, warnings, warning_md, closed, note_md, calls }`;

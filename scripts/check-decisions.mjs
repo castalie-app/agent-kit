@@ -276,8 +276,8 @@ check("one waiting decision reads in the singular",
   ];
   check("only the servers serving the inbox are read", decisionServersOf(tools).join() === "castalie,benedic");
 
-  check("an answer, a comment, a filing and a cancel are writes",
-    ["decision_answer", "decision_comment", "decision_create", "decision_cancel", "decision_revise_answer"].every(
+  check("an answer, a reassignment, a filing and a cancel are writes",
+    ["decision_answer", "decision_reassign", "decision_create", "decision_cancel", "decision_revise_answer"].every(
       (verb) => decisionWriteOf(`mcp__castalie__${verb}`) === verb,
     ));
   check("a read and a verb of something else are not",
@@ -369,7 +369,7 @@ check("one waiting decision reads in the singular",
     refresh: () => (refreshes += 1),
   });
   check("a read is no write", !burst.wrote("mcp__castalie__decision_list", { scope: "mine" }));
-  burst.wrote("mcp__castalie__decision_comment", { id: 77, body_md: "x" });
+  burst.wrote("mcp__castalie__decision_reassign", { id: 77, addressee_user_id: 3 });
   burst.wrote("mcp__castalie__decision_answer", { id: 81, option_id: 401 });
   await burst.settled();
   timers.filter((timer) => !timer.cancelled).forEach((timer) => timer.fn());

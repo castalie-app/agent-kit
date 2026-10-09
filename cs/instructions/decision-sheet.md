@@ -348,8 +348,7 @@ can play the resume: `resume_mode` `robot_prompt` with a `resume_prompt_md` in p
   cost and what it gives up. How a spec places its choices: `plan-tree.md`.
 - **Readers ask before they answer.** What a person writes in « Autre réponse ou question » and
   sends as a question reaches you as a context question (`decision-resume --context`): answer it
-  with `decision_add_context(context_ask_id=…)`. `decision_comment` still records a remark on an
-  option through MCP; `decision_get` returns them in `comments[]`.
+  with `decision_add_context(context_ask_id=…)`.
 - **Read how the answer was given.** `answer.read` says whether the 250- or 500-word level was
   opened before the answer. `answer.confirmed` false means a decision that matters was settled on
   its recommendation without opening it: confirm with the person before acting (`decision-resume`).

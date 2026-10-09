@@ -3474,40 +3474,6 @@
       }
     },
     {
-      "name": "decision_comment",
-      "kind": "write",
-      "description": "Comment on an option or on a line of a decision's detailed context without settling it — what the sheet's « Commenter » does. The asker reads comments in decision_get. Refused to a viewer, to a service token, and on a decision already settled.",
-      "params": [
-        {
-          "name": "id",
-          "type": "int",
-          "required": true,
-          "description": "The decision id."
-        },
-        {
-          "name": "body_md",
-          "type": "string",
-          "required": true,
-          "description": "The comment, at most 2000 characters."
-        },
-        {
-          "name": "option_id",
-          "type": "int",
-          "required": false,
-          "description": "The option commented on, from decision_get. Omit for a line of the context or the sheet as a whole."
-        },
-        {
-          "name": "quote",
-          "type": "string",
-          "required": false,
-          "description": "The line of the detailed context commented on, as written there, at most 300 characters."
-        }
-      ],
-      "returns": {
-        "success": "bool"
-      }
-    },
-    {
       "name": "discussion_post",
       "kind": "write",
       "description": "Say something about a brief, a spec or a bug. The thread opens on the first message rather than when a sheet is displayed, so an empty thread means nobody has spoken — not that nobody answered. author_kind separates a person from their agent: pass \"agent\" when you are writing on somebody's behalf, and the thread will say so instead of signing it as them. author_user_id goes further: it signs the message with the automation's OWN account, so no colleague is told about words they never wrote. An agent reply to a bug awaiting reporter feedback releases it and returns awaiting_validation to new — provided the caller may write in this workspace; a read-only member's message is still posted and the ticket stays parked, which the answer says with bug_released_from_awaiting_feedback.",
