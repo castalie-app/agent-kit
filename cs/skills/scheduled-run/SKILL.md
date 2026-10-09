@@ -156,6 +156,10 @@ same key, character for character. `asked_by_agent` is `scheduled-task:<task id>
 something else this run touched also stays broken. `outcome_type="decision"` and `outcome_ref_id`
 the first decision's id.
 
+**A skill whose product is a decision** — `strategy-scout`, whose leads the leader judges — is not
+blocked by it: its decisions keep the skill's own `asked_by_agent` and `dedupe_key`, which its
+learning reads across runs, and the run closes `passed` / `done` with `outcome_type="decision"`.
+
 ## 5. Tickets
 
 A ticket is the team's work, and the robot's name on a wrong one costs a colleague an hour.

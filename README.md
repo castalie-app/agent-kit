@@ -579,6 +579,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `report` | Receive a bug report or improvement request from an agent, find or create its ticket, and return the link. |
 | `acceptance` | Sit in front of the running product and fire remarks: each is queued the instant it lands, then coded one at a time in the order received — one commit per remark, a single PR. |
 | `strategy` | Explore your objectives tree (read-only) and map work to the objective it serves. |
+| `strategy-scout` | Every weekday morning, a few leads on the strategy: the topics where the leader adds the most value, scored, dug and pre-chewed into two or three moves with their cost, plus a few drawn at random, each filed as a decision the leader judges in a click. Learns from the answers; never writes to the strategy. |
 | `okr-review` | Where the objectives stand: the tree with its progress, off-track and unreported key results first, and the pace each one now demands, then the key results that read off no report. Reads only. |
 | `okr-checkin` | The check-in ritual: one pass over the key results you own, one question, a dated trace on every figure that moved. A key result measured by a workspace report is recalculated, not asked. |
 | `okr-key-result` | Give an objective its one key result, read off a report that tracks the metric over time: a report of your workspace, or the address of one elsewhere. The target is proposed from the data and confirmed by you; a key result with no report is refused. |
