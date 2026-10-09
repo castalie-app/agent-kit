@@ -262,10 +262,11 @@ export function runProcess(command, args, { cwd, timeoutMs = LAUNCH_TIMEOUT_MS }
     let stderr = "";
     let child;
     try {
-      // Its own hidden console on Windows. The round runs under `conhost --headless`, and a child
-      // that inherits that console answers slowly or not at all: a relay that takes 22 s from a
-      // terminal took over 120 s there, and the host's tab opener never returned (spec 89, 9 Oct 2026).
-      child = spawn(command, args, { cwd, windowsHide: true, detached: process.platform === "win32", stdio: ["ignore", "pipe", "pipe"] });
+      // Never `detached` on Windows: it starts the child with no console at all, and the host's tab
+      // opener (a pwsh script) then exits 0 in two seconds having opened nothing. The round already
+      // runs in a hidden real console (run-hidden.vbs), which the child inherits. On 9 October 2026
+      // the first real red was reported delivered twice to a new session that never started.
+      child = spawn(command, args, { cwd, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     } catch (error) {
       done({ code: null, stdout, stderr, error: error.message });
       return;
