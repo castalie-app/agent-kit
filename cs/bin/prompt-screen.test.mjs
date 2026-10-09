@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
-  MODEL, NOUL_THRESHOLD, QUESTIONS, SEVERITY_THRESHOLD, TYPESAFE_URL, WARN_ONLY, readApiKey, screenPrompt, verdictFrom,
+  MODEL, NOUL_THRESHOLD, QUESTIONS, SEVERITY_THRESHOLD, TYPESAFE_URL, WARN_ONLY, hostKeyEnv, readApiKey, screenPrompt, verdictFrom,
 } from "./prompt-screen.mjs";
 
 const answers = (nouls = {}, severity = 0.02) => ({
@@ -176,4 +176,21 @@ test("a warning is logged with the verdict", async () => {
   const line = JSON.parse(readFileSync(join(dir, "2026-10-08.jsonl"), "utf8").trim());
   assert.equal(line.verdict, "pass");
   assert.deepEqual(line.warnings, ["outbound 0.90"]);
+});
+
+test("the key is read under the name the host declares, after TYPESAFE_API_KEY and before the credential", () => {
+  const run = () => { throw new Error("the credential must not be read"); };
+  assert.equal(readApiKey({ env: { TYPESAFE_API_KEY: " a ", AiProviderKeys__TypeSafe: "b" }, platform: "win32", keyEnv: "AiProviderKeys__TypeSafe", run }), "a");
+  assert.equal(readApiKey({ env: { AiProviderKeys__TypeSafe: " b " }, platform: "win32", keyEnv: "AiProviderKeys__TypeSafe", run }), "b");
+  assert.equal(readApiKey({ env: { AiProviderKeys__TypeSafe: "b" }, platform: "linux", keyEnv: "NOT-A-NAME;rm" }), null);
+  assert.equal(readApiKey({ env: {}, platform: "linux", keyEnv: "AiProviderKeys__TypeSafe" }), null);
+});
+
+test("the host names its key in .cs/config.json, found from the working copy upwards", () => {
+  const dir = mkdtempSync(join(tmpdir(), "cs-keyenv-"));
+  mkdirSync(join(dir, ".cs"));
+  writeFileSync(join(dir, ".cs", "config.json"), JSON.stringify({ promptScreen: { keyEnv: "AiProviderKeys__TypeSafe" } }));
+  mkdirSync(join(dir, "scripts"));
+  assert.equal(hostKeyEnv(join(dir, "scripts")), "AiProviderKeys__TypeSafe");
+  assert.equal(hostKeyEnv(tmpdir()), null);
 });

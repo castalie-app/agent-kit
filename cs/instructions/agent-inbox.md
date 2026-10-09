@@ -82,9 +82,12 @@ The task « Castalie - agent inbox » runs every minute with no window (`conhost
 from the marketplace copy of the kit, nine minutes at most per pass. `cs inbox uninstall` removes it.
 The token is read as `cs agent-tasks` reads it (`agent-tasks.md`).
 
-The screen needs a TypeSafe key on that machine: `TYPESAFE_API_KEY`, or the Windows credential
-`typesafe` read through `~/.claude/keys/get-key.ps1`. Without it, every message is refused, « Jev
-screening unavailable »: the round fails closed.
+The screen needs a TypeSafe key on that machine, read by name in this order: `TYPESAFE_API_KEY`;
+then the environment variable the host names in `.cs/config.json` → `promptScreen.keyEnv`; then the
+Windows credential `typesafe` read through `~/.claude/keys/get-key.ps1`. **A team that already
+distributes a TypeSafe key reuses it**: it names that variable instead of creating a key for the
+screen — `{ "promptScreen": { "keyEnv": "AiProviderKeys__TypeSafe" } }`. Without any key, every message
+is refused, « Jev screening unavailable »: the round fails closed.
 
 ## The screen: `cs prompt screen`
 
