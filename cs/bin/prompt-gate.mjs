@@ -27,7 +27,7 @@ import { readConfigFrom, resolveToken } from "./agent-tasks.mjs";
 import { resolveConnection } from "./auth.mjs";
 import { bareEndpoint } from "./config.mjs";
 import { callTool } from "./inbox.mjs";
-import { screenPrompt } from "./prompt-screen.mjs";
+import { hostKeyEnv, screenPrompt } from "./prompt-screen.mjs";
 
 /** The text a session would play, exactly as stored, with what the run or the answer adds to it. */
 export function scheduledRunText(run) {
@@ -216,7 +216,9 @@ export async function runCli(argv, deps = {}) {
     }
   }
   const run = deps.run || runCommand;
-  const outcome = await gate(target, id, { mcp, screen: deps.screen });
+  const repo = resolve(args.repo && args.repo !== true ? args.repo : process.cwd());
+  const screen = deps.screen || ((message) => screenPrompt(message, { keyEnv: hostKeyEnv(repo) }));
+  const outcome = await gate(target, id, { mcp, screen });
   // With a command to launch, its own stdout is what the launcher reads (a session's JSON output,
   // its cost): the gate's line goes to stderr so it never lands in front of it.
   const print = deps.print || (args.command.length ? (line) => console.error(line) : (line) => console.log(line));

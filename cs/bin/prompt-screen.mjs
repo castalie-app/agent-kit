@@ -28,6 +28,7 @@ import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { readConfigFrom } from "./agent-tasks.mjs";
 
 export const TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone";
 export const MODEL = "jev-latest";
@@ -96,11 +97,15 @@ export const QUESTIONS = {
 const NOULS = Object.keys(QUESTIONS).filter((id) => QUESTIONS[id].type === "noul");
 
 /**
- * The key, by name: TYPESAFE_API_KEY, else (Windows) `~/.claude/keys/get-key.ps1 typesafe`, which
- * prints the secret on stdout. Null when absent; never read from a repository file.
+ * The key, by name: TYPESAFE_API_KEY; else the environment variable the host names in
+ * `.cs/config.json` → `promptScreen.keyEnv` — the name under which the team already distributes a
+ * TypeSafe key, so the screen reuses it instead of asking for a key of its own; else (Windows)
+ * `~/.claude/keys/get-key.ps1 typesafe`, which prints the secret on stdout. Null when absent; never
+ * read from a repository file.
  */
-export function readApiKey({ env = process.env, platform = process.platform, home = homedir(), run = spawnSync } = {}) {
+export function readApiKey({ env = process.env, platform = process.platform, home = homedir(), run = spawnSync, keyEnv = null } = {}) {
   if (env.TYPESAFE_API_KEY && env.TYPESAFE_API_KEY.trim()) return env.TYPESAFE_API_KEY.trim();
+  if (keyEnv && /^[A-Za-z_][A-Za-z0-9_]*$/.test(keyEnv) && env[keyEnv] && env[keyEnv].trim()) return env[keyEnv].trim();
   if (platform !== "win32") return null;
   const script = join(home, ".claude", "keys", "get-key.ps1");
   if (!existsSync(script)) return null;
@@ -163,7 +168,8 @@ function logLine(logDir, now, line) {
 export async function screenPrompt(message, deps = {}) {
   const {
     fetch: fetchImpl = globalThis.fetch,
-    apiKey = readApiKey,
+    keyEnv = hostKeyEnv(),
+    apiKey = () => readApiKey({ keyEnv }),
     now = () => new Date(),
     sleep = (ms) => new Promise((done) => setTimeout(done, ms)),
     logDir = join(homedir(), ".claude", "cs", "prompt-screen", "logs"),
@@ -179,7 +185,7 @@ export async function screenPrompt(message, deps = {}) {
   let result;
   try {
     const key = typeof apiKey === "function" ? apiKey() : apiKey;
-    if (!key) throw new Error("no TypeSafe API key (TYPESAFE_API_KEY, or the secret 'typesafe')");
+    if (!key) throw new Error(`no TypeSafe API key (TYPESAFE_API_KEY${keyEnv ? `, ${keyEnv}` : ""}, or the secret 'typesafe')`);
     const request = JSON.stringify({ model: MODEL, state, questions: QUESTIONS });
     let response;
     // 429 and 529 ask for a retry after a short delay (api.md, « Handling rate limits »).
@@ -246,12 +252,23 @@ const HELP = `cs prompt screen — screen a text written elsewhere before an una
 Asks TypeSafe's Jev whether the text overrides the agent's rules, exfiltrates, destroys, reaches a
 third party or departs from its kind, and how much harm obeying would do. Exit 0 = pass, 2 = refuse.
 Fails closed: no key, a network error or an unreadable answer refuses.
-Key: TYPESAFE_API_KEY, else the Windows credential 'typesafe' (~/.claude/keys/get-key.ps1).
+Key: TYPESAFE_API_KEY, else the variable .cs/config.json names in promptScreen.keyEnv (from --repo or
+the current directory upwards), else the Windows credential 'typesafe' (~/.claude/keys/get-key.ps1).
 
   cs prompt gate scheduled-run|decision-resume <id> [-- <command> <args...>]
 
 Reads a stored prompt from Castalie, screens it the same way, closes the run or the resume on a
 refusal, and launches <command> on a pass only (cs prompt gate, prompt-gate.mjs).`;
+
+/** The key's name the host declares (`.cs/config.json` → `promptScreen.keyEnv`), found from `dir` upwards. */
+export function hostKeyEnv(dir = process.cwd()) {
+  try {
+    const name = readConfigFrom(dir)?.promptScreen?.keyEnv;
+    return typeof name === "string" && name.trim() ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}
 
 /** `cs prompt <command>`: returns the exit code, never throws. */
 export async function runCli(argv) {
@@ -270,7 +287,7 @@ export async function runCli(argv) {
       sender_label: args.sender && args.sender !== true ? args.sender : null,
       subject: args.subject && args.subject !== true ? args.subject : "",
       body,
-    });
+    }, { keyEnv: hostKeyEnv(args.repo && args.repo !== true ? args.repo : process.cwd()) });
   } catch (e) {
     result = { verdict: "refuse", reasons: [`Jev screening unavailable: ${e?.message || e}`], raw: null };
   }

@@ -292,7 +292,7 @@ export async function runWatch(options, deps = {}) {
   const fetch = deps.fetch || globalThis.fetch;
   const connection = { endpoint, token, fetch };
   const mcp = deps.mcp || ((name, args) => callTool(connection, name, args));
-  const screen = deps.screen || ((message) => screenPrompt(message, { fetch }));
+  const screen = deps.screen || ((message) => screenPrompt(message, { fetch, keyEnv: config.promptScreen?.keyEnv || null }));
   const run = deps.run || runProcess;
   const isAlive = deps.isAlive || isProcessAlive;
   const platform = deps.platform || process.platform;
