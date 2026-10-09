@@ -358,9 +358,12 @@ export async function runWatch(options, deps = {}) {
         const target = { name: plan.live.name || null, sessionId: plan.live.sessionId };
         const result = await run("claude", ["-p", relayInstruction(target, deliveredText(item)), "--model", RELAY_MODEL,
           "--allowedTools", "ToolSearch,ListAgents,SendMessage"], { cwd: home, timeoutMs: RELAY_TIMEOUT_MS });
+        // What the relay printed before it stopped goes into the log with the failure: a timeout alone
+        // says nothing about where it hung (spec 89, 9 Oct 2026).
+        const tail = String(result.stdout || "").slice(-300) + (result.stderr ? ` | stderr: ${String(result.stderr).slice(-300)}` : "");
         return relaySucceeded(result)
           ? { ok: true, sessionId: plan.live.sessionId }
-          : { ok: false, detail: result.error || `relay exit ${result.code}: ${String(result.stdout || result.stderr).slice(-300)}` };
+          : { ok: false, detail: `${result.error || `relay exit ${result.code}`}: ${tail}` };
       }
       if (how === "resumed") {
         const template = config.inbox?.openTab || (platform === "win32" ? DEFAULT_OPEN_TAB : null);
