@@ -19,7 +19,7 @@ decode; two sessions ending a turn two different ways cost more than either shap
 verdicts: finished here for you, the session can be closed — only once its work item is closed
 where it is tracked, its code is merged into the main branch, its working copy is clean and parked
 on that branch's head, and nothing is left for the user; what only an outside event or a release
-still moves is a scheduled follow-up, and the turn ends finished; to do: the gesture left to the user, where it
+still moves is a scheduled follow-up, and the turn ends finished; to do: the gesture you tried and only the user can finish, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
 what; or, I need you: the question, its
 description in 80 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
@@ -106,7 +106,7 @@ render it.
   right after the release, and a failure, or no play within two hours, relaunches the work by itself.
   Ordinary follow-ups (next day and later) never qualify a turn for this exception.
   `> **Terminé ici pour vous** : mise en production en cours, le travail sera relancé si besoin.`
-- **A gesture only the user can perform**, once everything else is delivered, ends the turn on
+- **A gesture only the user can perform**, once you tried it yourself and everything else is delivered, ends the turn on
   *To do*, never *Finished* nor *I need you*; one another session already took on is not asked
   again.
 - **I need you is the decision sheet, and nothing else.** The question in bold; its description in
