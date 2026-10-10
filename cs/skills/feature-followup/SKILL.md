@@ -30,13 +30,18 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    evidence.
 4. **Act on failure per `onFailAction`.** `create_spec` → draft a corrective `feature-spec`; `bug_fix` /
    `implement_spec` → note the follow-up work. Record what you decided.
-   **A post-deploy check relaunches the work** (`postDeploy` on the check; an ordinary follow-up
-   never does). When it fails, or needs a person's decision, close its run with
-   `mcp__castalie__followup_run_complete(…, relaunch_prompt_md=…)`: a prompt addressed to the session
-   that will take the work back, which receives it word for word as its first message. A check whose
-   phase is not delivered yet is rescheduled (`followup_run_reschedule`), never failed. Say the criterion that was missed, what you measured (figures, queries,
+   **A post-deploy check relaunches the work only on a real problem** (`postDeploy` on the check; an
+   ordinary follow-up never does): a criterion measured and missed, or a decision a person must
+   take. Then close its run with `mcp__castalie__followup_run_complete(…, relaunch_prompt_md=…)`: a
+   prompt addressed to the session that will take the work back, which receives it word for word as
+   its first message. Say the criterion that was missed, what you measured (figures, queries,
    links) and what that session must do: fix, replay the measure, or settle a named decision. It
    is read alone, without the rest of the report.
+   **A check that could measure nothing yet never relaunches.** When its data is not produced yet
+   (a scheduled batch, a task, an expected trigger that has not run since the delivery) or its
+   phase is not delivered yet, reschedule the run past that producer's next pass
+   (`followup_run_reschedule`). Never fail it, never close it with `relaunch_prompt_md`: the server
+   refuses a relaunch prompt on a skipped run.
    **Any other run that needs a person is a decision on the run**, never a bare
    `finalStatus=human_required`: first `decision_create(subject_kind="followup_run",
    subject_id=<run>)`, written by `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, with
