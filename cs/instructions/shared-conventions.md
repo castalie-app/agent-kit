@@ -15,12 +15,13 @@ decode; two sessions ending a turn two different ways cost more than either shap
 
 ## The two rules, verbatim
 
-**A turn ends** only on a delivered result or a cited legitimate stop, and names one of five
+**A turn ends** only on a delivered result or a cited legitimate stop, and names one of four
 verdicts: finished here for you, the session can be closed — only once its work item is closed
 where it is tracked, its code is merged into the main branch, its working copy is clean and parked
-on that branch's head, and nothing is left for the user; to do: the gesture left to the user, where it
+on that branch's head, and nothing is left for the user; what only an outside event or a release
+still moves is a scheduled follow-up, and the turn ends finished; to do: the gesture left to the user, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
-what; waiting, on what, when no agent is working on it; or, I need you: the question, its
+what; or, I need you: the question, its
 description in 80 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
 ("I'll check X next", "j'enchaîne", "the loop/cron will resume it") — execute it in the same turn;
 a loop tick is a safety net for a dead turn, never a reason to defer work you can do now. A check
@@ -60,7 +61,7 @@ the terminal included. They need no loading, because they are here:
 a spec or a ticket, a procedure) also loads the skill, for its replacements and its check, and runs
 the check on the text before handing it back.
 
-## The five verdicts, as they print
+## The four verdicts, as they print
 
 The rules above stay in English; the verdict is written in the user's language. In French:
 
@@ -70,10 +71,6 @@ The rules above stay in English; the verdict is written in the user's language. 
 
 ```
 > **En cours** : l'onglet Green Acres retire les modules déjà servis par Castalie, une PR par module.
-```
-
-```
-> **En attente** : de la mise en production du correctif, pour la sonde de disponibilité.
 ```
 
 ```
@@ -90,21 +87,20 @@ The rules above stay in English; the verdict is written in the user's language. 
 > **D.** Autre réponse ou question.
 ```
 
-In English the headings are **Finished here for you**, **To do**, **In progress**, **Waiting** and
-**I need you**.
+In English the headings are **Finished here for you**, **To do**, **In progress** and **I need you**.
 The finished heading always names its scope: never « Finished » or « Terminé » alone. The
 blockquote is the whole mechanism: the terminal draws it as a vertical bar, and nothing else has to
 render it.
 
-- **Exactly one of the five**, and it is the last block of the turn.
-- **In progress, not Waiting, when an agent is at work.** The turn waits on work an agent is
-  doing now: a sub-agent, a workflow, a tab or another session this one handed it to, its own
-  background command. The heading tells the person that nothing is stuck and nobody needs them.
-  *Waiting* is kept for what no agent moves: a person, a release pipeline, an outside event, a
-  decision. When the turn waits on both, *In progress* wins, and the line names the agent first.
+- **Exactly one of the four**, and it is the last block of the turn.
+- **In progress only while an agent is at work** (a sub-agent, a workflow, a tab or another
+  session this one handed it to, its own background command). What no agent moves (a release
+  pipeline, an outside event, a date) is a scheduled follow-up, and the turn ends on *Finished*;
+  what needs a person is a filed decision, and the turn ends on *I need you*. No turn ends on an
+  open wait.
 - **Finished waits for the tracker**: while the work item is still open where it is tracked, its code
   unmerged into the main branch, or its working copy dirty or off that branch's head, the
-  verdict is *In progress* or *Waiting*, on whatever closes it. One exception: when all that is left is a production
+  verdict is *In progress* or *I need you*, on whatever closes it. One exception: when all that is left is a production
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
   right after the release, and a failure, or no play within two hours, relaunches the work by itself.
@@ -138,8 +134,8 @@ render it.
   robot, a tab left alone) does not end on a question nobody will read: it files the decision in
   Castalie with `decision_create`, on the work it blocks, written by
   `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, carries on with what does not depend on
-  it, and ends on *Waiting*, on that decision and its link.
-  `> **En attente** : de la décision « Fusionner la correction de la TVA ? », adressée à Claire.`
+  it, and ends on *I need you*, naming that decision and its link.
+  `> **J'ai besoin de vous** : décision « Fusionner la correction de la TVA ? », adressée à Claire.`
 
 ## The prose around it
 

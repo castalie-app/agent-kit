@@ -90,7 +90,7 @@ it and closes the brief in one call. What the server cannot do is the replay —
 ## Report
 
 Two lines, then the link to the brief's page (`brief.url` from `feature_brief_get`): the verdict — accepted,
-or waiting on the owner or on a release — and the count of criteria passed, not applicable and failed.
+or with its owner's decision filed, or with its release follow-up scheduled — and the count of criteria passed, not applicable and failed.
 The detail lives on the page, where the verdicts are.
 
 ## Hand back
