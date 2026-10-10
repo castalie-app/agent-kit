@@ -22,8 +22,10 @@ it pins a check to one phase's delivery instead of the subject's first.
 after its release. Register it when you request the release: `followup_check_add(…, postDeploy=true,
 anchorPrUrl=<the pull request>)`. It is due the moment the delivery is recorded, the developer's own
 machine plays it right away, and it is the only check that reopens the shipping session's work: when
-it fails or needs a decision, or is not played within two hours of the delivery. Register one only
-where an immediate production check makes sense; the rest is an ordinary follow-up.
+it fails or needs a decision, or is not played within two hours of the delivery. A skipped run
+never relaunches anything. Register one only when the delivery itself makes the change observable.
+A check that waits on a scheduled batch or task is an ordinary follow-up, anchored on the delivery
+(`anchorPrUrl`), with an offset that falls after that batch's next pass.
 
 **A run that needs a person is a decision on the run.** Only the post-deploy check relaunches a
 session (`relaunch_prompt_md`), and that relaunch needs no decision. Every other run that cannot
@@ -38,8 +40,9 @@ reschedule it.
 put the measurement in a check: a spec waiting on its check while its check waits on the spec moves
 neither.
 
-**A check played too early** (its phase not delivered yet) is rescheduled (`followup_run_reschedule`),
-never failed.
+**A check played too early** (its phase not delivered yet, or the batch or task that produces its
+data has not run since the delivery) is rescheduled past that pass (`followup_run_reschedule`),
+never failed, never closed as a relaunch.
 
 ## First horizon — set by `feature-spec`
 
