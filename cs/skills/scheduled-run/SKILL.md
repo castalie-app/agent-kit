@@ -115,6 +115,13 @@ A decision is put to a person with `decision_create`, written by
 `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`. No other channel: not a ticket, not a comment
 alone, not a question in the run's notes. Castalie notifies the person it is addressed to.
 
+**Ask only what a person must decide.** Never ask to confirm doing nothing: when nothing needs
+doing — no deadline within reach, no saving, an answer « wait » already given and no fact changed —
+file nothing and write it in the run's notes. A question already answered is not re-asked without
+a changed fact. A run asks ONE question per kind, never one per subject: ten models to upgrade are
+one sheet listing the ten, filed only when it recommends an action. The server refuses the rest
+(`status_quo_is_not_a_decision`, `batch_one_question_per_kind`, `question_dismissed_as_useless`).
+
 **The key.** Every decision of this task carries a `dedupe_key` built from what does not change
 between runs: `scheduled-task:<task id>:<what to decide>`, or the subject's own terms when it has
 them — `model-upgrade:<usage>:<candidate>`. The same question asked by the next run produces the
@@ -135,7 +142,13 @@ same key, character for character. `asked_by_agent` is `scheduled-task:<task id>
      `decision_add_context`; a fact that overturns it is a new sheet, `decision_supersede`.
    - **Answered or applied earlier**: when its answer still applies (« stay », « wait until the
      vendor's end date ») and nothing it rested on has changed, do not ask again. Ask again only
-     when the facts changed, and say which ones in the summary.
+     when the facts changed — under a new key that names the fact — and say which ones in the summary.
+   - **Cancelled with `dismissed_as_useless`**: a person said the question was not worth asking.
+     Do not ask it again, under any key, unless a fact changed.
+4. `decision_list(asked_by_agent="scheduled-task:<task id>", status=all, dedupe_key_prefix=<family>:)`
+   — the precedents: the same kind of question on another subject. When a person already answered
+   it and nothing it rested on changed, apply that answer yourself and write « applied by precedent
+   #N » in the notes instead of asking.
 
 **File** with every field the sheet needs:
 
