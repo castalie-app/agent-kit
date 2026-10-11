@@ -65,6 +65,34 @@ whose every option names a member.
 **Look before you file.** `decision_list(scope=subject, subject_kind, subject_id)` shows what
 already waits on that work: a question already asked is not asked again.
 
+**Never ask to confirm doing nothing.** When nothing needs doing — no deadline within reach, no
+saving, a person already answered « wait » and no fact changed — do nothing and say nothing: write
+it in your run's notes. A sheet whose recommended option changes nothing is a person's minutes
+spent approving an absence. Ask only when you recommend an action, or when a deadline forces a
+choice, and then recommend that action. The server refuses the rest on the MCP channel
+(`status_quo_is_not_a_decision`): a recommended option that keeps things as they are (« Rester »,
+« Garder », « Attendre », "Keep", "Stay", "Wait"…) with `effect` `none` or `close`.
+
+**One question per kind, never one per subject.** A run that finds the same question on ten
+subjects — ten models to upgrade, ten listings to fix — files ONE sheet listing every subject
+concerned, and only when it recommends an action on them. The server refuses the third waiting
+question of the same shape from the same `asked_by_agent` within a day (`batch_one_question_per_kind`):
+the same title once its figures and versions are masked, or two `dedupe_key`s of the same family
+(what comes before the last `:`).
+
+**Apply a precedent instead of asking again.** Before filing, look for the same kind of question a
+person already answered — `decision_list(asked_by_agent=…, status=all, dedupe_key_prefix=…)`, or
+the same subject kind and question pattern. When one exists and no fact it rested on changed,
+apply that answer yourself and write « applied by precedent #N » in your notes. A question already
+answered is never asked again without a changed fact — and then under a new `dedupe_key` that
+names the fact.
+
+**« Question inutile » is an answer about you.** A person can declare a sheet useless, on the
+screen, on the iPhone or with `decision_dismiss`: it closes without an answer, `decision_list`
+shows it `cancelled` with `dismissed_as_useless: true` and its `cancel_reason`, and the same
+question under the same `dedupe_key` is refused for good (`question_dismissed_as_useless`). Read
+it as « do not ask me this kind of question », not as « not now ».
+
 ## The description, at three depths
 
 | Field | Length — a target, ±10 % | What it holds |
@@ -158,8 +186,11 @@ A question your run asks again every month (a model price, a licence renewal) ca
 `model-upgrade:<usage>:<candidate>`. A second filing while one waits is refused with
 `decision_already_pending` and the waiting decision's id (`pending_decision_id`).
 
-Before filing, read `decision_list(dedupe_key=…, status=all)`: an answer "stay" given last month,
-on the same candidate at the same price, is not asked again.
+Before filing, read `decision_list(dedupe_key=…, status=all)` — or the whole family with
+`dedupe_key_prefix="model-upgrade:"`: an answer "stay" given last month, on the same candidate at
+the same price, is not asked again — nor for the next model of the same kind. When a fact changes
+(a shutdown date, a new price), the new question carries a key that names it:
+`model-upgrade:<usage>:<candidate>:shutdown-2026-12-11`.
 
 ## How the work restarts
 
@@ -212,6 +243,9 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `addressee_not_member` | an active member of the workspace |
 | `routing_is_not_a_decision` | the answer would be a person: find the owner (brief owner, spec assignee, `domain_list_owners`, ticket assignee) and file the request TO them, or assign them the task |
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
+| `status_quo_is_not_a_decision` | the option you recommend changes nothing: do nothing, write it in your notes; ask only when you recommend an action |
+| `batch_one_question_per_kind` | the same question already waits for other subjects: supersede the waiting one with ONE sheet listing every subject, and apply any precedent instead of asking |
+| `question_dismissed_as_useless` | a person declared this question useless: do not ask it again unless a fact changed, then under a new `dedupe_key` naming the change |
 
 **After filing**, a fact that changes the picture is added with `decision_add_context` while the
 decision waits: it lands at the end of the 500-word level, which it may take up to 550 words. A fact that
