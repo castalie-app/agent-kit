@@ -42,13 +42,15 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    phase is not delivered yet, reschedule the run past that producer's next pass
    (`followup_run_reschedule`). Never fail it, never close it with `relaunch_prompt_md`: the server
    refuses a relaunch prompt on a skipped run.
-   **Any other run that needs a person is a decision on the run**, never a bare
-   `finalStatus=human_required`: first `decision_create(subject_kind="followup_run",
-   subject_id=<run>)`, written by `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, with
-   options whose effect is `continue` (a new run is due at once, with the answer joined to its
-   prompt) or `close` (the run closes as the option says); a run knows no `take_over`. Then close
-   the run with `mcp__castalie__followup_run_complete(…, finalStatus="human_required")`. A run your
-   own session left open is a run to finish or reschedule, not a decision.
+   **A check never asks a person to replay or close it — it arbitrates on its own.** A person's
+   decision is expensive; a recurring one is never asked. `decision_create` on a `followup_run` is
+   refused (`followup_decides_itself`). Close the run with your verdict
+   (`mcp__castalie__followup_run_complete`): a run closed on `finalStatus="human_required"` is
+   replayed automatically the next day, at most twice, then closed as failed with its reason. The one
+   question a check may still put to a person is about its RULE, when it cannot be applied as
+   written: pass `rule_question_md` to `followup_run_complete` — the product files ONE decision for
+   that check, never again while it waits nor once answered, and its answer rewrites the check's
+   prompt. A run your own session left open is a run to finish or reschedule.
 5. **Reschedule.** Per `${CLAUDE_PLUGIN_ROOT}/instructions/followup-conventions.md`: green + stable →
    close the loop; green first cycle of a cascade → next horizon; minor anomaly → J+7 re-check; hard
    regression → stop + flag. Apply via `mcp__castalie__followup_check_update(checkId, scheduleOffsetDays=…,
