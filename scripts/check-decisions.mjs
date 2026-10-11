@@ -22,7 +22,6 @@ import {
   askRequestOf,
   effectsFor,
   emptyDraft,
-  isRefusalOption,
   nextAfter,
   withoutCard,
 } from "../cs/hooks/decisions/answer.mjs";
@@ -587,17 +586,16 @@ check("one waiting decision reads in the singular",
   };
   check("an approval reads « Oui » and « Non »",
     answerBarOf(approval, emptyDraft(), field)?.cards.map((card) => card.title).join() === "Oui,Non");
-  check("an approval's second option is its « Non »",
-    isRefusalOption(approval, 502) && !isRefusalOption(approval, 501) && !isRefusalOption(pending, 302));
+  // Castalie acceptance 28, remark 17: « Je dois pouvoir répondre non sans me justifier en 1 clic ».
   const bareNo = answerRequestOf(approval, emptyDraft(), { optionId: 502 });
-  check("« Non » without its reason leaves nothing, in the sheet's words",
-    !bareNo.ok && bareNo.code === "answer_text_required" && bareNo.fix === "Dites pourquoi : un refus sans sa raison ne relance rien.");
+  check("« Non » without a reason leaves on its own press, channel click",
+    bareNo.ok && bareNo.args.option_id === 502 && bareNo.args.text_md === undefined && bareNo.args.channel === "click", JSON.stringify(bareNo));
   const reasoned = answerRequestOf(approval, { ...emptyDraft(), text: "Not before the audit." }, { optionId: 502 });
   check("« Non » with its reason leaves, channel text",
     reasoned.ok && reasoned.args.option_id === 502 && reasoned.args.text_md === "Not before the audit." && reasoned.args.channel === "text");
   const markedNo = answerBarOf(approval, { ...emptyDraft(), optionId: 502 }, field);
-  check("« Non » marked asks for its reason in the field",
-    markedNo?.armed?.needsReason === true && markedNo.other.field?.label === "Pourquoi « Non » :" && markedNo.armed.hint.includes("demande sa raison"));
+  check("« Non » marked asks for nothing more: Enter answers",
+    markedNo?.armed?.hint.includes("Entrée répond") === true && markedNo.other.field?.label !== "Pourquoi « Non » :" && !("needsReason" in (markedNo?.armed ?? {})));
   check("« Oui » needs no words", answerRequestOf(approval, emptyDraft(), { optionId: 501 }).ok);
 
   const accepted = answerOutcomeOf(resultOf({ success: true, decision_id: 77, status: "answered" }));

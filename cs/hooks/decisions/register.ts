@@ -12,7 +12,6 @@ import {
   answerRequestOf,
   askRequestOf,
   emptyDraft,
-  isRefusalOption,
   nextAfter,
   withoutCard,
   type Draft,
@@ -481,13 +480,9 @@ export function register(on: On, companion: Companion): void {
     return {
       arm: optionId => {
         setDraft(engine, id, { optionId, error: null })
-        // A digit only marks: Enter on « Répondre » answers. The ring goes there — or to the
-        // field, where the option is an approval's « Non » and needs its reason.
-        const decision = sheet?.id === id ? sheet.decision : null
-        const needsReason = decision !== null && isRefusalOption(decision, optionId)
-        void engine
-          .focus(Names.SHEET_PANE_ID, needsReason ? Names.ANSWER_KEYS.text : Names.ANSWER_KEYS.confirm)
-          .catch(() => undefined)
+        // A digit only marks: Enter on « Répondre » answers, an approval's « Non » included — it
+        // needs no reason (Castalie acceptance 28, remark 17). The ring goes there.
+        void engine.focus(Names.SHEET_PANE_ID, Names.ANSWER_KEYS.confirm).catch(() => undefined)
       },
       choose: optionId => safely(() => answer(engine, { optionId })),
       confirm: () => safely(() => answer(engine)),

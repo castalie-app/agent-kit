@@ -96,6 +96,23 @@ shows it `cancelled` with `dismissed_as_useless: true` and its `cancel_reason`, 
 question under the same `dedupe_key` is refused for good (`question_dismissed_as_useless`). Read
 it as « do not ask me this kind of question », not as « not now ».
 
+**« Décide-toi » means you should have decided.** A person can hand a waiting decision back — the
+red « Décide-toi » card on the screen and on the iPhone, or `decision_answer(decide_yourself:
+true)`. It comes back as an answer: no option, `effect` `continue`, `answer_kind:
+"decide_yourself"` (in `decision_get`, top level and `answer.kind`), the text « Décide toi-même :
+c'était à toi de trancher. » with the person's words after it, if any. It says you filed a
+decision that was yours to take, and did not take your responsibility. So:
+
+- **Decide it yourself, now**, with what you know and the recommendation you had drafted; apply it,
+  and write in your notes and on the subject's thread what you chose and why.
+- **Never ask it again** — not under the same `dedupe_key`, not reworded, not split, not to another
+  person. A real blocker you cannot get past (a gesture only a person can make, money you are not
+  allowed to commit) is the one exception: say so on the subject's thread instead of filing.
+- **Learn the kind.** Before the next filing of the same shape, check
+  `decision_list(answered_as=decide_yourself, asked_by_agent=<you>)`: a kind of question handed back
+  once is one you settle from then on. Each one is kept for an improvement pass on the agents that
+  ask what they should settle.
+
 ## The description, at three depths
 
 | Field | Length — a target, ±10 % | What it holds |
@@ -159,7 +176,8 @@ answer only, no options, no recommendation).
   What the person writes there is the answer, or a question that comes back to you
   (`decision-resume --context`).
 - **An `approve` carries two options, yes then no, or none** (then they are "Yes" and "No"). A "no"
-  is answered with a reason.
+  answers in one click: a reason comes with it only when the person writes one, otherwise it reads
+  « Refusé, sans motif. ». Do not ask for the reason afterwards; act on the « no ».
 
 ## Each option says what the answer does
 

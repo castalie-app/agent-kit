@@ -6,8 +6,10 @@
 // `decision_ask_context`). A written answer carries the subject's first allowed effect. It answers through
 // `decision_answer` on the workspace the decision lives in, with the session's own credentials:
 // the server holds the rights — a viewer or a service token is refused there, and the bar shows
-// its `fix`. The rules that need no server (an approval's « Non » carries its reason, a written
-// answer has words) are applied here first, in the sheet's words, so nothing leaves to be refused.
+// its `fix`. The rule that needs no server (a written answer has words) is applied here first, in
+// the sheet's words, so nothing leaves to be refused. An approval's « Non » answers on its own press
+// (Castalie acceptance 28, remark 17: « Je dois pouvoir répondre non sans me justifier en 1 clic »):
+// words in the field go with it, none are asked for.
 //
 // `views.tsx` draws what `answerBarOf` answers; `register.ts` sends what `answerRequestOf` answers
 // and reads the reply with `answerOutcomeOf`.
@@ -30,9 +32,7 @@ import {
   NO_FIELD_TEXT,
   OTHER_PLACEHOLDER,
   OTHER_TITLE,
-  REASON_HINT,
   TEXT_LABEL_FREE,
-  TEXT_LABEL_REASON,
   TEXT_SUBMIT,
 } from "./names.mjs";
 
@@ -71,18 +71,6 @@ export function optionTitleOf(decision, option) {
 }
 
 /**
- * Whether this option is an approval's « Non », which the server refuses without its reason: the
- * second option of an approval, in display order.
- *
- * @param {Decision} decision
- * @param {number | null} optionId
- */
-export function isRefusalOption(decision, optionId) {
-  if (decision.shape !== "approve" || optionId === null) return false;
-  return decision.options.findIndex((option) => option.id === optionId) === 1;
-}
-
-/**
  * The answering half of a sheet, as data — null where the decision no longer waits: one card per
  * option, then the card « Autre réponse ou question ».
  *
@@ -114,20 +102,17 @@ export function answerBarOf(decision, draft, surface) {
   });
 
   const chosen = cards.find((card) => card.isArmed) ?? null;
-  const needsReason = chosen !== null && isRefusalOption(decision, chosen.id);
   const armed =
     chosen === null
       ? null
       : {
           id: chosen.id,
           title: chosen.title,
-          needsReason,
-          hint: needsReason ? REASON_HINT(chosen.title) : ARMED_HINT(chosen.title),
+          hint: ARMED_HINT(chosen.title),
           confirm: CONFIRM_TEXT(chosen.title),
         };
 
-  const label =
-    decision.shape === "free_text" ? TEXT_LABEL_FREE : armed !== null && armed.needsReason ? TEXT_LABEL_REASON(armed.title) : OTHER_TITLE;
+  const label = decision.shape === "free_text" ? TEXT_LABEL_FREE : OTHER_TITLE;
 
   return {
     error: draft.error,
@@ -175,9 +160,6 @@ export function answerRequestOf(decision, draft, chosen = {}) {
   const text = draft.text.trim() === "" ? null : draft.text.trim();
 
   if (optionId !== null) {
-    if (isRefusalOption(decision, optionId) && text === null) {
-      return { ok: false, code: "answer_text_required", fix: LOCAL_REFUSALS.reason_required };
-    }
     return {
       ok: true,
       args: { id: decision.id, option_id: optionId, ...(text === null ? {} : { text_md: text }), channel: text === null ? "click" : "text" },

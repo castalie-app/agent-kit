@@ -3594,6 +3594,15 @@
           "description": "Only decisions filed by this agent."
         },
         {
+          "name": "answered_as",
+          "type": "string",
+          "required": false,
+          "description": "Only answers of this kind: decide_yourself — every sheet a person handed back with « Décide-toi » because the asking agent should have settled it itself. Without a status, every status is read. With asked_by_agent, one agent's list for an improvement pass.",
+          "enum": [
+            "decide_yourself"
+          ]
+        },
+        {
           "name": "origin",
           "type": "string",
           "required": false,
@@ -3629,13 +3638,13 @@
         "never_opened": "int",
         "page_url": "string — the inbox",
         "objective_id": "int — the objective filtered on, when objective_id was passed",
-        "decisions": "object[] — each with url, cancel_reason and dismissed_as_useless"
+        "decisions": "object[] — each with url, cancel_reason, dismissed_as_useless and answer_kind"
       }
     },
     {
       "name": "decision_answer",
       "kind": "write",
-      "description": "Record a person's answer through the tool contract instead of the sheet — the answer a person just gave you in this session, signed as them. Pick an option (option_id), or write the answer (text_md) and say what it does (effect). A \"no\" on an approval and a free_text decision need words (answer_text_required). Refused decision_not_pending once answered; a service token never answers (answer_requires_person).",
+      "description": "Record a person's answer through the tool contract instead of the sheet — the answer a person just gave you in this session, signed as them. Pick an option (option_id), or write the answer (text_md) and say what it does (effect), or hand the decision back with decide_yourself: true — the sheet's red « Décide-toi » card: answered with effect continue, no option, the text « Décide toi-même : c'était à toi de trancher. » (text_md follows it), answer_kind decide_yourself, journal handed_back. A free_text decision needs words (answer_text_required); a \"no\" on an approval answers on its own, a bare one reading « Refusé, sans motif. ». Refused decision_not_pending once answered; a service token never answers (answer_requires_person).",
       "params": [
         {
           "name": "id",
@@ -3673,6 +3682,13 @@
             "mcp"
           ],
           "default": "mcp"
+        },
+        {
+          "name": "decide_yourself",
+          "type": "bool",
+          "required": false,
+          "description": "true: the person answered « Décide-toi » — the asking agent decides itself. Takes no option_id (decide_yourself_takes_no_option).",
+          "default": false
         }
       ],
       "returns": {
@@ -3683,6 +3699,8 @@
         "answer_channel": "string",
         "answer_adjusted": "bool",
         "resume_job_state": "string",
+        "answer_kind": "string | null — decide_yourself when the person handed the decision back",
+        "next_decision_id": "int | null — the caller's next waiting decision",
         "url": "string"
       }
     },

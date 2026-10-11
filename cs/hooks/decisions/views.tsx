@@ -248,7 +248,7 @@ export type AnswerBarView = {
   error: string | null
   isSending: boolean
   cards: { id: number; title: string; href: string | null; markdown: string; hotkey: string | undefined; isRecommended: boolean; isArmed: boolean }[]
-  armed: { id: number; title: string; needsReason: boolean; hint: string; confirm: string } | null
+  armed: { id: number; title: string; hint: string; confirm: string } | null
   other: {
     title: string
     asks: string | null
