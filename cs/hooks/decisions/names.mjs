@@ -139,9 +139,7 @@ export const ANSWER_VERB = "decision_answer";
 /** The elements of the answer bar, by key: what a press, a typing and a focus name. */
 export const ANSWER_KEYS = {
   option: (id) => `option-${id}`,
-  choose: (id) => `choose-${id}`,
-  confirm: "confirm",
-  disarm: "disarm",
+  decideYourself: "decide-yourself",
   text: "answer-text",
   effect: "effect",
   send: "send-text",
@@ -163,7 +161,6 @@ export const EFFECT_CHOICES = {
 export const APPROVAL_TITLES = { Yes: "Oui", No: "Non" };
 
 export const CHOOSE_TEXT = "Choisir";
-export const DISARM_TEXT = "annuler le choix";
 export const ANSWER_HEADING = "Votre réponse";
 export const TEXT_LABEL_FREE = "Votre réponse :";
 export const TEXT_LABEL_OTHER = "Répondre autrement ou ajuster :";
@@ -172,16 +169,17 @@ export const TEXT_PLACEHOLDER = "Écrivez votre réponse";
 export const TEXT_SUBMIT = "répondre";
 export const EFFECT_LABEL = "Si vous répondez par écrit :";
 export const SEND_TEXT = "Répondre avec ce texte";
-export const CONFIRM_TEXT = (title) => `Répondre « ${title} »`;
-export const ARMED_HINT = (title) => `« ${title} » choisi : Entrée répond, un autre chiffre change de choix.`;
 export const SENDING_TEXT = "Envoi de la réponse…";
 export const NO_FIELD_TEXT = "Pour répondre par écrit, ouvrez la décision dans Castalie.";
 export const REFUSED_TEXT = (fix) => `Réponse refusée par Castalie : ${fix}`;
 export const UNSENT_TEXT = (reason) => `La réponse n'est pas partie : ${reason}`;
-export const ANSWERED_TEXT = (id, left) =>
-  left > 0
-    ? `✓ Réponse enregistrée sur n° ${id} et envoyée à l'agent. ${left} à répondre.`
-    : `✓ Réponse enregistrée sur n° ${id} et envoyée à l'agent. Plus rien à répondre sur cet objectif.`;
+/** What is left to answer, after the line that says what was done. */
+const LEFT_TEXT = (left) => (left > 0 ? `${left} à répondre.` : "Plus rien à répondre sur cet objectif.");
+export const ANSWERED_TEXT = (id, left) => `✓ Réponse enregistrée sur n° ${id} et envoyée à l'agent. ${LEFT_TEXT(left)}`;
+/** After « Décide-toi »: the sheet's own words (« Renvoyée à l'agent : il tranche lui-même. »). */
+export const HANDED_BACK_TEXT = (id, left) => `✓ N° ${id} renvoyée à l'agent : il tranche lui-même. ${LEFT_TEXT(left)}`;
+/** After « Question inutile »: the sheet's own words (« Question écartée comme inutile. »). */
+export const DISMISSED_TEXT = (id, left) => `✓ N° ${id} : question écartée comme inutile. ${LEFT_TEXT(left)}`;
 
 /** What the effect of an answer asks of the agent that reads it, in the model's language. */
 export const EFFECT_ORDERS = {
@@ -208,7 +206,9 @@ export const LEVEL_TEXT = (words) => `En ${words} mots`;
 export const SHEET_KEYS = {
   level: (words) => `level-${words}`,
   card: (id) => `card-${id}`,
+  decideYourself: "card-decide-yourself",
   ask: "ask",
+  dismiss: "dismiss",
 };
 
 export const OPTIONS_HEADING = "Options";
@@ -222,3 +222,21 @@ export const ASK_PENDING_TEXT = "en attente de réponse";
 
 /** The verb « Poser la question » sends through: the reader's right to ask for more. */
 export const ASK_VERB = "decision_ask_context";
+
+// ── « Décide-toi » and « Question inutile » (Castalie acceptance 28, remarks 10 and 18) ─────
+
+/**
+ * « Décide-toi »: the card outlined in red, just before « Autre réponse ou question », that hands
+ * the decision back to the agent that asked — it was its to settle. The sheet's own words.
+ */
+export const DECIDE_YOURSELF_TITLE = "Décide-toi";
+export const DECIDE_YOURSELF_BODY = "C'était à toi de trancher : décide toi-même.";
+
+/** The sheet's anchor of that card: a press on its text lands there, and the pane takes it over. */
+export const DECIDE_YOURSELF_ANCHOR = "decide-toi";
+
+/** « Question inutile »: the question closes without an answer, and the next one opens. */
+export const DISMISS_TEXT = "Question inutile";
+
+/** The verb « Question inutile » goes through: the person's gesture, signed as them. */
+export const DISMISS_VERB = "decision_dismiss";

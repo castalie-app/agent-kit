@@ -481,7 +481,7 @@ test('a decision this session filed comes back with its answer at the next promp
 
 // ── Answering from the sheet ──────────────────────────────────────────────
 
-/** Decision 81 whole: an approval, still waiting — « Non » needs its reason. */
+/** Decision 81 whole: an approval, still waiting — « Non » answers in one press, no reason asked. */
 const APPROVAL = {
   success: true,
   decision: {
@@ -515,6 +515,7 @@ async function answering(
   options: { id: number; surface?: 'terminal' | 'desktop'; reply?: (args: Record<string, unknown>) => unknown },
 ) {
   const { id, surface = 'terminal', reply = () => ({ success: true, decision_id: id, status: 'answered' }) } = options
+  const dismissals: Record<string, unknown>[] = []
   const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
   mock.store(on)
 
@@ -527,6 +528,7 @@ async function answering(
       { name: 'mcp__castalie__decision_list', description: '', isMcp: true },
       { name: 'mcp__castalie__decision_get', description: '', isMcp: true },
       { name: 'mcp__castalie__decision_answer', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_dismiss', description: '', isMcp: true },
     ],
   }) as never)
   on('fs.exists', ($, e) => ({ value: slashed(e.path) === 'C:/repo/.git' }))
@@ -540,6 +542,7 @@ async function answering(
   on('mcp.call', ($, e) => {
     if (e.tool === 'decision_answer') answers.push(e.args)
     if (e.tool === 'decision_ask_context') asked.push(e.args)
+    if (e.tool === 'decision_dismiss') dismissals.push(e.args)
     const body =
       e.tool === 'decision_list'
         ? { ...INBOX, objective_id: e.args.objective_id }
@@ -549,9 +552,11 @@ async function answering(
             : SHEET
           : e.tool === 'decision_answer'
             ? reply(e.args)
-            : e.tool === 'decision_ask_context'
-              ? { success: true, context_ask: { id: 6, decision_id: e.args.id, asked_md: e.args.asked_md } }
-              : NAMES[e.tool]
+            : e.tool === 'decision_dismiss'
+              ? { success: true, decision_id: e.args.id, status: 'cancelled', next_decision_id: e.args.id === 77 ? 81 : null }
+              : e.tool === 'decision_ask_context'
+                ? { success: true, context_ask: { id: 6, decision_id: e.args.id, asked_md: e.args.asked_md } }
+                : NAMES[e.tool]
     if (body === undefined) throw new Error(`${e.tool} is not served here`)
 
     return { value: { content: [{ type: 'text', text: JSON.stringify(body) }] } } as never
@@ -598,28 +603,24 @@ async function answering(
     drawn = null
   }
 
-  return { answers, asked, opened, submitted, sheet, done }
+  return { answers, asked, dismissals, opened, submitted, sheet, done }
 }
 
 for (const surface of SURFACES) {
-  test(`a press on a card answers, its digit marks it then « Répondre » answers, and the next card opens — ${surface}`, async ($, on) => {
+  test(`one press answers — a card's text, its « Choisir » or its digit — and the next card opens — ${surface}`, async ($, on) => {
     const { answers, opened, submitted, sheet } = await answering($, on, { id: 77, surface })
 
     const bar = await sheet()
     expect((await bar.find({ key: 'option-302' }))?.props.hotkey).toBe('1')
     expect((await bar.find({ key: 'option-302' }))?.props.label).toBe('Choisir')
     expect((await bar.find({ key: 'text-302' }))?.text).toMatch(/★ 1\. A relay number, always/)
+    // No mark-then-confirm step is left (Castalie acceptance 28, remark 20).
+    expect(await bar.find({ key: 'confirm' })).toBeUndefined()
 
-    // The digit only marks: nothing leaves, and « Répondre » names what Enter will send.
+    // « Choisir » — or its digit — answers at once.
     await bar.press({ key: 'option-302' })
-    const marked = await sheet()
-    expect(answers).toHaveLength(0)
-    expect(submitted).toHaveLength(0)
-    expect((await marked.find({ key: 'confirm' }))?.props.label).toBe('Répondre « A relay number, always »')
-
-    await marked.press({ key: 'confirm' })
     const next = await sheet(81)
-    expect(answers.at(-1)).toEqual({ id: 77, option_id: 302, channel: 'click' })
+    expect(answers).toEqual([{ id: 77, option_id: 302, channel: 'click' }])
     expect(opened.at(-1)).toBe('cs-decision')
     expect((await next.find({ key: 'answered' }))?.text).toBe("✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 1 à répondre.")
     // The agent working in the session gets it at once, as a turn of its own.
@@ -629,12 +630,56 @@ for (const surface of SURFACES) {
     expect(submitted[0]).toMatch(/decision-resume 77/)
     expect((await next.find({ key: 'sheet-81' }))?.text).toMatch(/Merge the VAT fix/)
 
-    // A press on the card answers at once.
+    // A press on the card's text answers at once.
     await next.press({ key: 'text-501', link: { href: 'https://acme.castalie.app/decisions/81#option-501' } as never })
     await sheet(81)
     expect(answers.at(-1)).toEqual({ id: 81, option_id: 501, channel: 'click' })
   })
 }
+
+test('the decision the server names next opens, even when it is not the first card left here', async ($, on) => {
+  const { answers, sheet } = await answering($, on, {
+    id: 81,
+    reply: args => ({ success: true, decision_id: args.id, status: 'answered', next_decision_id: args.id === 81 ? 77 : null }),
+  })
+
+  const bar = await sheet()
+  await bar.press({ key: 'option-501' })
+  const next = await sheet(77)
+
+  expect(answers).toEqual([{ id: 81, option_id: 501, channel: 'click' }])
+  expect((await next.find({ key: 'sheet-77' }))?.text).toMatch(/Which phone number/)
+})
+
+test('« Décide-toi » is a red card that hands the decision back in one press, and the next one opens', async ($, on) => {
+  const { answers, submitted, sheet } = await answering($, on, { id: 77, surface: 'desktop' })
+
+  const bar = await sheet()
+  expect((await bar.find({ key: 'text-decide-yourself' }))?.text).toMatch(/Décide-toi/)
+  expect((await bar.find({ key: 'card-decide-yourself' }))?.props.borderColor).toBe('red')
+  await bar.press({ key: 'text-decide-yourself', link: { href: 'https://acme.castalie.app/decisions/77#decide-toi' } as never })
+  const next = await sheet(81)
+
+  expect(answers).toEqual([{ id: 77, decide_yourself: true, channel: 'click' }])
+  expect((await next.find({ key: 'answered' }))?.text).toBe("✓ N° 77 renvoyée à l'agent : il tranche lui-même. 1 à répondre.")
+  expect(submitted.join('\n')).toMatch(/with « Décide-toi »/)
+  expect(submitted.join('\n')).toMatch(/Decide it yourself now/)
+})
+
+test('« Question inutile » closes the question without an answer, its words as the reason, and the next one opens', async ($, on) => {
+  const { answers, dismissals, submitted, sheet } = await answering($, on, { id: 77 })
+
+  const bar = await sheet()
+  expect((await bar.find({ key: 'dismiss' }))?.props.label).toBe('Question inutile')
+  await bar.input({ key: 'answer-text', text: 'Already settled in the spec.', kind: 'change' })
+  await bar.press({ key: 'dismiss' })
+  const next = await sheet(81)
+
+  expect(dismissals).toEqual([{ id: 77, reason_md: 'Already settled in the spec.' }])
+  expect(answers).toHaveLength(0)
+  expect((await next.find({ key: 'answered' }))?.text).toBe('✓ N° 77 : question écartée comme inutile. 1 à répondre.')
+  expect(submitted.join('\n')).toMatch(/useless \(« Question inutile »\)/)
+})
 
 test('words typed in « Autre réponse ou question » are the answer, channel text, or a question to the agent', async ($, on) => {
   const { answers, submitted, sheet } = await answering($, on, { id: 77 })
@@ -685,19 +730,13 @@ test("a refusal shows the server's fix, keeps the typed words, and the card stay
   expect(submitted).toHaveLength(0)
 })
 
-test("an approval's « Non » without its reason is refused before anything leaves, and leaves with it", async ($, on) => {
+test("an approval's « Non » answers in one press, with no reason asked", async ($, on) => {
   const { answers, sheet } = await answering($, on, { id: 81, surface: 'desktop' })
 
   const bar = await sheet()
   expect((await bar.find({ key: 'text-502' }))?.text).toMatch(/2\. Non/)
   await bar.press({ key: 'text-502', link: { href: 'https://acme.castalie.app/decisions/81#option-502' } as never })
-  const refused = await sheet()
-
-  expect(answers).toHaveLength(0)
-  expect((await refused.find({ key: 'error' }))?.text).toBe('Dites pourquoi : un refus sans sa raison ne relance rien.')
-  expect((await refused.find({ key: 'answer-text' }))?.props.label).toBe('Pourquoi « Non » :')
-
-  await refused.input({ key: 'answer-text', text: 'Not before the audit.' })
   await sheet(77)
-  expect(answers).toEqual([{ id: 81, option_id: 502, text_md: 'Not before the audit.', channel: 'text' }])
+
+  expect(answers).toEqual([{ id: 81, option_id: 502, channel: 'click' }])
 })

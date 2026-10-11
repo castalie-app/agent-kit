@@ -13,6 +13,9 @@ import { groupsOf } from "./inbox.mjs";
 import {
   APPROVAL_TITLES,
   APPROXIMATE_TEXT,
+  DECIDE_YOURSELF_BODY,
+  DECIDE_YOURSELF_TITLE,
+  DISMISS_TEXT,
   ASK_PENDING_TEXT,
   DESCRIPTION_HEADING,
   DESCRIPTION_LEVELS,
@@ -313,7 +316,48 @@ export function levelShownOf(decision, asked) {
 }
 
 /**
- * The top of the sheet: the question, then one line of who asks, since when and by when.
+ * The pages of a feature and a spec, on the workspace the decision lives in — the web sheet's
+ * own links. Null where the decision has no page to take the workspace's address from.
+ *
+ * @param {string | null} url the decision's page
+ * @param {"feature" | "spec"} kind
+ * @param {number | null} id
+ * @returns {string | null}
+ */
+function contextHrefOf(url, kind, id) {
+  const page = hrefOf(url);
+  if (page === null || id === null) return null;
+  try {
+    const origin = new URL(page).origin;
+    return `${origin}/Product/${kind === "feature" ? "FeatureBrief" : "FeatureSpec"}/Detail/${id}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The line just under the question (Castalie acceptance 28, remark 16: « il faut mettre
+ * uniquement le titre de la fonctionnalité et le titre de la spec, plutôt en dessous de la
+ * question »): the feature's title and the spec's title, each a link to its page, no labels, no
+ * objective. Null where the decision sits on neither.
+ *
+ * @param {import("./inbox.mjs").Decision} decision
+ * @returns {string | null}
+ */
+export function contextLineOf(decision) {
+  const parts = [];
+  for (const kind of /** @type {const} */ (["feature", "spec"])) {
+    const level = decision[kind] ?? null;
+    if (level === null) continue;
+    const href = contextHrefOf(decision.url, kind, level.id);
+    parts.push(href === null ? linkText(level.title) : `[${linkText(level.title)}](${href})`);
+  }
+  return parts.length === 0 ? null : parts.join(" · ");
+}
+
+/**
+ * The top of the sheet: the question, the feature and the spec it works on, then one line of who
+ * asks, since when and by when.
  *
  * @param {import("./inbox.mjs").Decision} decision
  * @param {{ now: number }} view
@@ -321,6 +365,8 @@ export function levelShownOf(decision, asked) {
  */
 export function sheetHeadMarkdown(decision, view) {
   const lines = [`# ${decision.title ?? `Décision n° ${decision.id}`}`];
+  const context = contextLineOf(decision);
+  if (context !== null) lines.push("", context);
   const facts = [];
   const asker = decision.agent ?? (decision.origin === "migration" ? "l'ancienne file" : null);
   if (asker) facts.push(`demandée par ${asker}`);
@@ -389,7 +435,8 @@ export function answerMarkdown(decision) {
   if (answer === null) return null;
   const lines = ["## Réponse", ""];
   const facts = [];
-  if (answer.optionTitle) facts.push(`« ${answer.optionTitle} »`);
+  if (decision.answerKind === "decide_yourself") facts.push(`« ${DECIDE_YOURSELF_TITLE} »`);
+  else if (answer.optionTitle) facts.push(`« ${answer.optionTitle} »`);
   if (answer.effect) facts.push(EFFECTS[answer.effect] ?? answer.effect);
   const day = dayText(answer.answeredAt);
   if (day) facts.push(`le ${day}`);
@@ -427,14 +474,16 @@ export function sheetMarkdown(decision, view) {
   }
 
   const options = decision.shape === "free_text" ? [] : decision.options;
-  if (options.length > 0) {
-    lines.push(`## ${OPTIONS_HEADING}`, "");
-    options.forEach((option, index) => lines.push(optionCardMarkdown(decision, option, index), ""));
-  }
+  const isPending = decision.status === null || decision.status === "pending";
+  if (options.length > 0 || isPending) lines.push(`## ${OPTIONS_HEADING}`, "");
+  options.forEach((option, index) => lines.push(optionCardMarkdown(decision, option, index), ""));
+  // While it waits, the sheet's last two gestures, as the web draws them.
+  if (isPending) lines.push(`**${DECIDE_YOURSELF_TITLE}** — ${DECIDE_YOURSELF_BODY}`, "");
 
   lines.push(`**${OTHER_TITLE}**`, "");
   const asks = asksMarkdown(decision);
   if (asks !== null) lines.push(asks, "");
+  if (isPending) lines.push(`_« ${DISMISS_TEXT} » la ferme sans réponse._`, "");
 
   const answer = answerMarkdown(decision);
   if (answer !== null) lines.push(answer, "");
@@ -473,6 +522,9 @@ export function settledNotice(decision) {
   const lines = [`Castalie: the decision this session filed, ${name}, is now ${decision.status ?? "settled"}.`];
   const answer = decision.answer;
   if (answer !== null) {
+    if (decision.answerKind === "decide_yourself") {
+      lines.push("They answered « Décide-toi »: it was yours to settle. Decide it yourself now, write what you chose and why, and never ask it again.");
+    }
     if (answer.optionTitle) lines.push(`Option chosen: « ${answer.optionTitle} »${answer.effect ? ` (effect: ${answer.effect})` : ""}.`);
     if (answer.text) lines.push(`The person's words, which count over the option: ${answer.text}`);
     if (answer.confirmed === false) {

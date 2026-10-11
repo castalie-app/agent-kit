@@ -164,6 +164,17 @@ const answerOf = (node) => {
   };
 };
 
+/**
+ * One level of where the decision sits, `{ id, title }`, from `decision_get`'s `context`.
+ *
+ * @param {any} node
+ * @returns {{ id: number | null, title: string } | null}
+ */
+const levelOf = (node) => {
+  const title = textOf(pick(node ?? {}, "title"));
+  return title === null ? null : { id: idOf(pick(node, "id")), title };
+};
+
 /** A list field, each entry read by `of`. */
 const listOf = (record, snake, of) => {
   const listed = pick(record, snake);
@@ -195,6 +206,11 @@ export function decisionOf(answer) {
     optionCount: options.length,
     opened: textOf(pick(record, "presented_at")) !== null,
     answer: answerOf(pick(record, "answer")),
+    // The feature and the spec the decision works on (Castalie acceptance 28, remark 16): their
+    // titles alone, under the question. `context.objective` is sent for an agent; no surface shows it.
+    feature: levelOf(pick(pick(record, "context") ?? {}, "feature")),
+    spec: levelOf(pick(pick(record, "context") ?? {}, "spec")),
+    answerKind: textOf(pick(record, "answer_kind")) ?? textOf(pick(pick(record, "answer") ?? {}, "kind")),
     comments: listOf(record, "comments", commentOf),
     contextAsks: listOf(record, "context_asks", contextAskOf),
   };

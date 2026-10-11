@@ -11,6 +11,14 @@
 // (Castalie acceptance 28, remark 17: « Je dois pouvoir répondre non sans me justifier en 1 clic »):
 // words in the field go with it, none are asked for.
 //
+// One press answers, as on the web and the iPhone (Castalie acceptance 28, remark 20: « dans le
+// panneau aujourd'hui il faut 2 clics pour valider une décision […] envoyer dès le 1er clic comme
+// pour le web ou l'app »): a card's text, its « Choisir » and its digit all answer at once. There is
+// no mark-then-confirm step. Two more gestures close a sheet in one press, as there: « Décide-toi »
+// (remark 18), the red card that hands the decision back to the agent that asked
+// (`decision_answer(decide_yourself: true)`), and « Question inutile » (remark 10), which closes it
+// without an answer (`decision_dismiss`). Each one then opens the decision the server names next.
+//
 // `views.tsx` draws what `answerBarOf` answers; `register.ts` sends what `answerRequestOf` answers
 // and reads the reply with `answerOutcomeOf`.
 
@@ -22,9 +30,11 @@ import {
   EFFECT_ORDERS,
   APPROVAL_TITLES,
   ANSWER_TEXT,
-  ARMED_HINT,
   ASK_TEXT,
-  CONFIRM_TEXT,
+  DECIDE_YOURSELF_ANCHOR,
+  DECIDE_YOURSELF_BODY,
+  DECIDE_YOURSELF_TITLE,
+  DISMISS_TEXT,
   HOTKEY_CARDS,
   LOCAL_REFUSALS,
   NARROW_EFFECTS,
@@ -38,12 +48,12 @@ import {
 
 /**
  * @typedef {import("./inbox.mjs").Decision} Decision
- * @typedef {{ optionId: number | null, text: string, effect: string | null, error: string | null,
- *   isSending: boolean, level: number | null }} Draft
+ * @typedef {{ text: string, effect: string | null, error: string | null, isSending: boolean,
+ *   level: number | null }} Draft
  */
 
-/** A draft nobody has touched yet: 80 words shown, nothing chosen. @returns {Draft} */
-export const emptyDraft = () => ({ optionId: null, text: "", effect: null, error: null, isSending: false, level: null });
+/** A draft nobody has touched yet: 80 words shown, nothing written. @returns {Draft} */
+export const emptyDraft = () => ({ text: "", effect: null, error: null, isSending: false, level: null });
 
 /**
  * The effects a written answer may have on this subject — the sheet's rule, `none` left out as
@@ -72,11 +82,11 @@ export function optionTitleOf(decision, option) {
 
 /**
  * The answering half of a sheet, as data — null where the decision no longer waits: one card per
- * option, then the card « Autre réponse ou question ».
+ * option, then « Décide-toi », then the card « Autre réponse ou question » with « Répondre »,
+ * « Poser la question » and « Question inutile ».
  *
- * A press on a card answers with that option at once. Its digit only marks it, and Enter on
- * « Répondre « … » » answers: the two presses that open a card from the cards pane and pick its
- * first option cannot answer it by accident.
+ * A press on a card answers with that option at once — on its text, on its « Choisir » or with its
+ * digit — as a click on the web and a tap on the iPhone do. Nothing is marked first.
  *
  * @param {Decision} decision
  * @param {Draft} draft
@@ -97,39 +107,49 @@ export function answerBarOf(decision, draft, surface) {
     markdown: optionCardMarkdown(decision, option, index, href),
     hotkey: index < HOTKEY_CARDS ? String(index + 1) : undefined,
     isRecommended: option.isRecommended,
-    isArmed: option.id === draft.optionId,
     };
   });
 
-  const chosen = cards.find((card) => card.isArmed) ?? null;
-  const armed =
-    chosen === null
-      ? null
-      : {
-          id: chosen.id,
-          title: chosen.title,
-          hint: ARMED_HINT(chosen.title),
-          confirm: CONFIRM_TEXT(chosen.title),
-        };
-
   const label = decision.shape === "free_text" ? TEXT_LABEL_FREE : OTHER_TITLE;
+  const decideHref = page === null ? null : `${page}#${DECIDE_YOURSELF_ANCHOR}`;
 
   return {
     error: draft.error,
     isSending: draft.isSending,
     cards,
-    armed,
+    // On every waiting sheet, as on the web: the card outlined in red, just before the last one.
+    decideYourself: {
+      title: DECIDE_YOURSELF_TITLE,
+      body: DECIDE_YOURSELF_BODY,
+      href: decideHref,
+      markdown: decideYourselfMarkdown(decideHref),
+    },
     other: {
       title: OTHER_TITLE,
       asks: asksMarkdown(decision),
       field: surface.hasField ? { label, placeholder: OTHER_PLACEHOLDER, value: draft.text, submitLabel: TEXT_SUBMIT } : null,
       answerLabel: ANSWER_TEXT,
       askLabel: ASK_TEXT,
-      canAnswer: surface.hasField && armed === null,
-      canAsk: surface.hasField && armed === null,
+      dismissLabel: DISMISS_TEXT,
+      canAnswer: surface.hasField,
+      canAsk: surface.hasField,
+      // A dismissal needs no words: a surface with no field closes the question all the same.
+      canDismiss: true,
     },
     fallback: surface.hasField ? null : NO_FIELD_TEXT,
   };
+}
+
+/**
+ * The « Décide-toi » card's text: its title, then the sheet's sentence, every line a link to the
+ * sheet's anchor of that card where there is a page, so a press anywhere on it is the press.
+ *
+ * @param {string | null} href
+ * @returns {string}
+ */
+export function decideYourselfMarkdown(href) {
+  const lines = [`**${DECIDE_YOURSELF_TITLE}**`, DECIDE_YOURSELF_BODY];
+  return (href === null ? lines : lines.map((line) => `[${line}](${href})`)).join("\n\n");
 }
 
 /**
@@ -152,11 +172,11 @@ export function askRequestOf(decision, draft) {
  *
  * @param {Decision} decision
  * @param {Draft} draft
- * @param {{ optionId?: number | null }} [chosen] the option pressed now, over the one marked
+ * @param {{ optionId?: number | null }} [chosen] the option pressed, if one was
  * @returns {{ ok: true, args: Record<string, unknown> } | { ok: false, code: string, fix: string }}
  */
 export function answerRequestOf(decision, draft, chosen = {}) {
-  const optionId = chosen.optionId ?? draft.optionId;
+  const optionId = chosen.optionId ?? null;
   const text = draft.text.trim() === "" ? null : draft.text.trim();
 
   if (optionId !== null) {
@@ -182,11 +202,43 @@ export function answerRequestOf(decision, draft, chosen = {}) {
 }
 
 /**
- * What `decision_answer` answered: accepted with the decision's new status, or refused with the
- * server's own code and `fix` — the sentence that says what to do, shown as written.
+ * What `decision_answer` is asked on « Décide-toi »: no option — the server refuses one — and the
+ * field's words along as a note, as on the web. A `click` without words, `text` with them.
+ *
+ * @param {Decision} decision
+ * @param {Draft} draft
+ * @returns {{ ok: true, args: Record<string, unknown> }}
+ */
+export function decideYourselfRequestOf(decision, draft) {
+  const text = draft.text.trim();
+  return {
+    ok: true,
+    args: { id: decision.id, decide_yourself: true, ...(text === "" ? {} : { text_md: text }), channel: text === "" ? "click" : "text" },
+  };
+}
+
+/**
+ * What `decision_dismiss` is asked on « Question inutile »: the field's words, if any, go to the
+ * asker as the reason; none are needed.
+ *
+ * @param {Decision} decision
+ * @param {Draft} draft
+ * @returns {{ ok: true, args: Record<string, unknown> }}
+ */
+export function dismissRequestOf(decision, draft) {
+  const text = draft.text.trim();
+  return { ok: true, args: { id: decision.id, ...(text === "" ? {} : { reason_md: text }) } };
+}
+
+/**
+ * What `decision_answer` or `decision_dismiss` answered: accepted with the decision's new status
+ * and the decision the server says comes next for this reader (`next_decision_id` — the same
+ * subject, then spec, feature and objective, then the inbox's order, as the web and the iPhone
+ * chain), or refused with the server's own code and `fix` — the sentence that says what to do,
+ * shown as written.
  *
  * @param {any} result the MCP result, its JSON in a text block
- * @returns {{ ok: true, status: string } | { ok: false, code: string, fix: string }}
+ * @returns {{ ok: true, status: string, nextId: number | null } | { ok: false, code: string, fix: string }}
  */
 export function answerOutcomeOf(result) {
   const blocks = Array.isArray(result?.content) ? result.content : [];
@@ -207,7 +259,12 @@ export function answerOutcomeOf(result) {
       .find((said) => typeof said === "string" && said.trim() !== "");
     return { ok: false, code, fix: String(fix ?? "refusé").trim() };
   }
-  return { ok: true, status: typeof body.status === "string" ? body.status : "answered" };
+  const next = Number(body.next_decision_id ?? body.NextDecisionId);
+  return {
+    ok: true,
+    status: typeof body.status === "string" ? body.status : "answered",
+    nextId: Number.isInteger(next) && next > 0 ? next : null,
+  };
 }
 
 /**
@@ -221,9 +278,20 @@ export function answerOutcomeOf(result) {
  * @returns {string}
  */
 export function answerMessageOf(decision, args) {
-  const name = `« ${decision.title ?? `decision ${decision.id}`} » (decision ${decision.id}${decision.url ? `, ${decision.url}` : ""})`;
-  const option = decision.options.find((candidate) => candidate.id !== null && candidate.id === args.option_id) ?? null;
+  const name = nameOf(decision);
   const text = typeof args.text_md === "string" ? args.text_md : null;
+
+  if (args.decide_yourself === true) {
+    const lines = [
+      `Castalie: the person answered ${name} with « Décide-toi » in the decisions panel. It is recorded in Castalie (answer_kind decide_yourself).`,
+      "It means the decision was yours to settle and you asked instead. Decide it yourself now, with what you know and the recommendation you had drafted; apply it, and write in your notes and on the subject's thread what you chose and why. Never ask it again, reworded or to someone else.",
+    ];
+    if (text !== null) lines.push(`Their words: ${text}`);
+    lines.push(`Then \`decision_mark_applied\` on decision ${decision.id}.`);
+    return lines.join("\n");
+  }
+
+  const option = decision.options.find((candidate) => candidate.id !== null && candidate.id === args.option_id) ?? null;
   const effect = option?.effect ?? (typeof args.effect === "string" ? args.effect : "continue");
 
   const lines = [`Castalie: the person just answered ${name} in the decisions panel. It is recorded in Castalie.`];
@@ -233,6 +301,27 @@ export function answerMessageOf(decision, args) {
   lines.push(`Pick the work back up now, as \`decision-resume ${decision.id}\` says, then \`decision_mark_applied\`.`);
   return lines.join("\n");
 }
+
+/**
+ * The message the session's agent reads when the person declares a question useless in the panel:
+ * closed without an answer, and a kind of question not to ask again.
+ *
+ * @param {Decision} decision
+ * @param {Record<string, unknown>} args what `decision_dismiss` was asked, and accepted
+ * @returns {string}
+ */
+export function dismissMessageOf(decision, args) {
+  const lines = [
+    `Castalie: the person declared ${nameOf(decision)} useless (« Question inutile ») in the decisions panel. It is closed without an answer.`,
+    "Read it as « do not ask me this kind of question »: carry on without it, settle it yourself if the work needs it, and never file it again.",
+  ];
+  if (typeof args.reason_md === "string") lines.push(`Their reason: ${args.reason_md}`);
+  return lines.join("\n");
+}
+
+/** A decision as the agent's message names it: its question, its number and its page. */
+const nameOf = (decision) =>
+  `« ${decision.title ?? `decision ${decision.id}`} » (decision ${decision.id}${decision.url ? `, ${decision.url}` : ""})`;
 
 /**
  * @typedef {{ server: string, inbox: import("./inbox.mjs").Inbox | null, error: string | null,
