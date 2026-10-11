@@ -168,14 +168,12 @@ export const ANSWER_HEADING = "Votre réponse";
 export const TEXT_LABEL_FREE = "Votre réponse :";
 export const TEXT_LABEL_OTHER = "Répondre autrement ou ajuster :";
 export const TEXT_LABEL_ADJUST = (title) => `Ajuster « ${title} » (facultatif) :`;
-export const TEXT_LABEL_REASON = (title) => `Pourquoi « ${title} » :`;
 export const TEXT_PLACEHOLDER = "Écrivez votre réponse";
 export const TEXT_SUBMIT = "répondre";
 export const EFFECT_LABEL = "Si vous répondez par écrit :";
 export const SEND_TEXT = "Répondre avec ce texte";
 export const CONFIRM_TEXT = (title) => `Répondre « ${title} »`;
 export const ARMED_HINT = (title) => `« ${title} » choisi : Entrée répond, un autre chiffre change de choix.`;
-export const REASON_HINT = (title) => `« ${title} » demande sa raison : écrivez-la, puis Entrée.`;
 export const SENDING_TEXT = "Envoi de la réponse…";
 export const NO_FIELD_TEXT = "Pour répondre par écrit, ouvrez la décision dans Castalie.";
 export const REFUSED_TEXT = (fix) => `Réponse refusée par Castalie : ${fix}`;
@@ -194,7 +192,6 @@ export const EFFECT_ORDERS = {
 
 /** What the bar refuses before anything leaves: the server's rules, in the sheet's words. */
 export const LOCAL_REFUSALS = {
-  reason_required: "Dites pourquoi : un refus sans sa raison ne relance rien.",
   text_required_free: "Cette décision se tranche par écrit : écrivez la réponse.",
   text_required: "Choisissez une carte, ou écrivez la réponse dans « Autre réponse ou question ».",
   question_required: "Écrivez la question dans « Autre réponse ou question », puis « Poser la question ».",
