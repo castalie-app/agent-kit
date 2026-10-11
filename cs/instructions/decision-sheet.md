@@ -45,6 +45,18 @@ ask what one of the seven reasons above does not cover: a skill blocked on its o
 seven or decides. An instance that does not know `idea` yet refuses it; the lead is then filed as
 `private_knowledge`, since what the leader alone knows is what settles it.
 
+**Never ask a person to name a person.** A person's attention is the scarcest thing a workspace
+has, and a sheet that asks *who* validates, reviews, downloads or re-reads spends it to find out
+whose attention to spend next. That is routing, not a decision: the workspace already records who
+owns the work — the brief's owner (`feature_brief_get`), the spec's assignee (`feature_spec_get`),
+the domain's owners (`domain_list_owners`), the ticket's assignee (`bug_get`). Find that person and
+address the actual request TO them: the decision filed with their `addressee_user_id`
+(« Valides-tu la spec … avant le code ? »), the task assigned to them, or the question asked in the
+discussion. When nobody is recorded, set an owner from the strategy — the objective's owner — with
+`domain_set_owner`, rather than asking. The server refuses such a sheet on the MCP channel
+(`routing_is_not_a_decision`): a title opening on « Qui », « À qui », "Who", "Whom", or a choice
+whose every option names a member.
+
 **With the person in front of you, ask in the turn** (the *I need you* verdict of
 `shared-conventions.md`). A sheet is for the person who is not there.
 
@@ -198,6 +210,7 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `subject_not_found`, `subject_closed` | the id of open work; `none` takes no id |
 | `subject_kind_unavailable` | this workspace does not know that kind yet: file on the brief the work belongs to |
 | `addressee_not_member` | an active member of the workspace |
+| `routing_is_not_a_decision` | the answer would be a person: find the owner (brief owner, spec assignee, `domain_list_owners`, ticket assignee) and file the request TO them, or assign them the task |
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
 
 **After filing**, a fact that changes the picture is added with `decision_add_context` while the
