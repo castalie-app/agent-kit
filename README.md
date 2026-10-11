@@ -369,24 +369,33 @@ opens decision 42 the same way. The resume state an agent left itself is never s
 │ Renonce à : the owner's own number.          │
 │ [1] Choisir                                  │
 ╰──────────────────────────────────────────────╯
+╭──────────────────────────────────────────────╮  (outlined in red)
+│ Décide-toi                                   │
+│ C'était à toi de trancher : décide toi-même. │
+│ Choisir                                      │
+╰──────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────╮
 │ Autre réponse ou question :                  │
 │ ▏                                            │
-│ [ Répondre ]  [ Poser la question ]          │
+│ [ Répondre ]  [ Poser la question ]  Question inutile │
 ╰──────────────────────────────────────────────╯
 ```
 
-- **A card** answers with a click anywhere on its text. Its digit, or its « Choisir », only marks
-  it, and Enter on « Répondre « … » » answers: two quick digits (one opening the card, one
-  picking) never answer by accident; nothing answers on hover.
-- **Your own words** go in « Autre réponse ou question »: with a card marked they adjust it;
-  without one, « Répondre » makes them the answer and the work restarts from them, and « Poser la
-  question » sends them to the agent that asked (`decision_ask_context`) while the decision waits.
-- **An approval's « Non » needs its reason**, as on the sheet: without words nothing leaves, the
-  card says so, and the ring goes to the field.
+- **A card answers in one press**, as on the web and the iPhone: a click anywhere on its text,
+  its « Choisir » or its digit sends it at once. There is no mark-then-confirm step.
+- **An approval's « Non »** is a press like any other: no reason is asked.
+- **« Décide-toi »**, outlined in red, hands the decision back to the agent that asked — it was its
+  to settle — as `decision_answer(decide_yourself: true)`.
+- **Your own words** go in « Autre réponse ou question »: « Répondre » makes them the answer and the
+  work restarts from them, « Poser la question » sends them to the agent that asked
+  (`decision_ask_context`) while the decision waits, and « Question inutile » closes the question
+  without an answer (`decision_dismiss`), the words as its reason. Words in the field also go along
+  with a card or with « Décide-toi ».
 
-It goes out as `decision_answer` on the workspace the decision lives in, with the session's own
-credentials — `channel: "click"` for an option alone, `"text"` once words are typed. The server
+Under the question, the sheet names the feature and the spec it works on, by their titles alone.
+
+It goes out on the workspace the decision lives in, with the session's own
+credentials — `channel: "click"` for a press alone, `"text"` once words are typed. The server
 holds the rights: a viewer or a service token is refused there, and the bar draws its `fix` in red
 (« Réponse refusée par Castalie : … ») with your words still in the field.
 
@@ -396,7 +405,8 @@ your words, what the effect asks of it, and `decision-resume <id>`. Where the se
 agent that filed the decision is usually waiting on it — that message starts its turn right away;
 while a turn runs, it goes in the moment that turn ends, before anything you type next. Where it
 cannot enter, it goes back on the list the next prompt reads, as before. The card leaves the list
-at once and the next one opens, under « ✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 2 à
+at once and the decision the server names next opens (`next_decision_id`: the same spec, then
+feature, then objective), under « ✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 2 à
 répondre. »; with none left the sheet closes. The mobile app draws no field: there, the cards
 answer and the last card points at Castalie for words.
 

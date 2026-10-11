@@ -33,19 +33,25 @@ A decision this session filed comes back once it is settled, wherever it was ans
 person's next prompt, the model reads the answer beside it (the option, the person's words, and
 `decision-resume <id>` to pick the work up).
 
-**A pending sheet answers.** A click anywhere on a card's text answers with that option. Its digit,
-or its « Choisir », only marks it, and Enter on « Répondre « … » » answers — nothing answers on
-hover or on one stray key. The last card, « Autre réponse ou question », takes the person's own
-words: with a card marked they adjust it; without one, « Répondre » makes them the answer (the
-work restarts from them) and « Poser la question » sends them to the agent that asked
-(`decision_ask_context`), the decision still waiting. An approval's « Non » needs its reason, as on
-the sheet. The answer goes out as `decision_answer` on the
-decision's workspace, with the session's own credentials (`channel` `click` for an option alone,
-`text` once words are typed); a refusal of the server — a viewer, a service token — is shown as its
-`fix`, the words kept. Accepted, the answer is handed at once to the agent working in this
-session, as a message of the plugin's own: idle, the session starts a turn on it right away;
-mid-turn, it goes in when that turn ends. The card leaves the list and the next one opens, with
-what is left to answer.
+**A pending sheet answers in one press**, as on the web and the iPhone: a click anywhere on a
+card's text, its « Choisir » or its digit sends that option at once — there is no step that marks
+a card and then asks to confirm it. An approval's « Non » is a press like any other: no reason is
+asked. Then « Décide-toi », a card outlined in red: one press hands the decision back to the agent
+that asked — it was its to settle — as `decision_answer(decide_yourself: true)`. The last card,
+« Autre réponse ou question », takes the person's own words: « Répondre » makes them the answer
+(the work restarts from them), « Poser la question » sends them to the agent that asked
+(`decision_ask_context`), the decision still waiting, and « Question inutile » closes the question
+without an answer (`decision_dismiss`), the words, if any, as its reason. Words in the field also
+go along with an option or with « Décide-toi ». Everything goes out on the decision's workspace,
+with the session's own credentials (`channel` `click` for a press alone, `text` once words are
+typed); a refusal of the server — a viewer, a service token — is shown as its `fix`, the words
+kept. Accepted, it is handed at once to the agent working in this session, as a message of the
+plugin's own: idle, the session starts a turn on it right away; mid-turn, it goes in when that
+turn ends. The card leaves the list and the decision the server names next opens
+(`next_decision_id`: the same spec, then feature, then objective), with what is left to answer.
+
+Under the question, the sheet names the feature and the spec the decision works on, by their
+titles alone, as Castalie's own sheet does.
 
 **When that message reaches you** (« Castalie: the person just answered … in the decisions
 panel »), it is the person's answer, already recorded: pick the work back up on it now, as
@@ -64,9 +70,11 @@ of saying nothing can be done:
 1. With a number in the arguments: `decision_get(id)`, and write the sheet as described above,
    in the person's language, headings per section, options numbered, the recommended one marked.
    Never show `resume_state_md` or `resume_prompt_md`: the sheet a person reads never does. End
-   on how to answer: the option's number, or their own words. When they then answer in the
-   conversation, record it with `decision_answer` (their option, their words, `channel: "mcp"`),
-   and show the server's `fix` as written when it refuses.
+   on how to answer: the option's number, « Décide-toi », « Question inutile », or their own
+   words. When they then answer in the conversation, record it with `decision_answer` (their
+   option, their words, `channel: "mcp"`; « Décide-toi » is `decide_yourself: true` with no option)
+   or, for « Question inutile », `decision_dismiss`, and show the server's `fix` as written when it
+   refuses.
 2. Without: find this copy's objective — the latest entry of `.cs/work.json`, its spec's brief
    (`feature_spec_get`), the brief's `objective_id` (`feature_brief_get`). None: say in one line
    that this copy works on no objective, and show no decision. Else

@@ -11,6 +11,9 @@ import {
   answerOutcomeOf,
   answerRequestOf,
   askRequestOf,
+  decideYourselfRequestOf,
+  dismissMessageOf,
+  dismissRequestOf,
   emptyDraft,
   nextAfter,
   withoutCard,
@@ -401,20 +404,34 @@ export function register(on: On, companion: Companion): void {
   }
 
   /**
-   * Sends the answer the draft holds — or the option pressed now — through `decision_answer` on
-   * the decision's own workspace, with the session's credentials. The server holds the rights:
-   * a refusal is drawn as its `fix`, and the typed words stay in the field. Accepted, the answer
-   * goes to the session's agent at once (`handBack`), the card leaves the list and the next one
-   * opens, the count of what is left above it.
+   * What a press settles the sheet with: an option or the field's words (`answer`), « Décide-toi »
+   * (`decide_yourself`), or « Question inutile » (`dismiss`).
    */
-  async function answer(engine: Host, chosen: { optionId?: number | null } = {}): Promise<void> {
+  type Settle = { kind: 'answer'; optionId?: number | null } | { kind: 'decide_yourself' } | { kind: 'dismiss' }
+
+  /**
+   * Settles the sheet on show in ONE press, as the web and the iPhone do (Castalie acceptance 28,
+   * remark 20): an option, the field's words, « Décide-toi » through `decision_answer`, or
+   * « Question inutile » through `decision_dismiss` — on the decision's own workspace, with the
+   * session's credentials. The server holds the rights: a refusal is drawn as its `fix`, and the
+   * typed words stay in the field. Accepted, the outcome goes to the session's agent at once
+   * (`handBack`), the card leaves the list and the decision the server names next opens
+   * (`next_decision_id`: the same spec, then feature, then objective), else the first one left
+   * here, the count of what is left above it.
+   */
+  async function settle(engine: Host, how: Settle): Promise<void> {
     const shown = sheet
     if (shown === null || shown.decision === null || shown.draft.isSending) return
     const { id, server, decision } = shown
 
-    const request = answerRequestOf(decision, shown.draft, chosen)
+    const request =
+      how.kind === 'decide_yourself'
+        ? decideYourselfRequestOf(decision, shown.draft)
+        : how.kind === 'dismiss'
+          ? dismissRequestOf(decision, shown.draft)
+          : answerRequestOf(decision, shown.draft, { optionId: how.optionId ?? null })
     if (!request.ok) {
-      setDraft(engine, id, { error: request.fix, optionId: chosen.optionId ?? shown.draft.optionId })
+      setDraft(engine, id, { error: request.fix })
       // What is missing is words: the ring goes to the field.
       void engine.focus(Names.SHEET_PANE_ID, Names.ANSWER_KEYS.text).catch(() => undefined)
 
@@ -422,9 +439,10 @@ export function register(on: On, companion: Companion): void {
     }
 
     setDraft(engine, id, { error: null, isSending: true })
+    const verb = how.kind === 'dismiss' ? Names.DISMISS_VERB : Names.ANSWER_VERB
     let outcome: ReturnType<typeof answerOutcomeOf>
     try {
-      outcome = answerOutcomeOf(await engine.mcpCall(server, Names.ANSWER_VERB, request.args))
+      outcome = answerOutcomeOf(await engine.mcpCall(server, verb, request.args))
     } catch (error) {
       setDraft(engine, id, { isSending: false, error: Names.UNSENT_TEXT(message(error)) })
 
@@ -436,13 +454,21 @@ export function register(on: On, companion: Companion): void {
       return
     }
 
-    void handBack(engine, server, decision, request.args).catch(error => engine.uiLog(`décisions : ${message(error)}`))
+    const said = how.kind === 'dismiss' ? dismissMessageOf(decision, request.args) : answerMessageOf(decision, request.args)
+    void handBack(engine, server, decision, said).catch(error => engine.uiLog(`décisions : ${message(error)}`))
 
     const known = readerFor(engine)
     await known.forget([...inboxKeysOf(known, server), known.cacheKeyOf(server, 'decision', id)]).catch(() => undefined)
     model = { ...model, workspaces: withoutCard(model.workspaces, server, id) }
-    const { next, left } = nextAfter(model.workspaces)
-    const notice = Names.ANSWERED_TEXT(id, left)
+    const local = nextAfter(model.workspaces)
+    const next = outcome.nextId !== null && outcome.nextId !== id ? { id: outcome.nextId, server } : local.next
+    const left = Math.max(local.left, next === null ? 0 : 1)
+    const notice =
+      how.kind === 'dismiss'
+        ? Names.DISMISSED_TEXT(id, left)
+        : how.kind === 'decide_yourself'
+          ? Names.HANDED_BACK_TEXT(id, left)
+          : Names.ANSWERED_TEXT(id, left)
 
     if (next === null) {
       await closeSheet(engine)
@@ -454,17 +480,18 @@ export function register(on: On, companion: Companion): void {
   }
 
   /**
-   * Hands the answer to the agent working in this session, at once: a prompt of the plugin's own,
-   * which starts a turn now where the session is idle — the agent that filed the decision is
-   * usually waiting on it — and the moment the running turn ends otherwise. The decision leaves
-   * the filed list first, so the next prompt does not carry it twice. Where the prompt does not
-   * enter, it goes back on that list, and the person's next prompt carries it as before.
+   * Hands what the person did to the agent working in this session, at once: a prompt of the
+   * plugin's own, which starts a turn now where the session is idle — the agent that filed the
+   * decision is usually waiting on it — and the moment the running turn ends otherwise. The
+   * decision leaves the filed list first, so the next prompt does not carry it twice. Where the
+   * prompt does not enter, it goes back on that list, and the person's next prompt carries it as
+   * before.
    */
-  async function handBack(engine: Host, server: string, decision: Decision, args: Record<string, unknown>): Promise<void> {
+  async function handBack(engine: Host, server: string, decision: Decision, said: string): Promise<void> {
     const filed = await filedNow(engine)
     await keepFiled(engine, filed.filter(entry => !(entry.id === decision.id && entry.server === server)))
 
-    const entered = await engine.submitPrompt(answerMessageOf(decision, args)).catch((error: unknown) => ({ drop: message(error) }))
+    const entered = await engine.submitPrompt(said).catch((error: unknown) => ({ drop: message(error) }))
     if (entered.drop === undefined) return
 
     engine.uiLog(`décisions : la réponse à n° ${decision.id} n'a pas pu être envoyée à l'agent (${entered.drop}) ; elle part avec votre prochain message.`)
@@ -478,22 +505,18 @@ export function register(on: On, companion: Companion): void {
       void run().catch(error => setDraft(engine, id, { isSending: false, error: Names.UNSENT_TEXT(message(error)) }))
 
     return {
-      arm: optionId => {
-        setDraft(engine, id, { optionId, error: null })
-        // A digit only marks: Enter on « Répondre » answers, an approval's « Non » included — it
-        // needs no reason (Castalie acceptance 28, remark 17). The ring goes there.
-        void engine.focus(Names.SHEET_PANE_ID, Names.ANSWER_KEYS.confirm).catch(() => undefined)
-      },
-      choose: optionId => safely(() => answer(engine, { optionId })),
-      confirm: () => safely(() => answer(engine)),
-      disarm: () => setDraft(engine, id, { optionId: null, error: null }),
+      // One press answers — the card's text, its « Choisir » or its digit — an approval's « Non »
+      // included, which needs no reason (Castalie acceptance 28, remarks 17 and 20).
+      choose: optionId => safely(() => settle(engine, { kind: 'answer', optionId })),
+      decideYourself: () => safely(() => settle(engine, { kind: 'decide_yourself' })),
       // Every keystroke is kept without a redraw: the field draws its own typing.
       type: text => setDraft(engine, id, { text }, false),
       send: text => {
         if (text !== undefined) setDraft(engine, id, { text }, false)
-        safely(() => answer(engine))
+        safely(() => settle(engine, { kind: 'answer' }))
       },
       ask: () => safely(() => askAgent(engine)),
+      dismiss: () => safely(() => settle(engine, { kind: 'dismiss' })),
     }
   }
 

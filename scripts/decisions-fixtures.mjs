@@ -207,6 +207,12 @@ export const sheetAnswer = {
     continuing_md: "Phase 2 (portal formats) goes on.",
     subject_kind: "feature_spec",
     subject_id: 1210,
+    // Where it sits (Castalie acceptance 28, remarks 3 and 16): the objective is for an agent only.
+    context: {
+      objective: { id: 5, title: "Partners get every listing" },
+      feature: { id: 32, title: "Listing export" },
+      spec: { id: 1210, title: "Export to partner portals" },
+    },
     addressee_user_id: 7,
     decide_by: null,
     resume_mode: "asker",

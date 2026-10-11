@@ -20,6 +20,10 @@ import {
   answerOutcomeOf,
   answerRequestOf,
   askRequestOf,
+  decideYourselfMarkdown,
+  decideYourselfRequestOf,
+  dismissMessageOf,
+  dismissRequestOf,
   effectsFor,
   emptyDraft,
   nextAfter,
@@ -41,6 +45,8 @@ import {
 } from "../cs/hooks/decisions/inbox.mjs";
 import {
   ANSWERED_TEXT,
+  DISMISSED_TEXT,
+  HANDED_BACK_TEXT,
   APPROXIMATE_TEXT,
   EMPTY_TEXT,
   HOTKEY_CARDS,
@@ -208,6 +214,15 @@ check("one waiting decision reads in the singular",
   const sheet = sheetMarkdown(decision, { now: NOW });
 
   check("the sheet opens on the question", sheet.startsWith("# Which phone number goes to the partner portals"));
+  // Castalie acceptance 28, remark 16: « uniquement le titre de la fonctionnalité et le titre de la spec, plutôt en dessous de la question ».
+  check("under the question, the feature's title and the spec's title alone, linked, no objective",
+    sheet.includes("listing export?\n\n[Listing export](https://acme.castalie.app/Product/FeatureBrief/Detail/32) · " +
+      "[Export to partner portals](https://acme.castalie.app/Product/FeatureSpec/Detail/1210)\n\n_demandée par") &&
+      !sheet.includes("Partners get every listing"), sheet.split("\n").slice(0, 5).join("\n"));
+  check("a sheet on no feature and no spec draws no context line",
+    !sheetMarkdown(decisionOf(answeredSheetAnswer), { now: NOW }).includes("/Product/"));
+  check("a waiting sheet printed as text names « Décide-toi » and « Question inutile »",
+    sheet.includes("**Décide-toi** — C'était à toi de trancher : décide toi-même.") && sheet.includes("« Question inutile » la ferme sans réponse"));
   check("the sheet's facts line names the asker, the age and the plan point, nothing about why",
     sheet.includes("_demandée par feature-implement · il y a 4 j · point 3.2 du plan_"), sheet.split("\n")[2]);
   check("the description shows its 80 words first, and says the deeper levels are there",
@@ -244,6 +259,20 @@ check("one waiting decision reads in the singular",
     answered.includes("## Réponse\n\n« Merge and ship it » · le travail reprend · le 05/10 · sans ouvrir le descriptif détaillé"), answered);
   check("an unconfirmed answer says the agent confirms before acting",
     answered.includes("l'agent la confirme avec vous avant d'agir"));
+  check("an answered sheet offers neither « Décide-toi » nor « Question inutile »",
+    !answered.includes("Décide-toi") && !answered.includes("Question inutile"));
+  const handedBack = decisionOf({
+    ...answeredSheetAnswer,
+    decision: {
+      ...answeredSheetAnswer.decision,
+      answer_kind: "decide_yourself",
+      answer: { ...answeredSheetAnswer.decision.answer, option_id: null, option_title: null, text_md: "Décide toi-même : c'était à toi de trancher." },
+    },
+  });
+  check("a sheet handed back reads « Décide-toi » as its answer",
+    sheetMarkdown(handedBack, { now: NOW }).includes("## Réponse\n\n« Décide-toi » · le travail reprend"));
+  check("the agent that filed it is told to decide it itself, never to ask again",
+    settledNotice(handedBack).includes("They answered « Décide-toi »") && settledNotice(handedBack).includes("never ask it again"));
   check("a sheet with one level of description offers no other",
     !answered.includes("_Aussi") && answered.includes("## Descriptif — en 80 mots"));
 }
@@ -531,21 +560,39 @@ check("one waiting decision reads in the singular",
       bar.cards.find((card) => card.id === 302)?.markdown.includes(`${RECOMMENDED_MARK} 2. A relay number, always`));
   check("a card's press lands on its option's anchor of the sheet",
     bar?.cards.find((card) => card.id === 302)?.href === "https://acme.castalie.app/decisions/77#option-302");
-  check("nothing is marked yet, and the last card answers or asks",
-    bar?.armed === null && bar?.other.title === "Autre réponse ou question :" && bar.other.field?.label === "Autre réponse ou question :" &&
-      bar.other.canAnswer === true && bar.other.canAsk === true && bar.other.answerLabel === "Répondre" && bar.other.askLabel === "Poser la question");
+  check("nothing is marked: there is no mark-then-confirm step, and the last card answers, asks or dismisses",
+    !("armed" in (bar ?? {})) && bar?.other.title === "Autre réponse ou question :" && bar.other.field?.label === "Autre réponse ou question :" &&
+      bar.other.canAnswer === true && bar.other.canAsk === true && bar.other.canDismiss === true &&
+      bar.other.answerLabel === "Répondre" && bar.other.askLabel === "Poser la question" && bar.other.dismissLabel === "Question inutile",
+    JSON.stringify(bar?.other));
+  // Castalie acceptance 28, remark 18: « une réponse entourée d'un trait rouge : « Décide-toi » ».
+  check("« Décide-toi » is a card of its own, pressed anywhere on its text, at the sheet's anchor",
+    bar?.decideYourself.title === "Décide-toi" && bar.decideYourself.body === "C'était à toi de trancher : décide toi-même." &&
+      bar.decideYourself.href === "https://acme.castalie.app/decisions/77#decide-toi" &&
+      bar.decideYourself.markdown === "[**Décide-toi**](https://acme.castalie.app/decisions/77#decide-toi)\n\n" +
+        "[C'était à toi de trancher : décide toi-même.](https://acme.castalie.app/decisions/77#decide-toi)",
+    JSON.stringify(bar?.decideYourself));
+  check("with no page, « Décide-toi » is the same text, linking nowhere", !decideYourselfMarkdown(null).includes("]("));
   check("the questions already asked are read in the last card",
     bar?.other.asks?.includes("Does the relay provider bill per number or per minute?") === true);
   check("a follow-up run allows no take-over, as the sheet",
     effectsFor("followup_run").join() === "continue,close" && effectsFor("maturity_question").join() === "continue,close");
   check("a decision that no longer waits has no cards to press", answerBarOf(decisionOf(answeredSheetAnswer), emptyDraft(), field) === null);
   const mobile = answerBarOf(pending, emptyDraft(), { hasField: false });
-  check("where the surface draws no field, the cards stay and the last card says where to write",
-    mobile?.cards.length === 3 && mobile.other.field === null && !mobile.other.canAnswer && mobile.fallback === NO_FIELD_TEXT);
+  check("where the surface draws no field, the cards stay, « Question inutile » too, and the last card says where to write",
+    mobile?.cards.length === 3 && mobile.other.field === null && !mobile.other.canAnswer && mobile.other.canDismiss &&
+      mobile.fallback === NO_FIELD_TEXT);
 
-  const marked = answerBarOf(pending, { ...emptyDraft(), optionId: 302 }, field);
-  check("a digit marks its card and answers nothing: Enter answers, and the field waits",
-    marked?.armed?.id === 302 && marked.armed.hint.includes("Entrée répond") && marked.other.canAnswer === false);
+  const decided = decideYourselfRequestOf(pending, emptyDraft());
+  check("« Décide-toi » answers with no option, channel click",
+    JSON.stringify(decided.args) === '{"id":77,"decide_yourself":true,"channel":"click"}', JSON.stringify(decided));
+  const decidedWithWords = decideYourselfRequestOf(pending, { ...emptyDraft(), text: "  Pick the relay. " });
+  check("« Décide-toi » carries the field's words along, channel text",
+    JSON.stringify(decidedWithWords.args) === '{"id":77,"decide_yourself":true,"text_md":"Pick the relay.","channel":"text"}');
+  const dismissed = dismissRequestOf(pending, emptyDraft());
+  check("« Question inutile » needs no words", JSON.stringify(dismissed.args) === '{"id":77}');
+  check("« Question inutile » sends the field's words as its reason",
+    dismissRequestOf(pending, { ...emptyDraft(), text: " Already settled in spec 1210. " }).args.reason_md === "Already settled in spec 1210.");
 
   const ask = askRequestOf(pending, { ...emptyDraft(), text: "  Per number or per minute? " });
   check("« Poser la question » sends the words to the agent, trimmed",
@@ -554,9 +601,9 @@ check("one waiting decision reads in the singular",
   check("an empty question leaves nothing, and says what to do", !blank.ok && blank.fix.startsWith("Écrivez la question"));
 
   const click = answerRequestOf(pending, emptyDraft(), { optionId: 302 });
-  check("« Choisir » without words answers with the option, channel click",
+  check("one press on a card, without words, answers with the option, channel click",
     click.ok && JSON.stringify(click.args) === '{"id":77,"option_id":302,"channel":"click"}', JSON.stringify(click));
-  const adjusted = answerRequestOf(pending, { ...emptyDraft(), optionId: 302, text: "  Only for Northwind. " });
+  const adjusted = answerRequestOf(pending, { ...emptyDraft(), text: "  Only for Northwind. " }, { optionId: 302 });
   check("an option with words adjusts it, channel text, the words trimmed",
     adjusted.ok && JSON.stringify(adjusted.args) === '{"id":77,"option_id":302,"text_md":"Only for Northwind.","channel":"text"}',
     JSON.stringify(adjusted));
@@ -593,13 +640,16 @@ check("one waiting decision reads in the singular",
   const reasoned = answerRequestOf(approval, { ...emptyDraft(), text: "Not before the audit." }, { optionId: 502 });
   check("« Non » with its reason leaves, channel text",
     reasoned.ok && reasoned.args.option_id === 502 && reasoned.args.text_md === "Not before the audit." && reasoned.args.channel === "text");
-  const markedNo = answerBarOf(approval, { ...emptyDraft(), optionId: 502 }, field);
-  check("« Non » marked asks for nothing more: Enter answers",
-    markedNo?.armed?.hint.includes("Entrée répond") === true && markedNo.other.field?.label !== "Pourquoi « Non » :" && !("needsReason" in (markedNo?.armed ?? {})));
+  check("« Non » asks for nothing more: its card is a press like any other",
+    answerBarOf(approval, emptyDraft(), field)?.other.field?.label === "Autre réponse ou question :");
   check("« Oui » needs no words", answerRequestOf(approval, emptyDraft(), { optionId: 501 }).ok);
 
   const accepted = answerOutcomeOf(resultOf({ success: true, decision_id: 77, status: "answered" }));
-  check("an accepted answer reads its status", accepted.ok && accepted.status === "answered");
+  check("an accepted answer reads its status", accepted.ok && accepted.status === "answered" && accepted.nextId === null);
+  const chained = answerOutcomeOf(resultOf({ success: true, decision_id: 77, status: "answered", next_decision_id: 81 }));
+  check("an accepted answer reads the decision the server names next", chained.ok && chained.nextId === 81);
+  const closed = answerOutcomeOf(resultOf({ success: true, decision_id: 77, status: "cancelled", cancel_reason: "Question inutile — B, 11/10/2026", next_decision_id: null }));
+  check("a dismissal reads as accepted, with nothing next", closed.ok && closed.status === "cancelled" && closed.nextId === null);
   const fix = "A service token files decisions and plays resumes; it never answers one.";
   const refused = answerOutcomeOf(resultOf({ success: false, error: "answer_requires_person", fix }));
   check("a refusal carries the server's code and its fix as written",
@@ -623,6 +673,9 @@ check("one waiting decision reads in the singular",
   check("the line over the next sheet says the agent has it, and what is left",
     ANSWERED_TEXT(77, 2) === "✓ Réponse enregistrée sur n° 77 et envoyée à l'agent. 2 à répondre." &&
       ANSWERED_TEXT(77, 0).includes("Plus rien à répondre"));
+  check("after « Décide-toi » and « Question inutile », the sheet's own words",
+    HANDED_BACK_TEXT(77, 1) === "✓ N° 77 renvoyée à l'agent : il tranche lui-même. 1 à répondre." &&
+      DISMISSED_TEXT(77, 0) === "✓ N° 77 : question écartée comme inutile. Plus rien à répondre sur cet objectif.");
 
   const chosen = answerMessageOf(pending, { id: 77, option_id: 302, channel: "click" });
   check("the agent is told the option, its effect, and to resume now",
@@ -637,6 +690,13 @@ check("one waiting decision reads in the singular",
     takeOver.includes("Their answer, in their words: I call Northwind myself.") && !takeOver.includes("Option chosen") &&
       takeOver.includes("Effect: take_over — the person takes the subject over") && takeOver.includes("do not resume it"));
   check("the resume state an agent left itself never travels in the message", !chosen.includes("SECRET"));
+  const handBack = answerMessageOf(pending, decidedWithWords.args);
+  check("« Décide-toi » tells the agent to decide it itself now, and never to ask it again",
+    handBack.includes("with « Décide-toi »") && handBack.includes("Decide it yourself now") && handBack.includes("Never ask it again") &&
+      handBack.includes("Their words: Pick the relay.") && !handBack.includes("Option chosen"), handBack);
+  const useless = dismissMessageOf(pending, { id: 77, reason_md: "Already settled." });
+  check("« Question inutile » tells the agent not to ask this kind of question again",
+    useless.includes("useless (« Question inutile »)") && useless.includes("never file it again") && useless.includes("Their reason: Already settled."), useless);
 }
 
 if (failed) {

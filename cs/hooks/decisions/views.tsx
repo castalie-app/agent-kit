@@ -18,7 +18,6 @@ import {
   BACK_TEXT,
   CHOOSE_TEXT,
   DESCRIPTION_HEADING,
-  DISARM_TEXT,
   SENDING_TEXT,
   CARDS_PANE_TITLE,
   IN_CASTALIE_TEXT,
@@ -247,38 +246,44 @@ export type SheetView = {
 export type AnswerBarView = {
   error: string | null
   isSending: boolean
-  cards: { id: number; title: string; href: string | null; markdown: string; hotkey: string | undefined; isRecommended: boolean; isArmed: boolean }[]
-  armed: { id: number; title: string; hint: string; confirm: string } | null
+  cards: { id: number; title: string; href: string | null; markdown: string; hotkey: string | undefined; isRecommended: boolean }[]
+  /** « Décide-toi »: the card outlined in red that hands the decision back to the agent that asked. */
+  decideYourself: { title: string; body: string; href: string | null; markdown: string }
   other: {
     title: string
     asks: string | null
     field: { label: string; placeholder: string; value: string; submitLabel: string } | null
     answerLabel: string
     askLabel: string
+    dismissLabel: string
     canAnswer: boolean
     canAsk: boolean
+    canDismiss: boolean
   }
   fallback: string | null
 }
 
 export type AnswerHandlers = {
-  /** A digit: marks the card, answers nothing. */
-  arm: (optionId: number) => void
-  /** A press on the card: answers with that option at once. */
+  /** A press on the card, its « Choisir » or its digit: answers with that option at once. */
   choose: (optionId: number) => void
-  /** « Répondre « … » », the marked card's Enter. */
-  confirm: () => void
-  disarm: () => void
+  /** « Décide-toi »: the decision goes back to the agent that asked, which settles it itself. */
+  decideYourself: () => void
   /** Every change of the field: the draft keeps it across redraws. */
   type: (text: string) => void
   /** Enter in the field, or « Répondre »: the words are the answer. */
   send: (text?: string) => void
   /** « Poser la question »: the words go to the agent that asked, as a question. */
   ask: () => void
+  /** « Question inutile »: the question closes without an answer, the words as its reason. */
+  dismiss: () => void
 }
 
-/** A framed card, as the cards pane draws its own. */
-function framed(kit: Kit, key: string, children: (RenderElement | null)[], isRecommended = false): RenderElement {
+/**
+ * A framed card, as the cards pane draws its own: green around the recommended one, and red
+ * around « Décide-toi » — held under the pointer too, since the outline IS its meaning, as on the
+ * web sheet.
+ */
+function framed(kit: Kit, key: string, children: (RenderElement | null)[], tone: 'plain' | 'recommended' | 'alert' = 'plain'): RenderElement {
   const { Box } = kit
   return (
     <Box
@@ -286,10 +291,10 @@ function framed(kit: Kit, key: string, children: (RenderElement | null)[], isRec
       flexDirection="column"
       marginTop={1}
       borderStyle="round"
-      borderDimColor={!isRecommended}
-      borderColor={isRecommended ? 'green' : undefined}
+      borderDimColor={tone === 'plain'}
+      borderColor={tone === 'recommended' ? 'green' : tone === 'alert' ? 'red' : undefined}
       paddingX={1}
-      hover={{ borderColor: 'blue', borderDimColor: false }}
+      hover={tone === 'alert' ? { borderColor: 'red', borderDimColor: false } : { borderColor: 'blue', borderDimColor: false }}
     >
       {children}
     </Box>
@@ -297,10 +302,10 @@ function framed(kit: Kit, key: string, children: (RenderElement | null)[], isRec
 }
 
 /**
- * The cards of a pending sheet, as Castalie's own (spec 88): a framed card per option, whose
- * every line is a press that answers with it, and its digit, which only marks it; then the marked
- * card's « Répondre », and the last card, « Autre réponse ou question : », with its field,
- * « Répondre » and « Poser la question ».
+ * The cards of a pending sheet, as Castalie's own (spec 88; acceptance 28): a framed card per
+ * option, whose every line, « Choisir » and digit answer with it in one press; then « Décide-toi »,
+ * outlined in red; then the last card, « Autre réponse ou question : », with its field,
+ * « Répondre », « Poser la question » and « Question inutile ».
  */
 function answerCards(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderElement {
   const { Box, Text, Button, Input } = kit
@@ -332,31 +337,38 @@ function answerCards(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderEl
             card.href === null
               ? markdownOf(kit, `text-${card.id}`, card.markdown)
               : markdownOf(kit, `text-${card.id}`, card.markdown, { hrefs: [card.href], press: () => on.choose(card.id) }),
-            // Its digit, or a press on « Choisir », only marks it: Enter on « Répondre « … » » answers.
+            // Its digit, or a press on « Choisir », answers at once, as its text does.
             <Button
               key={ANSWER_KEYS.option(card.id)}
               plain
               hotkey={card.hotkey}
-              dimColor={!card.isArmed}
-              label={card.isArmed ? `› ${CHOOSE_TEXT}` : CHOOSE_TEXT}
-              onPress={() => on.arm(card.id)}
+              dimColor
+              label={CHOOSE_TEXT}
+              onPress={() => on.choose(card.id)}
             />,
           ],
-          card.isRecommended,
+          card.isRecommended ? 'recommended' : 'plain',
         ),
       )}
-      {bar.armed === null ? null : (
-        <Box key="armed" flexDirection="column" marginTop={1}>
-          <Box key="hint">
-            <Text dimColor wrap="wrap">
-              {bar.armed.hint}
-            </Text>
-          </Box>
-          <Box key="armed-actions" flexDirection="row">
-            <Button key={ANSWER_KEYS.confirm} variant="primary" label={bar.armed.confirm} onPress={() => on.confirm()} />
-            <Button key={ANSWER_KEYS.disarm} plain dimColor label={DISARM_TEXT} onPress={() => on.disarm()} />
-          </Box>
-        </Box>
+      {framed(
+        kit,
+        SHEET_KEYS.decideYourself,
+        [
+          bar.decideYourself.href === null
+            ? markdownOf(kit, 'text-decide-yourself', bar.decideYourself.markdown)
+            : markdownOf(kit, 'text-decide-yourself', bar.decideYourself.markdown, {
+                hrefs: [bar.decideYourself.href],
+                press: () => on.decideYourself(),
+              }),
+          <Button
+            key={ANSWER_KEYS.decideYourself}
+            plain
+            dimColor
+            label={CHOOSE_TEXT}
+            onPress={() => on.decideYourself()}
+          />,
+        ],
+        'alert',
       )}
       {framed(kit, 'other', [
         <Text key="title" bold>
@@ -374,13 +386,16 @@ function answerCards(kit: Kit, bar: AnswerBarView, on: AnswerHandlers): RenderEl
             onSubmit={value => on.send(value)}
           />
         ),
-        bar.other.canAnswer || bar.other.canAsk ? (
+        bar.other.canAnswer || bar.other.canAsk || bar.other.canDismiss ? (
           <Box key="other-actions" flexDirection="row">
             {bar.other.canAnswer ? (
               <Button key={ANSWER_KEYS.send} variant="primary" label={bar.other.answerLabel} onPress={() => on.send()} />
             ) : null}
             {bar.other.canAsk ? (
               <Button key={SHEET_KEYS.ask} variant="secondary" label={bar.other.askLabel} onPress={() => on.ask()} />
+            ) : null}
+            {bar.other.canDismiss ? (
+              <Button key={SHEET_KEYS.dismiss} plain dimColor label={bar.other.dismissLabel} onPress={() => on.dismiss()} />
             ) : null}
           </Box>
         ) : null,
