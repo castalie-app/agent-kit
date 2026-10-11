@@ -27,14 +27,15 @@ never relaunches anything. Register one only when the delivery itself makes the 
 A check that waits on a scheduled batch or task is an ordinary follow-up, anchored on the delivery
 (`anchorPrUrl`), with an offset that falls after that batch's next pass.
 
-**A run that needs a person is a decision on the run.** Only the post-deploy check relaunches a
-session (`relaunch_prompt_md`), and that relaunch needs no decision. Every other run that cannot
-conclude without a person — a threshold only they can move, a gesture only they can make — files a
-decision on it first, `decision_create(subject_kind="followup_run", subject_id=<run>)`
-(`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), then closes with
-`finalStatus=human_required`. Its `continue` replays the check at once with the answer; its `close`
-closes the run. A run left open by a session that stopped is not a decision: finish it, or
-reschedule it.
+**A check arbitrates on its own; it never asks a person to replay or close it.** A person's decision
+is expensive, and a recurring one is never asked. Only the post-deploy check relaunches a session
+(`relaunch_prompt_md`), with no decision. `decision_create(subject_kind="followup_run")` is refused
+(`followup_decides_itself`): close the run with `followup_run_complete`, or push it back with
+`followup_run_reschedule`. A run closed on `finalStatus=human_required` is replayed the next day, at
+most twice, then closed as failed with its reason. The one question a check may put to a person is
+about its RULE, when it cannot be applied as written: `rule_question_md` on `followup_run_complete`
+files ONE decision for that check — never once per run — and its answer rewrites the check's prompt.
+A run left open by a session that stopped is not a decision: finish it, or reschedule it.
 
 **A phase is not held open for a measurement a follow-up carries.** Close the phase at delivery and
 put the measurement in a check: a spec waiting on its check while its check waits on the spec moves

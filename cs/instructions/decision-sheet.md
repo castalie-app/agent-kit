@@ -8,8 +8,8 @@ sentence or by voice, and Castalie applies the answer to that work at once.
 a session poses it in the conversation:
 
 1. **the title**, the question;
-2. **the description**, written by you at three depths: 80, 250 and 500 words. The reader clicks
-   the depth they want; 80 words shows first;
+2. **the description**, written by you at three depths: an explanation in 80, in 250 and in 500
+   words — targets, not caps. The reader clicks the depth they want; 80 words shows first;
 3. **the options, as cards**: one card per option, with its title, its consequence, its cost or
    what it gives up, and the recommendation marked on its card. A click on the card answers. The
    last card is always « Autre réponse ou question : », a free field. Read by `bug-fix`,
@@ -55,14 +55,17 @@ already waits on that work: a question already asked is not asked again.
 
 ## The description, at three depths
 
-| Field | At most | What it holds |
+| Field | Length — a target, ±10 % | What it holds |
 |---|---|---|
-| `description_80_md` | 80 words | shown first, and often all that is read: the fact that decides, and what you recommend |
-| `description_250_md` | 250 words | for the reader who wants more: what you checked, what each option leads to |
-| `description_500_md` | 500 words | the deepest level: the figures, the history, a diagram |
+| `description_80_md` | an explanation in 80 words (72 to 88) | shown first, and often all that is read: the fact that decides, and what you recommend |
+| `description_250_md` | an explanation in 250 words (225 to 275) | for the reader who wants more: what you checked, what each option leads to |
+| `description_500_md` | an explanation in 500 words (450 to 550) | the deepest level: the figures, the history, a diagram |
 
-All three are mandatory, and you write them when you file: the page never generates them. Each one
-stands alone; a deeper level repeats what decides, then adds. A fenced block (a Mermaid diagram,
+All three are mandatory, and you write them when you file: the page never generates them. **80,
+250 and 500 words are targets, not caps**: the person asks for an explanation in 80 words, in 250
+words and in 500 words, and Castalie admits each level within 10 % of its target — shorter is
+refused as surely as longer. Count before you file. Each one stands alone; a deeper level repeats
+what decides, then adds what the reader needs at that depth — never padding to reach the count. A fenced block (a Mermaid diagram,
 an illustration) is looked at, not read: it does not count. A level identical to the one above it
 is not offered to the reader.
 
@@ -182,7 +185,8 @@ Correct and file again; never work around a refusal by changing the complexity a
 |---|---|
 | `title_not_a_question` | write the question, 12 to 160 characters, ending with `?` |
 | `description_required` | write the three levels: `description_80_md`, `description_250_md`, `description_500_md` (a caller that still sends only `executive_md` gets this one) |
-| `description_80_too_long`, `description_250_too_long`, `description_500_too_long` | cut that level to `cap` words; move the rest one level deeper |
+| `description_80_too_long`, `description_250_too_long`, `description_500_too_long` | that level is past 110 % of its target (`cap`): bring it back to an explanation in `cap` words; move the rest one level deeper |
+| `description_80_too_short`, `description_250_too_short`, `description_500_too_short` | that level is under 90 % of its target (`cap`): rewrite it as an explanation in `cap` words — what was checked, what each option leads to, the figures |
 | `complexity_mismatch` | `simple` takes an approval or two options |
 | `options_count` | `choice` 2 to 4, `approve` 0 or 2, `free_text` none |
 | `option_missing_gives_up`, `options_same_axis` | say what each option gives up, on a different axis |
@@ -197,7 +201,7 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
 
 **After filing**, a fact that changes the picture is added with `decision_add_context` while the
-decision waits: it lands at the end of the 500-word level, within its 500 words. A fact that
+decision waits: it lands at the end of the 500-word level, which it may take up to 550 words. A fact that
 overturns it is a new sheet, by `decision_supersede`. A question the
 work settled on its own is withdrawn with `decision_cancel` and its reason.
 
