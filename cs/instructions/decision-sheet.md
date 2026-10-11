@@ -47,9 +47,10 @@ seven or decides. An instance that does not know `idea` yet refuses it; the lead
 
 **Never ask a person to name a person.** A person's attention is the scarcest thing a workspace
 has, and a sheet that asks *who* validates, reviews, downloads or re-reads spends it to find out
-whose attention to spend next. That is routing, not a decision: the workspace already records who
-owns the work — the brief's owner (`feature_brief_get`), the spec's assignee (`feature_spec_get`),
-the domain's owners (`domain_list_owners`), the ticket's assignee (`bug_get`). Find that person and
+whose attention to spend next. That is routing, not a decision: questions go to the person in
+charge of the FEATURE, and the workspace already records who that is — the brief's owner first
+(`feature_brief_get`, `owner_user_id`), then the spec's assignee (`feature_spec_get`), then the
+domain's owners (`domain_list_owners`); for a ticket, its assignee (`bug_get`). Find that person and
 address the actual request TO them: the decision filed with their `addressee_user_id`
 (« Valides-tu la spec … avant le code ? »), the task assigned to them, or the question asked in the
 discussion. When nobody is recorded, set an owner from the strategy — the objective's owner — with
@@ -147,7 +148,8 @@ not know `take_over`: refused with `effect_not_allowed_for_subject`.
 ## Name who decides
 
 `addressee_user_id` is the person who can answer. Omitted, Castalie picks the person assigned to
-the subject, then its lead, then the workspace owner — the owner is the worst inbox to land in.
+the subject, then its lead, then the person in charge of its feature (the brief's owner first), and
+the workspace owner only as the last resort — the worst inbox to land in.
 When you know who decides — the author of the code at stake (`git log`), the brief's owner, the
 person who can play the script — name them.
 
@@ -210,7 +212,7 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `subject_not_found`, `subject_closed` | the id of open work; `none` takes no id |
 | `subject_kind_unavailable` | this workspace does not know that kind yet: file on the brief the work belongs to |
 | `addressee_not_member` | an active member of the workspace |
-| `routing_is_not_a_decision` | the answer would be a person: find the owner (brief owner, spec assignee, `domain_list_owners`, ticket assignee) and file the request TO them, or assign them the task |
+| `routing_is_not_a_decision` | the answer would be a person: find the person in charge of the feature (the brief's owner first, then the spec's assignee, then `domain_list_owners`, or the ticket's assignee) and file the request TO them, or assign them the task |
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
 
 **After filing**, a fact that changes the picture is added with `decision_add_context` while the
