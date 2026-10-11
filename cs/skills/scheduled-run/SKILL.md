@@ -144,7 +144,7 @@ same key, character for character. `asked_by_agent` is `scheduled-task:<task id>
 | `title` | the question, ending with `?`: « Switch invoice-export to the new model before the old one retires? » |
 | `subject_kind`, `subject_id` | `scheduled_task_run` and this run's id. Refused `subject_kind_unavailable`: the brief or spec the prompt names |
 | `escalation_reason` | `money`, `public_voice`, `shareholder`, `private_knowledge`, `irreversible`, `authorization` or `external_gesture`; none fits → the decision is yours, take it and write why in the notes |
-| `description_80_md`, `description_250_md`, `description_500_md` | the description at three depths (80, 250, 500 words at most): the first opens on the fact that decides, with the figures, and says what you recommend; the deeper ones add what was measured and what each option leads to |
+| `description_80_md`, `description_250_md`, `description_500_md` | the description at three depths, each an explanation in 80, 250 and 500 words — targets within ±10 %, not caps: the first opens on the fact that decides, with the figures, and says what you recommend; the deeper ones add what was measured and what each option leads to |
 | `answer_shape`, `options` | `choice`, two or three options on different axes, each a card the person clicks: `gives_up_md`, its `cost_text` when there is one (on every option when `money`), its `effect`, one `is_recommended` |
 | `blocked_items` | how many gestures wait for the answer |
 | `addressee_user_id` | the responsible person: the one the prompt names (resolve an address with `user_lookup(email)`), else the task's last editor (`updated_by_user_id`, else `created_by_user_id`, from `scheduled_task_get`) |
