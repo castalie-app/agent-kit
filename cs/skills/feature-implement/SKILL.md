@@ -83,8 +83,9 @@ watchdog never fires — ideal.
    one `scope=subject` read for the spec and each phase). Cancel with `decision_cancel(id, reason)`
    each one the finished work settled or left without a reason to exist, the reason naming the
    pull request or the phase that settled it; supersede one whose facts moved; keep one that still
-   stands (a production gesture, a business choice the spec did not make) and name it in the
-   report. `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md` § Your decisions, at the start
+   stands (a business choice the spec did not make) and name it in the report; one that asks a
+   person to make a gesture was never a decision — put the gesture on a ticket waiting for a person
+   (§ Autonomy contract) and cancel the sheet, the reason naming the ticket. `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md` § Your decisions, at the start
    and at the end. Then invoke `retro` (additive, never blocking).
    **Then go back up to the brief.** `mcp__castalie__feature_brief_get(briefId)`: when this spec was its
    last open one, Castalie has already moved the brief to `Acceptance`, and the stories this spec was
@@ -98,12 +99,16 @@ watchdog never fires — ideal.
 
 Runs for hours; the developer is gone. **A business question is not a stop: it becomes a decision,
 and the loop carries on.** An expectation only a person can settle, a merge conflict on business
-logic, an action only a person can take — file it with `decision_create`, on the phase it blocks
+logic — file it with `decision_create`, on the phase it blocks
 (`subject_kind="feature_spec_phase"`) or on the spec, written by
 `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`: `resume_mode="asker"` with the branch, the
 phase and what each answer changes in `resume_state_md` (`robot_prompt` with
 `/feature-implement <specId> --continue` where the workspace lets a robot resume). Then go on with
-the phases and cases that do not depend on it, exactly those. On
+the phases and cases that do not depend on it, exactly those. **An action only a person can take**
+(a provider console, a secret on a server, an access to grant, someone to contact) is not a decision
+(`human_action_is_not_a_decision`): check it is not already made, then `bug_create` it under the spec,
+the gesture as its title, assigned to the brief's owner, and `bug_set_requires_human(true, reason)`;
+name the ticket in the report and carry on. On
 `--continue`, `decision_list(asked_by_agent="feature-implement", status=answered)`, kept to this
 spec and its phases, returns what was settled: build each answer as an instruction, then
 `decision_mark_applied`. The only stops left are a hard build/test failure you cannot fix, or

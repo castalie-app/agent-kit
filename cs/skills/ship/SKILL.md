@@ -63,9 +63,11 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
 **The agent ships its own work.** Once the panel is clean and the host's quality gate is green, it
 hands the ready pull request to the host's merge path, then to its release path, and follows it to
 the release. It asks nobody for that: not "shall I merge?", not "do you want to review it?", not
-"shall I deploy?". A person is asked a business decision, an infrastructure decision with a real
-doubt (through a Castalie decision, `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), or a
-gesture no session can perform — never an authorisation to deliver.
+"shall I deploy?". A person is asked a business decision or an infrastructure decision with a real
+doubt (through a Castalie decision, `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`) — never an
+authorisation to deliver. A gesture no session can perform is not a decision: it is handed over as
+work — asked of the person at the keyboard, or, unattended, put on a ticket waiting for a person
+(`human_action_is_not_a_decision`).
 
 **The host's merge and release path** is, in this order:
 

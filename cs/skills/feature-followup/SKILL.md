@@ -52,7 +52,10 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    concrete readings of the rule, each a title, what the check then measures (`body_md`) and what it
    leaves out (`gives_up_md`), one `is_recommended` — and the product files ONE decision for that
    check, never again while it waits nor once answered; the reading picked rewrites the check's
-   prompt. A question without two readings is refused (`decision_needs_two_alternatives`). A run your own session left open is a run to finish or reschedule.
+   prompt. A question without two readings is refused (`decision_needs_two_alternatives`). A reading is a way
+   to measure, never a person making a gesture (« Eloi plays it on his Mac », « open the API to the
+   robot »): a check only a person's gesture can measure closes `human_required` and puts that gesture
+   on a ticket waiting for a person, under the spec it follows (`human_action_is_not_a_decision`). A run your own session left open is a run to finish or reschedule.
 5. **Reschedule.** Per `${CLAUDE_PLUGIN_ROOT}/instructions/followup-conventions.md`: green + stable →
    close the loop; green first cycle of a cascade → next horizon; minor anomaly → J+7 re-check; hard
    regression → stop + flag. Apply via `mcp__castalie__followup_check_update(checkId, scheduleOffsetDays=…,

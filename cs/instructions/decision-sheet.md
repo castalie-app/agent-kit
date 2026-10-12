@@ -20,7 +20,8 @@ and by any skill that is about to stop for a person.
 
 ## File one, or decide yourself
 
-File a decision only when one of seven reasons applies. It is the `escalation_reason`, and it is
+File a decision only when one of six reasons applies. A decision is a CHOICE only a person can make;
+a gesture a person has to perform is never one (below). It is the `escalation_reason`, and it is
 mandatory:
 
 | Reason | When |
@@ -30,8 +31,10 @@ mandatory:
 | `shareholder` | it belongs to the owners: pricing policy, a partnership, equity |
 | `private_knowledge` | the answer lives in someone's head: what a customer really needs, a promise made orally |
 | `irreversible` | no revert takes it back: data deleted, a message sent, a column dropped |
-| `authorization` | opening an access — never merging or releasing the agent's own work, which it does without asking, and never playing a SQL script (below) |
-| `external_gesture` | a gesture an agent cannot make: a provider console, a phone call, a signature |
+| `authorization` | a permission only a person can grant for work the AGENT then carries out: a change in production, a data correction, a push to a third party — never merging or releasing the agent's own work, which it does without asking, never opening an access or any other gesture the person makes themselves, never playing a SQL script (below) |
+
+`external_gesture` is retired: « a gesture an agent cannot make » is the definition of an action,
+and the server refuses it (`human_action_is_not_a_decision`).
 
 **If none fits, the decision is yours: make it.** Naming, file layout, which seam to cut, a change
 one revert takes back, two implementations with the same outcome, anything the code settles in
@@ -39,10 +42,34 @@ under a minute. A gesture the spec's `Authorisations` section lists, or a workfl
 answers, is not a question either. A sheet that asks what you could have decided costs a person
 three minutes and teaches them to stop reading your sheets.
 
-## Two things that are never a decision
+## Three things that are never a decision
 
 They are work on a ticket, handled on the ticket and the ticket board, and the server refuses them
 as decisions at every door.
+
+**A gesture a person has to make** (`human_action_is_not_a_decision`). Creating a resource from an
+MFA account, configuring a provider console, installing an application, setting a secret on a
+server, restarting a service, signing in somewhere, opening or granting an access, calling or
+writing to a customer or a supplier, making a transfer, reviewing: that is work somebody has to
+do, not a choice to weigh. A decision asks a person to CHOOSE; it never asks them to DO.
+
+- **Unattended run**: put the work on a ticket waiting for a person. On the ticket you work,
+  `bug_set_requires_human(true, reason)` — the reason is the gesture: what to do, where, with what.
+  When the work has no ticket, `bug_create` one with the gesture as its title, under the brief or
+  spec it belongs to, assigned to the person in charge (the brief's owner first — the routing
+  below), then `bug_set_requires_human`. It shows on the ticket board as requiring a person.
+- **Interactive session**: ask the person at your keyboard, and end the turn on *For you to do*
+  (`shared-conventions.md`).
+- **Before routing a gesture to anyone, check it is not already made**: read the real state —
+  the resource exists, the setting is on, the message was sent. Already made: say so on the ticket,
+  and nobody is asked.
+
+The server refuses the sheet when its `escalation_reason` is `external_gesture`, when its question
+asks the addressee to act (« Faites-vous… ? », « Peux-tu créer… ? », "Will you ask…?"), when it asks
+for a gesture by hand, from an MFA account or as an administrator with no alternative named, or when
+its recommended card is the person acting (« Je crée la balise », « J'ai lancé le script »,
+« C'est fait », « Je reprends », "I take it"). A choice that a gesture follows — which provider,
+whether to spend, what to say publicly — is still a decision: ask the choice, never the gesture.
 
 **Playing a SQL script** (`sql_script_is_not_a_decision`). Never ask whether to play, run or apply
 a script: it is an action to do, not a choice to weigh.
@@ -73,8 +100,8 @@ A choice about the ticket's WORK — which approach, which business rule — is 
 
 **One more reason, for a question nobody blocked on: `idea`.** A lead an agent raised on the
 strategy unprompted, which the leader judges good or not (`strategy-scout`). It is never a way to
-ask what one of the seven reasons above does not cover: a skill blocked on its own work uses those
-seven or decides. An instance that does not know `idea` yet refuses it; the lead is then filed as
+ask what one of the six reasons above does not cover: a skill blocked on its own work uses those
+six or decides. An instance that does not know `idea` yet refuses it; the lead is then filed as
 `private_knowledge`, since what the leader alone knows is what settles it.
 
 **Never ask a person to name a person.** A person's attention is the scarcest thing a workspace
@@ -138,8 +165,9 @@ decision that was yours to take, and did not take your responsibility. So:
 - **Decide it yourself, now**, with what you know and the recommendation you had drafted; apply it,
   and write in your notes and on the subject's thread what you chose and why.
 - **Never ask it again** — not under the same `dedupe_key`, not reworded, not split, not to another
-  person. A real blocker you cannot get past (a gesture only a person can make, money you are not
-  allowed to commit) is the one exception: say so on the subject's thread instead of filing.
+  person. A real blocker you cannot get past (money you are not allowed to commit) is the one exception:
+  say so on the subject's thread instead of filing. A gesture only a person can make was never a
+  decision: it waits on a ticket for a person (above).
 - **Learn the kind.** Before the next filing of the same shape, check
   `decision_list(answered_as=decide_yourself, asked_by_agent=<you>)`: a kind of question handed back
   once is one you settle from then on. Each one is kept for an improvement pass on the agents that

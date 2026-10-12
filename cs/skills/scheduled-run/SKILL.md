@@ -96,7 +96,8 @@ notes.
   chose and why. A choice that belongs to a person goes through section 4 and the run carries on with
   everything that does not depend on it.
 - **Never wait for a person.** An « I need you » verdict of a loaded skill becomes a decision
-  (section 4); a confirmation it would ask for before a gesture is either granted by the prompt in
+  (section 4); a « For you to do » verdict — a gesture only a person can make — becomes a ticket
+  waiting for a person, never a decision (section 4); a confirmation it would ask for before a gesture is either granted by the prompt in
   writing, or refused: the gesture is not made, and the notes say so.
 - **Never wait for anything.** This session is headless: it ends the moment its turn ends, and
   nothing wakes it again — not a monitor, not a background task, not a CI or release notification.
@@ -121,10 +122,14 @@ file nothing and write it in the run's notes. A question already answered is not
 a changed fact. A run asks ONE question per kind, never one per subject: ten models to upgrade are
 one sheet listing the ten, filed only when it recommends an action. The server refuses the rest
 (`status_quo_is_not_a_decision`, `batch_one_question_per_kind`, `question_dismissed_as_useless`).
-Two things are never asked at all, they are work on a ticket: playing a SQL script (declare it on the
-ticket with `bug_declare_sql_script` — the ticket then requires a person on the ticket board) and what
-to do with a ticket (settle it, or park it with `bug_set_requires_human`) — `sql_script_is_not_a_decision`,
-`ticket_triage_is_not_a_decision`, § « Two things that are never a decision » of the sheet.
+Three things are never asked at all, they are work on a ticket: a gesture a person has to make — create,
+configure, install, sign in, grant an access, restart, contact someone, make a transfer (park its ticket
+with `bug_set_requires_human`, the gesture as the reason, or `bug_create` one assigned to the person in
+charge when the work has none) — playing a SQL script (declare it on the ticket with
+`bug_declare_sql_script` — the ticket then requires a person on the ticket board) and what to do with a
+ticket (settle it, or park it with `bug_set_requires_human`) — `human_action_is_not_a_decision`,
+`sql_script_is_not_a_decision`, `ticket_triage_is_not_a_decision`, § « Three things that are never a
+decision » of the sheet.
 
 **The key.** Every decision of this task carries a `dedupe_key` built from what does not change
 between runs: `scheduled-task:<task id>:<what to decide>`, or the subject's own terms when it has
@@ -160,7 +165,7 @@ same key, character for character. `asked_by_agent` is `scheduled-task:<task id>
 |---|---|
 | `title` | the question, ending with `?`: « Switch invoice-export to the new model before the old one retires? » |
 | `subject_kind`, `subject_id` | `scheduled_task_run` and this run's id. Refused `subject_kind_unavailable`: the brief or spec the prompt names |
-| `escalation_reason` | `money`, `public_voice`, `shareholder`, `private_knowledge`, `irreversible`, `authorization` or `external_gesture`; none fits → the decision is yours, take it and write why in the notes |
+| `escalation_reason` | `money`, `public_voice`, `shareholder`, `private_knowledge`, `irreversible` or `authorization` (`external_gesture` is retired: a gesture goes on a ticket); none fits → the decision is yours, take it and write why in the notes |
 | `description_80_md`, `description_250_md`, `description_500_md` | the description at three depths, each an explanation in 80, 250 and 500 words — targets within ±10 %, not caps: the first opens on the fact that decides, with the figures, and says what you recommend; the deeper ones add what was measured and what each option leads to |
 | `answer_shape`, `options` | `choice`, two or three options on different axes, each a card the person clicks: `gives_up_md`, its `cost_text` when there is one (on every option when `money`), its `effect`, one `is_recommended` |
 | `blocked_items` | how many gestures wait for the answer |
@@ -217,7 +222,7 @@ scheduled_task_run_complete(id, outcome, notes_md, final_status, outcome_type, o
 |---|---|---|
 | nothing was broken, or everything broken was repaired | `passed` | `done` |
 | something stays broken | `failed` | `failed` |
-| a decision waits for a person (section 4) | `skipped` (or `failed`) | `human_required` |
+| a decision, or a gesture on a ticket, waits for a person (section 4) | `skipped` (or `failed`) | `human_required` |
 
 - **`notes_md`**: the result in the first sentence, then the figures, then a link to each ticket and
   each decision with its key and id, then what was chosen alone and why. `missed_occurrences` when it
