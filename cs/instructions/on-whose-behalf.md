@@ -46,11 +46,12 @@ never invented by a skill.
 
 Walk down and stop at the first rung that gives an **active member**:
 
-1. **The person who asked for the work, when what you were handed names one.**
+1. **The person who asked for or carries the work, when what you were handed names one.**
    - A spec (`cs:feature-implement`): its current `lead_user_id` when it has one — somebody already
-     answers for it, and a run does not take it from them — otherwise its brief's `owner_user_id`.
+     answers for it, and a run does not take it from them — otherwise its brief's assignee
+     (`assigned_to_user_id`) — the feature's carrier, never the brief's `owner_user_id`.
    - An existing brief (`cs:feature-single-deliverable <feature_brief_id>`): the brief's
-     `owner_user_id`.
+     assignee (`assigned_to_user_id`).
    - A ticket, a message, a request from another system: the person who filed or sent it. Resolve an
      e-mail address with `user_lookup(email)`; a membership that is not `assignable` is nobody here.
 2. **Otherwise, the workspace's robot account** — `robot_user_id` from `cs on-behalf`, or its

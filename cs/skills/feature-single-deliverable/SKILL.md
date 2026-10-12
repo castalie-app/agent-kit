@@ -77,7 +77,7 @@ spec, phase:
 - `owner_user_id` — **whose deliverable it is**, settled by
   `${CLAUDE_PLUGIN_ROOT}/instructions/on-whose-behalf.md`. Attended, leave it out: the loop's pick
   makes you the lead. Unattended (`cs on-behalf`), the person who asked for it — the ticket's
-  reporter, the adopted brief's owner — else the workspace's robot account. It owns the new brief and
+  reporter, the adopted brief's assignee — else the workspace's robot account. It owns the new brief and
   leads the spec; on an adopted brief it only leads the spec. Check `brief.owner_user_id` in the
   answer. `cs:feature-implement` then finds the spec already led and keeps that lead.
 
