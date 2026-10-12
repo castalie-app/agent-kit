@@ -81,7 +81,8 @@ Only `business_impact = true` findings reach the user — anything changing what
 sees/experiences. Everything technical, the assistant fixes autonomously.
 
 With the user in the session, the escalation is the turn's *I need you*. On a run nobody is
-watching, it is a decision on the work the diff belongs to — `decision_create` on the ticket, the
-spec or its phase, one option per way of resolving the finding, written by
-`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md` — and the run carries on with the findings
-that do not depend on it. The residual list after three rounds goes the same way.
+watching: on a ticket, each way of resolving the finding is an approach written on the ticket with
+`bug_add_decision_option` — the ticket then waits for a person, never as a decision; on a spec or its
+phase, it is a decision, `decision_create` with one option per way of resolving the finding, written
+by `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`. Either way the run carries on with the
+findings that do not depend on it. The residual list after three rounds goes the same way.
