@@ -22,7 +22,7 @@ on that branch's head, and nothing is left for the user; what only an outside ev
 still moves is a scheduled follow-up, and the turn ends finished; for you to do: the gesture you tried and only the user can finish, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
 what; or, I need you: the question, its
-description in 80 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
+description in 100 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
 ("I'll check X next", "j'enchaîne", "the loop/cron will resume it") — execute it in the same turn;
 a loop tick is a safety net for a dead turn, never a reason to defer work you can do now. A check
 the user asks for before a larger piece of work is the whole turn: deliver it and what it changes
@@ -115,22 +115,24 @@ render it.
   puts it on a ticket waiting for a person — `bug_set_requires_human` with the gesture as the reason,
   or `bug_create` assigned to the person in charge when the work has no ticket — never on a sheet.
 - **I need you is the decision sheet, and nothing else.** The question in bold; its description in
-  80 words, the fact that decides first and what you recommend; then one lettered line per option,
+  100 words, for a business reader — what happens for the company, its customers, its money or its
+  team, no class, table, endpoint, file or command names — the fact that decides first and what you
+  recommend; then one lettered line per option,
   its card: what it does, what it costs or gives up, ★ on the one you recommend. The last letter is
   always « Autre réponse ou question ». No « why you », no « what waits », no « meanwhile », no
-  context: what the person needs is in the 80 words.
+  context: what the person needs is in the 100 words.
 - **Where `AskUserQuestion` exists, the decision is asked with it**, so every card is clicked
   rather than typed: one option per card (its label the option's title, its description the card's
   cost or what it gives up, « (recommandé) » on the recommended one), plus « Autre réponse ou
   question », whose words are the answer or a question back to you. The depth of the description
-  is a choice of its own, in the same call: « En 80 mots » (read), « En 250 mots », « En 500 mots ».
+  is a choice of its own, in the same call: « En 100 mots » (read), « En 250 mots », « En 500 mots ».
   A person who picks a deeper level gets that text, and the same question again.
 - **I need you is also filed in Castalie, when the turn works on a tracked item.** A session on a
   spec, a brief or a ticket files the same question with `decision_create`: the complete sheet of
   `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, the work item as its subject, and a
   stable `dedupe_key` (`<subject kind>:<id>:<what is asked>`). Read
   `decision_list(dedupe_key=…, status=all)` first: the same question is never filed twice, and one
-  already answered is not asked again. The three depths you file (`description_80_md`,
+  already answered is not asked again. The three depths you file (`description_100_md`,
   `description_250_md`, `description_500_md`) are the ones the conversation offers. The question
   stays in the reply, with its lettered cards; the decisions panel opens on its sheet by itself. The person answers in either place. An answer
   given in the conversation is recorded with `decision_answer` before the work resumes; one given

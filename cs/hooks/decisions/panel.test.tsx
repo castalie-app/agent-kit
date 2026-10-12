@@ -58,7 +58,7 @@ const SHEET = {
     answer_shape: 'choice',
     escalation_reason: 'private_knowledge',
     why_human_md: 'You hold the Northwind account.',
-    description_80_md: 'Northwind asks for the owner phone.',
+    description_100_md: 'Northwind asks for the owner phone.',
     description_250_md: 'Northwind asks for the owner phone. 0 of 18,400 listings carry one.',
     description_500_md: 'Northwind asks for the owner phone. 0 of 18,400 listings carry one.\n\n```mermaid\nflowchart LR\n  A --> B\n```',
     asked_by_agent: 'feature-implement',
@@ -205,12 +205,12 @@ test('the inbox is drawn as cards per agent, and a card opens whole, on the term
     })
     const body = await sheet.find({ key: 'sheet-77' })
 
-    // Spec 88: the question, the description at 80 words, the cards — and nothing else.
+    // Spec 88: the question, the description at 100 words, the cards — and nothing else.
     expect(body?.text).toMatch(/# Which phone number goes to the partner portals\?/)
     expect(body?.text).not.toMatch(/Pourquoi vous|You hold the Northwind account/)
     expect(body?.text).not.toMatch(/SECRET-RESUME/)
     expect((await sheet.find({ key: 'description-77' }))?.text).toBe('Northwind asks for the owner phone.')
-    expect((await sheet.find({ key: 'level-80' }))?.props.label).toBe('[En 80 mots]')
+    expect((await sheet.find({ key: 'level-100' }))?.props.label).toBe('[En 100 mots]')
     expect((await sheet.find({ key: 'text-302' }))?.text).toMatch(/A relay number, always\*\* — recommandée/)
     // A depth is a press: the sheet is drawn again on the 500 words.
     await sheet.press({ key: 'level-500' })
@@ -338,7 +338,7 @@ test('where no pane can be seated, the command prints the cards, and a number pr
 
   const sheet = await $.command.run({ command: 'cs:decisions-panel', args: '77', origin, presentation })
   expect(sheet.text).toMatch(/# Which phone number goes to the partner portals\?/)
-  expect(sheet.text).toMatch(/## Descriptif — en 80 mots\n\nNorthwind asks for the owner phone\./)
+  expect(sheet.text).toMatch(/## Descriptif — en 100 mots\n\nNorthwind asks for the owner phone\./)
   expect(sheet.text).toMatch(/\*\*Autre réponse ou question :\*\*/)
   expect(sheet.text).not.toMatch(/Pourquoi vous/)
   expect(sheet.text).not.toMatch(/SECRET-RESUME/)

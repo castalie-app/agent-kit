@@ -116,7 +116,7 @@ Then the weights, multiplied:
 **Facts changed materially** means at least one of: the figure the lead stood on moved by a tenth
 of its start-to-target range or more; a status worsened (`on_track` → `at_risk` → `off_track`); a
 new SWOT item, brief or decision touches the same object; the condition the leader's answer named
-is now met. Say which one in the new sheet's 80-word level.
+is now met. Say which one in the new sheet's 100-word level.
 
 **And K topics drawn at random**, among the objectives and key results not already in the top
 2N, to look for a thread nobody pulled. Draw with the machine, never by preference — a draw you
@@ -166,7 +166,7 @@ dropped it).
 |---|---|
 | `title` | the lead as a question, ending with `?`: « Give "Grow recurring revenue" a key result before the quarter review? » |
 | `escalation_reason` | `idea`. Refused (an instance that does not know it yet): file again with `private_knowledge`, once |
-| `description_80_md` | the fact that decides, with its figure, and the move you recommend in one sentence |
+| `description_100_md` | the fact that decides, with its figure, and the move you recommend in one sentence — in business terms, no technical names |
 | `description_250_md` | what the data says, what it means, and what each move leads to |
 | `description_500_md` | the evidence: figures with their dates, the history or the weekly lines quoted, the links to the objective (`/strategie/objectif/<id>`), key results (`/strategie/resultat/<id>`) and briefs; a `mermaid` block when the topic is a flow |
 | `answer_shape`, `options` | `choice`: the two or three moves, each with `body_md` (its effect), `cost_text`, `gives_up_md`, `risk`, `effect: "continue"`, exactly one `is_recommended`; then **always a last option « Not a good idea »** (in the leader's language), `effect: "close"`, `gives_up_md` naming what is left as it is. Four options at most in all |

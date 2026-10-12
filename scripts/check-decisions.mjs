@@ -225,16 +225,19 @@ check("one waiting decision reads in the singular",
     sheet.includes("**Décide-toi** — C'était à toi de trancher : décide toi-même.") && sheet.includes("« Question inutile » la ferme sans réponse"));
   check("the sheet's facts line names the asker, the age and the plan point, nothing about why",
     sheet.includes("_demandée par feature-implement · il y a 4 j · point 3.2 du plan_"), sheet.split("\n")[2]);
-  check("the description shows its 80 words first, and says the deeper levels are there",
-    sheet.includes("## Descriptif — en 80 mots\n\nNorthwind asks") && sheet.includes("_Aussi en 250 mots et en 500 mots sur la fiche._") &&
+  check("the description shows its 100 words first, and says the deeper levels are there",
+    sheet.includes("## Descriptif — en 100 mots\n\nNorthwind asks") && sheet.includes("_Aussi en 250 mots et en 500 mots sur la fiche._") &&
       !sheet.includes("11,210 listings have an owner phone"), sheet);
   const deeper = sheetMarkdown(decision, { now: NOW, level: 500 });
   check("the level asked for is the level shown, a fence kept whole",
     deeper.includes("## Descriptif — en 500 mots") && deeper.includes("```mermaid\nflowchart LR\n  L[Listing] --> E[Export] --> P[Portal]\n```"));
   check("a level identical to the one above it is not offered",
-    descriptionLevelsOf({ ...decision, description250: decision.description80, description500: null }).map((level) => level.words).join() === "80");
+    descriptionLevelsOf({ ...decision, description250: decision.description100, description500: null }).map((level) => level.words).join() === "100");
+  check("the first level is read as description_100_md, then under its former name description_80_md",
+    decisionOf({ decision: { id: 1, description_100_md: "In 100 words.", description_80_md: "In 80 words." } }).description100 === "In 100 words." &&
+      decisionOf({ decision: { id: 2, description_80_md: "In 80 words." } }).description100 === "In 80 words.");
   check("a server before spec 88 sends the former summary, read as the first level",
-    decisionOf(answeredSheetAnswer).description80 === "Pull request #1834 fixes the VAT rounding on credit notes.");
+    decisionOf(answeredSheetAnswer).description100 === "Pull request #1834 fixes the VAT rounding on credit notes.");
   check("options come as cards, in their display order, numbered, the recommended one marked",
     sheet.indexOf("**1. The owner's phone") < sheet.indexOf(`**${RECOMMENDED_MARK} 2. A relay number, always** — recommandée`) &&
       sheet.indexOf("— recommandée") < sheet.indexOf("**3. No phone"));
@@ -274,7 +277,7 @@ check("one waiting decision reads in the singular",
   check("the agent that filed it is told to decide it itself, never to ask again",
     settledNotice(handedBack).includes("They answered « Décide-toi »") && settledNotice(handedBack).includes("never ask it again"));
   check("a sheet with one level of description offers no other",
-    !answered.includes("_Aussi") && answered.includes("## Descriptif — en 80 mots"));
+    !answered.includes("_Aussi") && answered.includes("## Descriptif — en 100 mots"));
 }
 
 // ── The command's text, where no pane is seated ───────────────────────────

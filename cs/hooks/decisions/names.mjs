@@ -195,7 +195,8 @@ export const LOCAL_REFUSALS = {
 // ── The sheet since Castalie spec 88: title, description levels, option cards ─────────────
 
 /** The depths a description is written at, in reading order: the first one shows. */
-export const DESCRIPTION_LEVELS = [80, 250, 500];
+// The first is 100 words since Castalie's acceptance 28, remark 31 (80 before).
+export const DESCRIPTION_LEVELS = [100, 250, 500];
 export const DESCRIPTION_HEADING = "Descriptif";
 export const LEVEL_TEXT = (words) => `En ${words} mots`;
 

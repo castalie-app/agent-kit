@@ -282,7 +282,7 @@ const READS = {
 };
 
 /**
- * The depths of the description a reader can open, in order (Castalie spec 88): 80, 250 and 500
+ * The depths of the description a reader can open, in order (Castalie spec 88): 100, 250 and 500
  * words. A level identical to the one above it adds nothing and is left out, as on the sheet.
  *
  * @param {import("./inbox.mjs").Decision} decision
@@ -292,7 +292,7 @@ export function descriptionLevelsOf(decision) {
   const levels = [];
   let previous = null;
   for (const [words, text] of [
-    [DESCRIPTION_LEVELS[0], decision.description80],
+    [DESCRIPTION_LEVELS[0], decision.description100],
     [DESCRIPTION_LEVELS[1], decision.description250],
     [DESCRIPTION_LEVELS[2], decision.description500],
   ]) {
@@ -451,7 +451,7 @@ export function answerMarkdown(decision) {
 
 /**
  * The whole sheet as one markdown text — what the command prints where no pane can be seated:
- * the question, the description at the level asked for (80 words unless told otherwise), every
+ * the question, the description at the level asked for (100 words unless told otherwise), every
  * option as its card, the last card « Autre réponse ou question », the readers' questions and the
  * answer once there is one. Nothing else: why this person, what waits, what carries on and the
  * former context are not on the sheet (Castalie spec 88). The resume state an agent left itself

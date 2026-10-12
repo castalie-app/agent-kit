@@ -8,8 +8,9 @@ sentence or by voice, and Castalie applies the answer to that work at once.
 a session poses it in the conversation:
 
 1. **the title**, the question;
-2. **the description**, written by you at three depths: an explanation in 80, in 250 and in 500
-   words — targets, not caps. The reader clicks the depth they want; 80 words shows first;
+2. **the description**, written by you at three depths: an explanation in 100, in 250 and in 500
+   words — targets, not caps — for a business reader, not an engineer. The reader clicks the depth
+   they want; 100 words shows first;
 3. **the options, as cards**: one card per option, with its title, its consequence, its cost or
    what it gives up, and the recommendation marked on its card. A click on the card answers. The
    last card is always « Autre réponse ou question : », a free field. Read by `bug-fix`,
@@ -181,17 +182,39 @@ decision that was yours to take, and did not take your responsibility. So:
 
 | Field | Length — a target, ±10 % | What it holds |
 |---|---|---|
-| `description_80_md` | an explanation in 80 words (72 to 88) | shown first, and often all that is read: the fact that decides, and what you recommend |
-| `description_250_md` | an explanation in 250 words (225 to 275) | for the reader who wants more: what you checked, what each option leads to |
-| `description_500_md` | an explanation in 500 words (450 to 550) | the deepest level: the figures, the history, a diagram |
+| `description_100_md` | an explanation in 100 words (90 to 110) | shown first, and often all that is read: the fact that decides, what it means for the business, and what you recommend |
+| `description_250_md` | an explanation in 250 words (225 to 275) | for the reader who wants more, still in business terms: what you checked, what each option leads to |
+| `description_500_md` | an explanation in 500 words (450 to 550) | the deepest level: the figures, the history, a diagram — and the only level that may carry technical detail |
 
-All three are mandatory, and you write them when you file: the page never generates them. **80,
-250 and 500 words are targets, not caps**: the person asks for an explanation in 80 words, in 250
+All three are mandatory, and you write them when you file: the page never generates them. **100,
+250 and 500 words are targets, not caps**: the person asks for an explanation in 100 words, in 250
 words and in 500 words, and Castalie admits each level within 10 % of its target — shorter is
 refused as surely as longer. Count before you file. Each one stands alone; a deeper level repeats
 what decides, then adds what the reader needs at that depth — never padding to reach the count. A fenced block (a Mermaid diagram,
 an illustration) is looked at, not read: it does not count. A level identical to the one above it
 is not offered to the reader.
+
+The first level was written in 80 words until Castalie's acceptance 28, remark 31; `description_80_md`,
+its former name, is still read as `description_100_md` on `decision_create`, `decision_supersede` and
+`decision_set_descriptions`, under the 100-word target. A sheet filed at 80 words before stays as it
+is: the target holds when a level is written, never when it is read.
+
+## Written for a business reader, not an engineer
+
+The person who decides is often the head of the company, not the engineer who did the work. Castalie's
+CEO, on the sheets agents filed for him: « je trouve globalement les descriptions très techniques et
+pas assez métier pour que je comprenne ce qu'elles veulent dire ». So:
+
+- **Say what happens for the company**: for its customers, its money, its team, its deadlines, its
+  risk — in the words someone outside the code uses. "Customers wait two days longer for their
+  invoice", never "the export job's queue backs up".
+- **The 100-word and 250-word levels name no class, table, endpoint, file, branch, pull request or
+  command.** If the reader has to know what `ExportMapper` or `/api/v2/sync` is to follow, rewrite the
+  sentence around what it does for them.
+- **Technical detail, if any, goes in the 500-word level only**, after the same business reading:
+  that level is for the reader who wants to check your work.
+- **Name a thing once, by what it is to the business**: "the partner export", "ticket triage", "the
+  invoice email" — and keep that name on every level and every option.
 
 `complexity` is optional (`standard` by default). It no longer sets any length: a `simple` sheet is
 an approval or a choice between two options.
@@ -205,8 +228,8 @@ an approval or a choice between two options.
 
 ## The first level opens on the fact that decides
 
-`description_80_md` is what a person reads on a phone, and often all they read. Its first sentence
-is the fact the answer turns on, not the history of how you got there.
+`description_100_md` is what a person reads on a phone, and often all they read. Its first sentence
+is the fact the answer turns on, said in business terms, not the history of how you got there.
 
 - **Measured figures, never an estimate where a measure exists.** "37 credit notes since
   1 October", read from the database, not "a few dozen".
@@ -312,9 +335,9 @@ Correct and file again; never work around a refusal by changing the complexity a
 | Code | Fix |
 |---|---|
 | `title_not_a_question` | write the question, 12 to 160 characters, ending with `?` |
-| `description_required` | write the three levels: `description_80_md`, `description_250_md`, `description_500_md` (a caller that still sends only `executive_md` gets this one) |
-| `description_80_too_long`, `description_250_too_long`, `description_500_too_long` | that level is past 110 % of its target (`cap`): bring it back to an explanation in `cap` words; move the rest one level deeper |
-| `description_80_too_short`, `description_250_too_short`, `description_500_too_short` | that level is under 90 % of its target (`cap`): rewrite it as an explanation in `cap` words — what was checked, what each option leads to, the figures |
+| `description_required` | write the three levels: `description_100_md`, `description_250_md`, `description_500_md` (a caller that still sends only `executive_md` gets this one) |
+| `description_100_too_long`, `description_250_too_long`, `description_500_too_long` | that level is past 110 % of its target (`cap`): bring it back to an explanation in `cap` words; move the rest one level deeper |
+| `description_100_too_short`, `description_250_too_short`, `description_500_too_short` | that level is under 90 % of its target (`cap`): rewrite it as an explanation in `cap` words — what was checked, what each option leads to, the figures |
 | `complexity_mismatch` | `simple` takes an approval or two options |
 | `decision_needs_two_alternatives` | frame 2 to 4 concrete options (`choice`), each with its effect and what it gives up, or ask yes / no (`approve`); a card of the sheet is not an option |
 | `options_count` | `choice` at most 4, `approve` 0 or 2 |
@@ -344,15 +367,16 @@ end).
 
 ## Two complete sheets
 
-Each one passes the server's admission as written. Replace `subject_id` and `addressee_user_id`
-with ids of your workspace.
+Their first level is written to its length, in business terms; the two deeper levels are abridged
+here — yours are written to 250 and 500 words. Replace `subject_id` and `addressee_user_id` with ids
+of your workspace.
 
 ### A customer arbitration — a choice
 
 ```json
 {
   "title": "Which phone number goes to the partner portals in the listing export?",
-  "description_80_md": "Northwind, our largest agency network, asks that the partner export carry each owner's phone number. Today it carries none, and no owner ever consented to share theirs. What the contract promised on contact details is in the account's history, not in the code. I recommend exporting the phone only where the owner consented.",
+  "description_100_md": "Northwind, our largest agency network, asks that the listings we send to its partner portals carry each owner's phone number. Today they carry none, and no owner has ever agreed to have their number shared. Sending numbers without that agreement exposes us to complaints and to a privacy breach; refusing outright may cost us part of the account. What the contract promised on contact details is in the account's history, which only you know. I recommend sending the phone number only for owners who agree: Northwind gets what it asked for, and no owner's number leaves without their consent.",
   "description_250_md": "Northwind, our largest agency network, asks that the partner export carry each owner's phone number. Today the export carries none: 0 of the 18,400 listings exported last week had one. 11,210 listings have an owner phone on file, and none has a recorded consent to share it.\n\nThe contract we can read promises \"listing data\", and does not say whether owner contact details are part of it. That answer is in the account's history.\n\nThree ways to answer: the phone where the owner consented (a consent field first, about 4 days), a relay number that forwards calls (about 6 days plus a provider), or no phone and a sentence to Northwind. I recommend consent first: it answers the request without sending a number nobody agreed to share.",
   "description_500_md": "Northwind, our largest agency network, asks that the partner export carry each owner's phone number. Today the export carries none: 0 of the 18,400 listings exported last week had one.\n\n## What was checked\n\n- The export code sends 41 fields per listing; `owner_phone` is not one of them, by design since its first version.\n- 11,210 of the 18,400 listings have an owner phone on file. None has a recorded consent to share it: the field does not exist.\n- Two of the three portals Northwind uses accept a contact field; the third ignores it.\n\n```mermaid\nflowchart LR\n  L[Listing] --> E[Export]\n  E -->|consent given| P1[Owner phone]\n  E -->|always| P2[Relay number]\n  E -->|neither| P3[No phone]\n```\n\nThe contract we can read promises \"listing data\" and says nothing of contact details. Phase 2 of the export spec (portal formats) does not depend on this answer and goes on; phase 3 (contact fields) waits.\n\nI recommend consent first: it gives Northwind what they asked for without sending any number an owner did not agree to share, and it is the cheaper of the two options that answer the request.",
   "escalation_reason": "private_knowledge",
@@ -399,7 +423,7 @@ with ids of your workspace.
 ```json
 {
   "title": "Switch ticket triage to the provider's new model before the current one retires?",
-  "description_80_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. It routes 93 % of 200 past tickets right, against 88 %. I recommend switching now.",
+  "description_100_md": "The service that sends each incoming support ticket to the right team stops working on 15 January, because its provider retires it. The replacement costs 323 $ a month instead of 212 $ today, so 111 $ more each month. Tested on 200 past tickets, it sends 93 % of them to the right team, against 88 % today: fewer customers wait while their ticket is passed from team to team. Switching takes minutes and can be undone until January. I recommend switching now: the change is unavoidable, and doing it early leaves time to go back if something goes wrong.",
   "description_250_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today.\n\nSwitching is one configuration line and is reverted the same way until 15 January. I recommend switching now: the switch has to happen anyway, and doing it early leaves time to revert.",
   "description_500_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today. The five points are mostly billing tickets the current model sends to support.\n\nSwitching is one configuration line and is reverted the same way until 15 January. Waiting until the retirement date saves about 330 $ and leaves no margin if the switch goes wrong that day. Staying means triage stops on 15 January unless someone switches by hand.\n\nI recommend switching now: the switch has to happen before 15 January anyway, the measured gain is five points of routing, and switching early leaves time to revert if something breaks.",
   "escalation_reason": "money",

@@ -52,7 +52,7 @@ import {
  *   level: number | null }} Draft
  */
 
-/** A draft nobody has touched yet: 80 words shown, nothing written. @returns {Draft} */
+/** A draft nobody has touched yet: 100 words shown, nothing written. @returns {Draft} */
 export const emptyDraft = () => ({ text: "", effect: null, error: null, isSending: false, level: null });
 
 /**
