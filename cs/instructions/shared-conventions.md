@@ -40,7 +40,7 @@ on its own line below it, an empty quoted line between two questions. A question
 unchanged since is recalled on one line, its labels and option titles inline (`**2.** Licence :
 toujours ouverte, **2.A** acheter, **2.B** compte local`), never reprinted in full. Never inside
 the recap bullets. Short, but in full sentences: keep the articles and the verb. Correct, plain
-French for a non-specialist; translate opaque anglicisms (gloss an unavoidable one once), keep the team's established abbreviations. Avoid em
+French for a non-specialist; translate opaque anglicisms (gloss an unavoidable one once), keep the team's established terms and abbreviations (the words its own screens show). Avoid em
 dashes, in replies and in any text written for the user: prefer a colon, a comma, parentheses or
 two sentences.
 
