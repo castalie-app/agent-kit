@@ -103,6 +103,13 @@ ce ticket ? », « Reprendre ce ticket ou le clore ? » are the ticket's own wor
 and a person keeps one with `bug_choose_fix_approach`; `decision_create` refuses an approach question
 on a ticket. A business rule only a person knows — what the product should do — is still a decision.
 
+**Asking a person to validate a ticket is an action on the ticket too**, never a decision
+(« Valider le ticket … ? », "Validate this ticket?" are refused with `ticket_triage_is_not_a_decision`):
+`bug_request_validation(id, reviewer_user_id?, note_md?)` — empty `reviewer_user_id`, it goes to the
+person in charge of the work. The ticket waits « En attente de validation », assigned to the validator
+(`bug_get` returns `is_awaiting_validation`), who answers with `bug_validate(id, note_md?)` or
+`bug_refuse_validation(id, reason_md?)`.
+
 **One more reason, for a question nobody blocked on: `idea`.** A lead an agent raised on the
 strategy unprompted, which the leader judges good or not (`strategy-scout`). It is never a way to
 ask what one of the six reasons above does not cover: a skill blocked on its own work uses those
@@ -354,7 +361,7 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
 | `status_quo_is_not_a_decision` | the option you recommend changes nothing: do nothing, write it in your notes; ask only when you recommend an action |
 | `sql_script_is_not_a_decision` | playing a SQL script is an action: declare it on its ticket (`bug_declare_sql_script`, the ticket then requires a person on the ticket board) or its spec (`feature_spec_add_sql_script`) when unattended; ask the person at your keyboard when interactive |
-| `ticket_triage_is_not_a_decision` | what to do with a ticket is the ticket's workflow: settle it yourself (`bug_set_status`, `bug_send_back_to_auto`), park it with `bug_set_requires_human(true, reason)` or assign it to the person in charge when unattended; ask the person at your keyboard when interactive |
+| `ticket_triage_is_not_a_decision` | what to do with a ticket is the ticket's workflow: settle it yourself (`bug_set_status`, `bug_send_back_to_auto`), park it with `bug_set_requires_human(true, reason)` or assign it to the person in charge when unattended; ask the person at your keyboard when interactive. Asking a person to validate the ticket: `bug_request_validation` |
 | `batch_one_question_per_kind` | the same question already waits for other subjects: supersede the waiting one with ONE sheet listing every subject, and apply any precedent instead of asking |
 | `question_dismissed_as_useless` | a person declared this question useless: do not ask it again unless a fact changed, then under a new `dedupe_key` naming the change |
 
