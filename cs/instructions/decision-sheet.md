@@ -273,7 +273,9 @@ Correct and file again; never work around a refusal by changing the complexity a
 **After filing**, a fact that changes the picture is added with `decision_add_context` while the
 decision waits: it lands at the end of the 500-word level, which it may take up to 550 words. A fact that
 overturns it is a new sheet, by `decision_supersede`. A question the
-work settled on its own is withdrawn with `decision_cancel` and its reason.
+work settled on its own is withdrawn with `decision_cancel` and its reason, at the latest when the
+tab that filed it ends its work (`shared-conventions.md` § Your decisions, at the start and at the
+end).
 
 ## Three complete sheets
 

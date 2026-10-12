@@ -99,7 +99,8 @@ render it.
   what needs a person is a filed decision, and the turn ends on *I need you*. No turn ends on an
   open wait.
 - **Finished waits for the tracker**: while the work item is still open where it is tracked, its code
-  unmerged into the main branch, or its working copy dirty or off that branch's head, the
+  unmerged into the main branch, its working copy dirty or off that branch's head, or a decision
+  its work settled still pending (§ Your decisions, at the start and at the end), the
   verdict is *In progress* or *I need you*, on whatever closes it. One exception: when all that is left is a production
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
@@ -181,6 +182,39 @@ not assumed**: while one runs, a recurring check (every twenty minutes) looks fo
 relaunches an agent that went idle without finishing. A sub-agent never waits on a background task
 or a monitor of its own — nothing reliably wakes it: it runs its commands in the foreground. A tab
 or a window the person has to watch hands the follow-up to them: open one only when they ask for it.
+
+## Your decisions, at the start and at the end
+
+**A tab owns the decisions of its work: it opens them at its start and sweeps them at its end.**
+The person should never have to ask what their agents are waiting on, nor answer a question the
+work already settled.
+
+**At the start**, the plugin's decisions panel opens by itself, beside the transcript, as soon as
+decisions wait for the person on the objective this working copy works on: when the session starts,
+at the end of a later turn once the tab has taken up work whose objective has some, and on the
+sheet of every decision the tab files. A close by the person holds for that tab only. Nothing is
+asked; where no panel can be drawn, `/cs:decisions-panel` prints the same cards.
+
+**At the end**, before a turn ends on *Finished here for you*, and before a delivery skill reports
+(`ship`, `feature-implement`, `bug-fix`), sweep the decisions still pending on what this tab worked
+on:
+
+1. **Read them**: `decision_list(asked_by_agent=<the skill that filed>, status=pending)`, kept to
+   this tab's work items, and `decision_list(scope=subject, subject_kind=…, subject_id=…,
+   status=pending)` for each item it held (the ticket, the brief, the spec). For a spec,
+   `decision_list(feature_spec_id=<id>, status=pending)` reads the spec, its phases, its tickets,
+   its follow-up runs and its acceptance remarks in one call; `feature_spec_complete` returns the
+   same list as `pending_decisions`.
+2. **Cancel what no longer stands**: `decision_cancel(id, reason)` on each question the work
+   settled, answered elsewhere, or whose subject is closed or archived. The reason names what
+   settled it in one sentence, with the pull request or the answer: the person reads it.
+3. **Supersede what moved**: a question still open whose facts changed gets
+   `decision_supersede(id, …)` with the complete new sheet.
+4. **Keep what still stands**, untouched: the verdict names it.
+
+Never cancel a question you cannot tie to this tab's work, and never one that asks for something
+the work did not do. A refused cancel (another asker's sheet) stays, and the verdict names it with
+its link.
 
 ## Up to the last click
 

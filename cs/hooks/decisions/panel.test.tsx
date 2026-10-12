@@ -310,7 +310,7 @@ test('a session the desktop app hosts binds when the desktop attaches, and a hea
 
 test('where no pane can be seated, the command prints the cards, and a number prints that sheet', async ($, on) => {
   mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
-  mock.store(on, { 'decisions/open': false })
+  mock.store(on)
 
   on('tool.list', () => ({
     value: [
@@ -347,7 +347,7 @@ test('where no pane can be seated, the command prints the cards, and a number pr
 /** A session on a pane surface whose command prints the cards: what the two tests below read. */
 async function printed($: Parameters<TestBody>[0], on: Parameters<TestBody>[1], options: { objective?: boolean; echo?: boolean }) {
   mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
-  mock.store(on, { 'decisions/open': false })
+  mock.store(on)
 
   const asked: string[] = []
   on('tool.list', () => ({ value: [{ name: 'mcp__castalie__decision_list', description: '', isMcp: true }] }) as never)
@@ -383,8 +383,10 @@ test('a server that ignores objective_id is filtered here, on what the copy know
   expect(text).not.toMatch(/Which phone number/)
 })
 
-test('a decision this session files opens the panel on its sheet, unasked, even after the person closed it', async ($, on) => {
+test('a tab opens the panel itself where decisions wait, a close holds for that tab, and a decision it files opens again', async ($, on) => {
   const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
+  // What an earlier version kept when the person closed the panel in another session: a new tab
+  // no longer reads it (Castalie acceptance 28, remark 25).
   mock.store(on, { 'decisions/open': false })
 
   const opened: { id: string; focus?: boolean }[] = []
@@ -404,9 +406,11 @@ test('a decision this session files opens the panel on its sheet, unasked, even 
 
     return { value: { isPlaced: true } } as never
   })
+  on('ui.close', () => ({ value: undefined }))
   on('ui.invalidate', () => ({ value: undefined }))
   on('ui.log', () => ({ value: undefined }))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('turn.complete', () => ({ text: '' }) as never)
   on('tool.call', () => ({
     result: { content: [{ type: 'text', text: '{"success":true,"decision_id":77}' }] },
     text: JSON.stringify({ success: true, decision_id: 77, url: 'https://acme.castalie.app/decisions/77' }),
@@ -414,13 +418,74 @@ test('a decision this session files opens the panel on its sheet, unasked, even 
 
   await $.session.start({ cwd: 'C:/repo', surface: 'terminal', isInteractive: true })
   await clock.advance(2_000)
-  expect(opened.some(pane => pane.id === 'cs-decisions')).toBe(false)
+  expect(opened.filter(pane => pane.id === 'cs-decisions')).toHaveLength(1)
 
+  // The person closes it: no later turn of this tab opens it again unasked.
+  const hidden = await $.command.run({
+    command: 'cs:decisions-panel',
+    args: '',
+    origin: { kind: 'composer' } as never,
+    presentation: { isFullscreen: true, columns: 160 },
+  })
+  expect(hidden.text).toMatch(/The decisions panel is hidden/)
+  await clock.advance(60_000)
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
+  await clock.advance(2_000)
+  expect(opened.filter(pane => pane.id === 'cs-decisions')).toHaveLength(1)
+
+  // A decision the tab files opens it again, on its sheet, without taking the keyboard.
   await $.tool.call({ tool: 'mcp__castalie__decision_create', title: 'Which phone number goes to the partner portals?' } as never)
   await clock.advance(200)
 
-  expect(opened.map(pane => pane.id)).toContain('cs-decisions')
+  expect(opened.filter(pane => pane.id === 'cs-decisions')).toHaveLength(2)
   expect(opened.at(-1)).toEqual({ id: 'cs-decision', focus: undefined })
+})
+
+test('a tab that found nothing waiting at its start opens the panel at the end of a turn once its objective has decisions', async ($, on) => {
+  const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
+  mock.store(on)
+
+  let holds = false
+  const opened: string[] = []
+  on('tool.list', () => ({ value: [{ name: 'mcp__castalie__decision_list', description: '', isMcp: true }] }) as never)
+  on('fs.exists', ($, e) => ({ value: slashed(e.path) === 'C:/repo/.git' }))
+  on('fs.read', ($, e) => {
+    if (holds && slashed(e.path) === 'C:/repo/.cs/work.json') return { value: WORK }
+    throw new Error('no such file')
+  })
+  on('fs.stat', () => {
+    throw new Error('no such file')
+  })
+  on('mcp.call', ($, e) => {
+    const body = e.tool === 'decision_list' ? { ...INBOX, objective_id: e.args.objective_id } : NAMES[e.tool]
+    if (body === undefined) throw new Error(`${e.tool} is not served here`)
+
+    return { value: { content: [{ type: 'text', text: JSON.stringify(body) }] } } as never
+  })
+  on('command.list', () => ({ value: [{ name: 'cs:decisions-panel' }, { name: 'cs:okr-panel' }] }) as never)
+  on('session.cwd', () => ({ value: 'C:/repo' }))
+  on('session.surfaces', () => ({ value: ['terminal'] as const }))
+  on('ui.open', ($, e) => {
+    opened.push(e.id)
+
+    return { value: { isPlaced: true } } as never
+  })
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.log', () => ({ value: undefined }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('turn.complete', () => ({ text: '' }) as never)
+
+  await $.session.start({ cwd: 'C:/repo', surface: 'terminal', isInteractive: true })
+  await clock.advance(2_000)
+  expect(opened).not.toContain('cs-decisions')
+
+  // The tab takes up spec 11, whose objective has decisions waiting.
+  holds = true
+  await clock.advance(60_000)
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
+  await clock.advance(2_000)
+
+  expect(opened).toContain('cs-decisions')
 })
 
 test('a decision this session filed comes back with its answer at the next prompt, once settled', async ($, on) => {

@@ -426,8 +426,11 @@ answer you give it.
 Nothing polls: the inbox is read when the panel opens, after a `decision_*` write of this session,
 at the end of a turn and when the panel is drawn, each only once the last read is thirty seconds
 old, and on « rafraîchir ». The cache is scoped to the working copy, because one server alias
-names a different workspace in each repository. It opens by itself in a session where decisions
-on its objective wait, unless you closed it last time.
+names a different workspace in each repository. The tab opens it by itself where decisions on its
+objective wait: at the session's start, or at the end of a later turn once the tab has taken up
+work whose objective has some. A close holds for that session only; the next tab opens it again.
+At the end of its work, the tab sweeps the decisions it filed or that trace to its work item and
+cancels the ones the work settled (`instructions/shared-conventions.md`).
 
 **Terminal and desktop.** The panel is a pane of the plugin's hooks module, and the same module
 draws it on both surfaces, each with its own elements: the terminal docks it beside the

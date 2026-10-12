@@ -49,7 +49,12 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
    the body as one sentence with how it is reverted — a flag, never a reason to wait.
 5. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to
    the release — § Delivery below. No question to anyone.
-6. **Report.** Read `${CLAUDE_PLUGIN_ROOT}/instructions/delivery-report.md` and `shared-conventions.md` now,
+6. **Sweep the decisions.** Once the release is observed, read the decisions still pending on what
+   this change shipped (the spec with `decision_list(feature_spec_id=…, status=pending)`, a ticket or
+   a brief with `scope=subject`, and the ones this session filed) and cancel, with their reason,
+   those the shipped work settled — `shared-conventions.md` § Your decisions, at the start and at
+   the end. A question that still stands is kept and named in the report.
+7. **Report.** Read `${CLAUDE_PLUGIN_ROOT}/instructions/delivery-report.md` and `shared-conventions.md` now,
    not from memory. Print the PR link, the panel outcome (N found / M fixed, rounds), the merge and
    release state you observed, and the naked verdict.
 
