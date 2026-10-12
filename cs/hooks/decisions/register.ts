@@ -774,7 +774,7 @@ export function register(on: On, companion: Companion): void {
         const bar = decision === null ? null : answerBarOf(decision, shown.draft, { hasField: kit.Input !== undefined })
 
         // The sheet since Castalie spec 88: the question, the description at the depth the person
-        // clicked (80 words first), then the cards — which answer while it waits.
+        // clicked (100 words first), then the cards — which answer while it waits.
         const view: SheetView = {
           id: shown.id,
           url: hrefOf(decision?.url ?? null),

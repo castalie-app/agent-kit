@@ -353,7 +353,7 @@ follow their most urgent card. `●` marks a card never opened, `★` the recomm
 **A card opens whole, at once.** A click anywhere on its text (every line of a card is a link
 the pane takes over, and its frame lights under the pointer), its « voir en grand », or its digit
 once the panel holds the keyboard opens `decision_get(id)` in a pane of its own — the sheet
-Castalie draws, and nothing else: the question, its description with « En 80 mots » shown and
+Castalie draws, and nothing else: the question, its description with « En 100 mots » shown and
 « En 250 mots », « En 500 mots » a click away (a Mermaid block stays a diagram), one card per
 option with its risk, cost, effect and what it gives up, ★ on the recommended one, the last card
 « Autre réponse ou question » with the readers' questions, and the answer once there is one. Escape or « ← cartes » closes it, and

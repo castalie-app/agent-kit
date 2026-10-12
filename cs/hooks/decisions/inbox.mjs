@@ -196,9 +196,12 @@ export function decisionOf(answer) {
     ...cardOf(record),
     complexity: textOf(pick(record, "complexity")),
     shape: textOf(pick(record, "answer_shape")),
-    // The description at its three depths (Castalie spec 88). A server that predates it sends
-    // the former summary only: it stands for the first level.
-    description80: textOf(pick(record, "description_80_md")) ?? textOf(pick(record, "executive_md")),
+    // The description at its three depths (Castalie spec 88). The first is `description_100_md`
+    // since acceptance 28, remark 31; a server that predates it sends `description_80_md`, and one
+    // that predates spec 88 the former summary only: each stands for the first level.
+    description100: textOf(pick(record, "description_100_md"))
+      ?? textOf(pick(record, "description_80_md"))
+      ?? textOf(pick(record, "executive_md")),
     description250: textOf(pick(record, "description_250_md")),
     description500: textOf(pick(record, "description_500_md")),
     options,

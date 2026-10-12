@@ -3249,7 +3249,7 @@
     {
       "name": "decision_create",
       "kind": "write",
-      "description": "Ask a person to decide something you cannot settle yourself, tied to the work it blocks — a ticket, a spec, a phase, a brief, a follow-up run, an acceptance remark. Never a question whose answer is a person — who validates, who reviews, who does it: that is routing, refused as routing_is_not_a_decision; address the request yourself TO the person in charge of the feature — the brief's owner first, then the spec's assignee, the ticket's assignee, the owner of the objective it serves (or that team's leader), then domain_list_owners — with addressee_user_id. Never a question that asks to confirm doing nothing: a recommended option that keeps things as they are (stay, keep, wait) with effect none or close is refused as status_quo_is_not_a_decision — write it in your notes instead. One question per kind, never one per subject: the third waiting question of the same shape from the same asked_by_agent within a day is refused as batch_one_question_per_kind — group the subjects in one sheet. Before asking, look for a precedent with decision_list(asked_by_agent, status=all, dedupe_key_prefix) and apply an answer a person already gave. A question a person declared useless is refused under its dedupe_key as question_dismissed_as_useless. Then CARRY ON with everything that does not depend on the answer. Each option says what the answer does to that work (effect), and Castalie applies it as soon as the person answers. Returns decision_id and the url of the sheet, or a refusal saying what to fix. The sheet keeps three things, and nothing else: the title (the QUESTION, 12 to 160 characters, ending with \"?\"), the description and the options. The description is written at three depths the reader clicks between: description_80_md in 80 words (72 to 88), shown first; description_250_md in 250 words (225 to 275); description_500_md in 500 words (450 to 550) — each an explanation at that length, a target within ±10 %, not a cap; a fenced block does not count. A level past its band is refused with description_<n>_too_long, one under it with description_<n>_too_short, both with cap set to the target; a missing one with description_required. The options show as cards and one click answers: a choice carries 2 to 4 options on different axes, each saying what it gives up; exactly one is_recommended; money needs a cost on every option. The sheet always ends on a card « Autre réponse ou question » with a free field. why_human_md, context_md, blocked_md, continuing_md and recommendation_md are optional and no longer shown. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
+      "description": "Ask a person to decide something you cannot settle yourself, tied to the work it blocks — a ticket, a spec, a phase, a brief, a follow-up run, an acceptance remark. Never a question whose answer is a person — who validates, who reviews, who does it: that is routing, refused as routing_is_not_a_decision; address the request yourself TO the person in charge of the feature — the brief's owner first, then the spec's assignee, the ticket's assignee, the owner of the objective it serves (or that team's leader), then domain_list_owners — with addressee_user_id. Never a question that asks to confirm doing nothing: a recommended option that keeps things as they are (stay, keep, wait) with effect none or close is refused as status_quo_is_not_a_decision — write it in your notes instead. One question per kind, never one per subject: the third waiting question of the same shape from the same asked_by_agent within a day is refused as batch_one_question_per_kind — group the subjects in one sheet. Before asking, look for a precedent with decision_list(asked_by_agent, status=all, dedupe_key_prefix) and apply an answer a person already gave. A question a person declared useless is refused under its dedupe_key as question_dismissed_as_useless. Then CARRY ON with everything that does not depend on the answer. Each option says what the answer does to that work (effect), and Castalie applies it as soon as the person answers. Returns decision_id and the url of the sheet, or a refusal saying what to fix. The sheet keeps three things, and nothing else: the title (the QUESTION, 12 to 160 characters, ending with \"?\"), the description and the options. The description is written at three depths the reader clicks between: description_100_md in 100 words (90 to 110), shown first; description_250_md in 250 words (225 to 275); description_500_md in 500 words (450 to 550) — each an explanation at that length, a target within ±10 %, not a cap; a fenced block does not count. Write for a business reader, not an engineer: say what happens for the company, its customers, its money or its team; the 100-word and 250-word levels name no class, table, endpoint, file, pull request or command, and technical detail, if any, goes in the 500-word level only. description_80_md, its former name, is still read as description_100_md. A level past its band is refused with description_<n>_too_long, one under it with description_<n>_too_short, both with cap set to the target; a missing one with description_required. The options show as cards and one click answers: a choice carries 2 to 4 options on different axes, each saying what it gives up; exactly one is_recommended; money needs a cost on every option. The sheet always ends on a card « Autre réponse ou question » with a free field. why_human_md, context_md, blocked_md, continuing_md and recommendation_md are optional and no longer shown. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
       "params": [
         {
           "name": "title",
@@ -3258,16 +3258,22 @@
           "description": "The question to settle, 12 to 160 characters, ending with \"?\": \"Merge the VAT fix on credit notes?\", never \"VAT fix\"."
         },
         {
-          "name": "description_80_md",
+          "name": "description_100_md",
           "type": "string",
           "required": true,
-          "description": "An explanation in 80 words (±10 %: 72 to 88), shown first: it opens on the fact that decides and says what you recommend. Rich markdown."
+          "description": "An explanation in 100 words (±10 %: 90 to 110), shown first, written for a business reader: it opens on the fact that decides — what happens for the company, its customers, its money or its team — and says what you recommend. No class, table, endpoint, file, pull request or command names: technical detail, if any, goes in description_500_md. Rich markdown."
+        },
+        {
+          "name": "description_80_md",
+          "type": "string",
+          "required": false,
+          "description": "The former name of description_100_md, still read when description_100_md is not sent."
         },
         {
           "name": "description_250_md",
           "type": "string",
           "required": true,
-          "description": "An explanation in 250 words (±10 %: 225 to 275), for a reader who wants more: what you checked, what each option leads to."
+          "description": "An explanation in 250 words (±10 %: 225 to 275), for a reader who wants more, still in business terms: what you checked, what each option leads to for the company, its customers, its money or its team."
         },
         {
           "name": "description_500_md",
@@ -3455,7 +3461,7 @@
           "name": "executive_md",
           "type": "string",
           "required": false,
-          "description": "Replaced by description_80_md, description_250_md and description_500_md: a call that sends only this is refused with description_required."
+          "description": "Replaced by description_100_md, description_250_md and description_500_md: a call that sends only this is refused with description_required."
         }
       ],
       "returns": {
@@ -3481,7 +3487,7 @@
       ],
       "returns": {
         "success": "bool",
-        "decision": "object — with url, description_80_md, description_250_md, description_500_md (executive_md repeats the 80-word level for an older reader), plan_point, context_opened_at, options[] (exhibit_md, removes_md), answer (read, confirmed), comments[] (id, option_id, quote, body_md, author_user_id, date_created), resume_state_md, resume_prompt_md, resume_job_state, context_asks[], events[]"
+        "decision": "object — with url, description_100_md, description_250_md, description_500_md (description_80_md and executive_md repeat the 100-word level for an older reader), plan_point, context_opened_at, options[] (exhibit_md, removes_md), answer (read, confirmed), comments[] (id, option_id, quote, body_md, author_user_id, date_created), resume_state_md, resume_prompt_md, resume_job_state, context_asks[], events[]"
       }
     },
     {
@@ -3824,7 +3830,7 @@
     {
       "name": "decision_supersede",
       "kind": "write",
-      "description": "Replace a waiting decision with a complete new sheet — the same subject unless you name another. The old one becomes superseded and points at the new one; a reader's open question follows it. Takes the same fields as decision_create. The sheet keeps three things, and nothing else: the title (the QUESTION, 12 to 160 characters, ending with \"?\"), the description and the options. The description is written at three depths the reader clicks between: description_80_md in 80 words (72 to 88), shown first; description_250_md in 250 words (225 to 275); description_500_md in 500 words (450 to 550) — each an explanation at that length, a target within ±10 %, not a cap; a fenced block does not count. A level past its band is refused with description_<n>_too_long, one under it with description_<n>_too_short, both with cap set to the target; a missing one with description_required. The options show as cards and one click answers: a choice carries 2 to 4 options on different axes, each saying what it gives up; exactly one is_recommended; money needs a cost on every option. The sheet always ends on a card « Autre réponse ou question » with a free field. why_human_md, context_md, blocked_md, continuing_md and recommendation_md are optional and no longer shown. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
+      "description": "Replace a waiting decision with a complete new sheet — the same subject unless you name another. The old one becomes superseded and points at the new one; a reader's open question follows it. Takes the same fields as decision_create. The sheet keeps three things, and nothing else: the title (the QUESTION, 12 to 160 characters, ending with \"?\"), the description and the options. The description is written at three depths the reader clicks between: description_100_md in 100 words (90 to 110), shown first; description_250_md in 250 words (225 to 275); description_500_md in 500 words (450 to 550) — each an explanation at that length, a target within ±10 %, not a cap; a fenced block does not count. Write for a business reader, not an engineer: say what happens for the company, its customers, its money or its team; the 100-word and 250-word levels name no class, table, endpoint, file, pull request or command, and technical detail, if any, goes in the 500-word level only. description_80_md, its former name, is still read as description_100_md. A level past its band is refused with description_<n>_too_long, one under it with description_<n>_too_short, both with cap set to the target; a missing one with description_required. The options show as cards and one click answers: a choice carries 2 to 4 options on different axes, each saying what it gives up; exactly one is_recommended; money needs a cost on every option. The sheet always ends on a card « Autre réponse ou question » with a free field. why_human_md, context_md, blocked_md, continuing_md and recommendation_md are optional and no longer shown. Every refusal returns error (the code), fix (what to correct) and, where one applies, cap. How to write one: instructions/decision-sheet.md.",
       "params": [
         {
           "name": "id",
@@ -3839,16 +3845,22 @@
           "description": "The question to settle, 12 to 160 characters, ending with \"?\": \"Merge the VAT fix on credit notes?\", never \"VAT fix\"."
         },
         {
-          "name": "description_80_md",
+          "name": "description_100_md",
           "type": "string",
           "required": true,
-          "description": "An explanation in 80 words (±10 %: 72 to 88), shown first: it opens on the fact that decides and says what you recommend. Rich markdown."
+          "description": "An explanation in 100 words (±10 %: 90 to 110), shown first, written for a business reader: it opens on the fact that decides — what happens for the company, its customers, its money or its team — and says what you recommend. No class, table, endpoint, file, pull request or command names: technical detail, if any, goes in description_500_md. Rich markdown."
+        },
+        {
+          "name": "description_80_md",
+          "type": "string",
+          "required": false,
+          "description": "The former name of description_100_md, still read when description_100_md is not sent."
         },
         {
           "name": "description_250_md",
           "type": "string",
           "required": true,
-          "description": "An explanation in 250 words (±10 %: 225 to 275), for a reader who wants more: what you checked, what each option leads to."
+          "description": "An explanation in 250 words (±10 %: 225 to 275), for a reader who wants more, still in business terms: what you checked, what each option leads to for the company, its customers, its money or its team."
         },
         {
           "name": "description_500_md",
@@ -4023,7 +4035,7 @@
           "name": "executive_md",
           "type": "string",
           "required": false,
-          "description": "Replaced by description_80_md, description_250_md and description_500_md: a call that sends only this is refused with description_required."
+          "description": "Replaced by description_100_md, description_250_md and description_500_md: a call that sends only this is refused with description_required."
         }
       ],
       "returns": {

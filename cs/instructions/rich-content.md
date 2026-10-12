@@ -16,7 +16,7 @@ as raw code, or does not show at all.
 | Spec phase | `action_plan_md`, `validation_criterion_md` | **no** | — | — |
 | Spec acceptance test | `verification_md` | yes | no — shows as code | yes |
 | Thread message | `discussion_post` body | yes | no — shows as code | yes |
-| Decision | `description_80_md`, `description_250_md`, `description_500_md` (arguments of `decision_create`) | yes | yes | yes |
+| Decision | `description_100_md`, `description_250_md`, `description_500_md` (arguments of `decision_create`) | yes | yes | yes |
 
 **`action_plan_md` and `validation_criterion_md` are displayed nowhere.** They are stored and
 returned by `feature_spec_get`, so they are the right place for what the next *agent* needs —

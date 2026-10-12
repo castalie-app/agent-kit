@@ -1,6 +1,6 @@
 ---
 name: decisions-panel
-description: Show or hide, beside the transcript, the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — open one card whole with "/cs:decisions-panel <number>" — its question, its description in 80, 250 or 500 words, its options as cards — and answer it there, with a click on a card or in your own words. A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
+description: Show or hide, beside the transcript, the decisions waiting for you on the objective this working copy works on, as cards — one group per agent that asked them, each card with its question, why it is yours, what it costs to read and the recommended option — open one card whole with "/cs:decisions-panel <number>" — its question, its description in 100, 250 or 500 words, its options as cards — and answer it there, with a click on a card or in your own words. A toggle drawn by the plugin's own hook, in the terminal and in the desktop app. Use it whenever someone asks what decisions wait for them, what their agents are asking, or to open, close or refresh the decisions panel.
 ---
 
 # decisions-panel — what your agents are waiting on, as cards
@@ -19,7 +19,7 @@ groups and cards in the order the inbox ranks them. A card carries the question,
 asked, the reading time, what waits on it, its deadline, how long it has waited, and the
 recommended option. A click anywhere on a card's text, « voir en grand », or its digit (1 to 9) once
 the panel holds the keyboard opens the whole sheet in a pane of its own, at once — the sheet Castalie draws since its spec 88,
-and nothing else: the question, its description with « En 80 mots » shown and « En 250 mots »,
+and nothing else: the question, its description with « En 100 mots » shown and « En 250 mots »,
 « En 500 mots » a click away, then one card per option (its risk, cost, effect, what it gives up,
 ★ on the recommended one), the last card « Autre réponse ou question » with the readers'
 questions, and the answer once there is one. Escape closes it; the cards stay.
