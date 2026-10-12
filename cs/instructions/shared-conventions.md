@@ -154,6 +154,8 @@ render it.
 - **No bare technical identifier** (`#N`, a column, a file) and no raw enumeration value, in a reply
   or in anything the person watches, an agent's name and its brief's first words included: use the
   label the interface shows, and name an entity by its business name, carried by its clickable link.
+- **A message sent for the person** answers its author where the request was posted (in its
+  thread, not by direct message), and is reported with the link that opens the sent message.
 - **The fact comes in the first sentence.**
 - **No corrective antithesis** ("not X, it is Y"), **no meta-commentary**, **no closing aphorism**,
   **no triads**, and **no final summary** that repeats what the bullets said.
