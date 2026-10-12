@@ -72,8 +72,15 @@ spec, phase:
   work, so write what will be delivered, not the area it touches.
 - `problem_md` — what is wrong or missing today. `solution_md` — how it will be done.
 - `persona` / `action` / `benefit` — the three story fields, all three or none.
-- `objective_id` — the strategy objective it serves, when you know it; `cs:strategy` finds it.
-  Unlike a brief, a deliverable is not refused for want of one.
+- `objective_id` — **required**: the strategy objective the deliverable serves. Find it **before**
+  the call, never after: `mcp__castalie__strategy_search_objectives` on the deliverable's subject, or
+  `cs:strategy` to walk the tree. Attended, name the two or three that fit and let the person pick —
+  one plainly matching is announced in one line and used. Unattended, take the objective the input
+  already carries (the ticket's, the adopted brief's), else the one the search plainly matches; none
+  does → do not create, put the question to the person who asked for the work. Castalie refuses a
+  deliverable without one (`objective_required`) or with an id that names no live objective of this
+  workspace (`objective_not_found`), and creates nothing: answer either by finding the right
+  objective, never by retrying without it. A work item attached to nothing answers to nobody.
 - `owner_user_id` — **whose deliverable it is**, settled by
   `${CLAUDE_PLUGIN_ROOT}/instructions/on-whose-behalf.md`. Attended, leave it out: the loop's pick
   makes you the lead. Unattended (`cs on-behalf`), the person who asked for it — the ticket's

@@ -544,7 +544,7 @@
     {
       "name": "strategy_create_objective",
       "kind": "write",
-      "description": "Create a strategy objective, at the root of a period or under a parent. The audit uses it to give its work a home when the team has none yet — and asks before calling it: an objective is the team's strategy, not the audit's own output.",
+      "description": "Create a strategy objective under its parent. Where the workspace's tree starts at ambitions (the Vision's roots), every other objective hangs under a parent: a call without parent_objective_id is refused with parent_objective_required and nothing is written. A workspace with no ambition takes its objectives at the root of a period. The audit uses it to give its work a home when the team has none yet — and asks before calling it: an objective is the team's strategy, not the audit's own output.",
       "params": [
         {
           "name": "title",
@@ -562,7 +562,7 @@
           "name": "parent_objective_id",
           "type": "int",
           "required": false,
-          "description": "Parent objective. Null for a root objective — this is what makes a sub-objective a single call."
+          "description": "Parent objective — this is what makes a sub-objective a single call. Required wherever the tree has ambitions (parent_objective_required otherwise); null only for a root objective in a workspace without any."
         },
         {
           "name": "description_md",
@@ -1070,7 +1070,7 @@
     {
       "name": "feature_brief_create",
       "kind": "write",
-      "description": "Create a new feature brief (business framing: title, domain, objective). Returns the new brief id. Write the body (problem/vision/executive summary) with `cs content push feature-brief <id>`, not as arguments.",
+      "description": "Create a new feature brief (business framing: title, domain, objective). A brief serves an objective: without one it is refused with objective_required, and an id naming no live objective of this workspace with objective_not_found — nothing is created in either case. Returns the new brief id. Write the body (problem/vision/executive summary) with `cs content push feature-brief <id>`, not as arguments.",
       "params": [
         {
           "name": "title",
@@ -1092,7 +1092,8 @@
         {
           "name": "objectiveId",
           "type": "int",
-          "required": false
+          "required": true,
+          "description": "Served as objective_id. The strategy objective this brief serves — strategy_search_objectives or strategy_navigate_children finds it. Missing: objective_required; naming no live objective of this workspace: objective_not_found."
         },
         {
           "name": "ownerUserId",
@@ -1157,7 +1158,13 @@
           "name": "objective_id",
           "type": "int",
           "required": false,
-          "description": "Optional strategy objective to attach."
+          "description": "The strategy objective the NEW brief serves — required whenever feature_brief_id is not given: without it the call is refused with objective_required, and an id naming no live objective of this workspace with objective_not_found; nothing is created in either case. Leave it out when feature_brief_id is given — the existing brief keeps its own objective."
+        },
+        {
+          "name": "feature_brief_id",
+          "type": "int",
+          "required": false,
+          "description": "An EXISTING brief to hang this deliverable on, instead of creating one: the spec and its phase are created under it, the brief keeps its own objective and owner. An id naming no brief is refused with feature_brief_not_found; nothing is created in that case."
         },
         {
           "name": "owner_user_id",
@@ -1296,7 +1303,8 @@
         {
           "name": "objectiveId",
           "type": "int",
-          "required": false
+          "required": false,
+          "description": "Served as objective_id. Moves the brief to another objective of this workspace. 0 detaches it only on a brief that has none already: detaching the objective of a brief that has one is refused with objective_required — attach it to another objective instead."
         }
       ],
       "returns": {

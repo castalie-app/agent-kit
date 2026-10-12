@@ -454,7 +454,10 @@ internal vocabulary**; a person reading them for the first time learns nothing a
 > — **Non** — je continue, et je ne rattache rien
 
 `mcp__castalie__strategy_create_objective` takes a `parent_objective_id`, so the sub-objective is one
-call, not two.
+call, not two. **And where their tree starts at ambitions, the top one hangs under a parent too** —
+Castalie refuses a parentless objective there with `parent_objective_required`, and writes nothing.
+Hang it under the ambition it serves, named in the same proposal; a workspace with no ambition takes
+it at the root of the period.
 
 **Why this one asks, like the non-green findings do.** An objective is **their strategy** — the
 thing the whole product exists to hold. Something appearing there that nobody asked for is the same
