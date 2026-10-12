@@ -159,12 +159,17 @@ A defect rarely admits a single repair — the guard goes at the boundary or at 
 bad rows are migrated or tolerated, the contract is tightened or its caller is — and each of those
 gives something up. Settled in a commit message, the choice reaches the ticket as a fact and
 nobody can see there was a decision at all. So when the choice is not yours to make (one of the
-seven reasons of `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), file it on the ticket:
+six reasons of `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), file it on the ticket:
 `decision_create(subject_kind="bug", subject_id=<ticket>, answer_shape="choice")`, one option per
 approach, each with **what it costs** (`cost_text`), **what it leaves behind** (`gives_up_md`), its
 `risk` and its `effect` — `continue` for the approaches the robot can carry, `take_over` for the one
 a person must — the one you recommend marked, and why in the description. Then carry on with
-what does not depend on it: the reproduction, the regression test.
+what does not depend on it: the reproduction, the regression test. **A gesture a person must make
+to finish the fix** — a provider console, a secret on a server, a resource only an MFA account
+creates, a customer to contact — is not an approach to choose: it is never a decision
+(`human_action_is_not_a_decision`). Check it is not already made, then park the ticket with
+`bug_set_requires_human(true, reason=<the gesture: what, where, with what>)`; with a person at the
+keyboard, ask them.
 
 **A ticket you picked up may already carry the answer.** `bug_get` returns its `decisions`: an
 answered one is **an instruction, not a suggestion** — its option, or the words written over it

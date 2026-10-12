@@ -103,7 +103,9 @@ Pick the **oldest** `pending` item. Not the last one typed: a fresh remark joins
    keeps Castalie in step and, if you die mid-item, lets the next session pick it up when the lease runs out.
 2. Fix the cause, following the `bug-fix` discipline. **Decide trivia on the spot** — naming, which file,
    which format, anything you can settle from the code in under a minute.
-3. **Only what a commit cannot undo goes to a person**: write the question into the item, set it
+3. **Only what a commit cannot undo goes to a person**, and only as a choice — a gesture only the person
+   can make (a console, an account, a message to someone) is asked of them in the session, never filed
+   as a decision (`human_action_is_not_a_decision`). For a choice: write the question into the item, set it
    `awaiting_user`, file it as a decision on the remark —
    `decision_create(subject_kind="acceptance_remark", subject_id=castalie_id, …)`, written by
    `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, its options carrying `continue` (the remark

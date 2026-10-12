@@ -97,7 +97,8 @@ render it.
 - **In progress only while an agent is at work** (a sub-agent, a workflow, a tab or another
   session this one handed it to, its own background command). What no agent moves (a release
   pipeline, an outside event, a date) is a scheduled follow-up, and the turn ends on *Finished*;
-  what needs a person is a filed decision, and the turn ends on *I need you*. No turn ends on an
+  what needs a person's choice is a filed decision, and the turn ends on *I need you*; what needs a
+  person's gesture is work, and the turn ends on *For you to do*. No turn ends on an
   open wait.
 - **Finished waits for the tracker**: while the work item is still open where it is tracked, its code
   unmerged into the main branch, its working copy dirty or off that branch's head, or a decision
@@ -110,7 +111,9 @@ render it.
   `> **Terminé ici pour vous** : mise en production en cours, le travail sera relancé si besoin.`
 - **A gesture only the user can perform**, once you tried it yourself and everything else is delivered, ends the turn on
   *For you to do*, never *Finished* nor *I need you*; one another session already took on is not asked
-  again.
+  again. A gesture is never a decision (`human_action_is_not_a_decision`): a session nobody watches
+  puts it on a ticket waiting for a person — `bug_set_requires_human` with the gesture as the reason,
+  or `bug_create` assigned to the person in charge when the work has no ticket — never on a sheet.
 - **I need you is the decision sheet, and nothing else.** The question in bold; its description in
   80 words, the fact that decides first and what you recommend; then one lettered line per option,
   its card: what it does, what it costs or gives up, ★ on the one you recommend. The last letter is
