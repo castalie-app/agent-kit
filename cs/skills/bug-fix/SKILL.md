@@ -44,7 +44,10 @@ of a customer with no reply costs an account, where a reasoned refusal costs an 
 to a person only when the decision is genuinely someone else's — a decision on the ticket,
 `decision_create(subject_kind="bug", subject_id=<ticket>)` written by
 `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, so the ticket says what it is waiting for
-and on whom — never as a way of not answering. **And when what you are handing over is a choice,
+and on whom — never as a way of not answering. **Never a decision on the ticket's fate or on playing
+a SQL script** — « Que faire du ticket ? », « Clore ce ticket ? », « Jouer le script ? »: both are the
+ticket's own workflow (`bug_set_requires_human`, `bug_declare_sql_script`), and the server refuses
+them (`ticket_triage_is_not_a_decision`, `sql_script_is_not_a_decision`). **And when what you are handing over is a choice,
 hand over the choice itself**: a `choice` whose options are the remedies, the way step 4 writes
 them, never an approval of a sentence. A reason with nothing to pick is a question, and it asks the
 person to compose the answer you already had the material for.

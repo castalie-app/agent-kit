@@ -30,7 +30,7 @@ mandatory:
 | `shareholder` | it belongs to the owners: pricing policy, a partnership, equity |
 | `private_knowledge` | the answer lives in someone's head: what a customer really needs, a promise made orally |
 | `irreversible` | no revert takes it back: data deleted, a message sent, a column dropped |
-| `authorization` | playing a script in production, opening an access — never merging or releasing the agent's own work, which it does without asking |
+| `authorization` | opening an access — never merging or releasing the agent's own work, which it does without asking, and never playing a SQL script (below) |
 | `external_gesture` | a gesture an agent cannot make: a provider console, a phone call, a signature |
 
 **If none fits, the decision is yours: make it.** Naming, file layout, which seam to cut, a change
@@ -38,6 +38,38 @@ one revert takes back, two implementations with the same outcome, anything the c
 under a minute. A gesture the spec's `Authorisations` section lists, or a workflow setting already
 answers, is not a question either. A sheet that asks what you could have decided costs a person
 three minutes and teaches them to stop reading your sheets.
+
+## Two things that are never a decision
+
+They are work on a ticket, handled on the ticket and the ticket board, and the server refuses them
+as decisions at every door.
+
+**Playing a SQL script** (`sql_script_is_not_a_decision`). Never ask whether to play, run or apply
+a script: it is an action to do, not a choice to weigh.
+
+- **Unattended run** (a scheduled task, an autofix, a robot account): declare the script on its
+  ticket — `bug_declare_sql_script(self_applied=false)`, with the rows it touches in production,
+  counted today by a read-only query, in `purpose_md` — and carry on. The ticket requires a person
+  and shows on the ticket board until the script is attested (`bug_mark_sql_script_applied`) or
+  cancelled. A spec's script goes on the spec: `feature_spec_add_sql_script`.
+- **Interactive session** (a person at the keyboard): ask that person, in your session, to play it;
+  once played, attest it (`self_applied=true`, then `bug_mark_sql_script_applied`).
+- **Before routing a script to anyone, check it is not already played**: read the current state
+  with a read-only query (the script's verification query, or its guards). Already played: attest
+  it, and nobody is asked.
+
+A question ABOUT a script — what it should change, which approach to take — is still a decision.
+
+**What to do with a ticket** (`ticket_triage_is_not_a_decision`). « Que faire du ticket ? », « Clore
+ce ticket ? », « Reprendre ce ticket ou le clore ? » are the ticket's own workflow.
+
+- **Unattended run**: when the answer is yours, give it — close the ticket with
+  `bug_set_status(closed, note_md)` or send it back with `bug_send_back_to_auto`; when it is not,
+  park the ticket with `bug_set_requires_human(true, reason)` — it shows on the ticket board as
+  requiring a person, with no decision — or assign it to the person in charge of the work.
+- **Interactive session**: ask the person at your keyboard.
+
+A choice about the ticket's WORK — which approach, which business rule — is still a decision.
 
 **One more reason, for a question nobody blocked on: `idea`.** A lead an agent raised on the
 strategy unprompted, which the leader judges good or not (`strategy-scout`). It is never a way to
@@ -199,8 +231,8 @@ not know `take_over`: refused with `effect_not_allowed_for_subject`.
 the person in charge of the work, in the order above — brief owner, spec assignee, ticket assignee,
 objective owner or its team's leader, domain owners — then whoever the subject names, and the
 workspace owner only as the last resort — the worst inbox to land in.
-When you know who decides — the author of the code at stake (`git log`), the brief's owner, the
-person who can play the script — name them.
+When you know who decides — the author of the code at stake (`git log`), the brief's owner —
+name them.
 
 ## A recurring question carries a `dedupe_key`
 
@@ -237,11 +269,6 @@ shown anywhere; what the reader needs goes in the description.
 `asked_by_agent` names you — the skill, or your robot's name — so the answer and a reader's
 questions find their way back to you (`decision-resume --context`).
 
-## One kind of sheet carries facts of its own
-
-- **A script to play in production** carries the number of rows it touches **in production**,
-  counted today by a read-only query, and the query that counted them.
-
 ## When it is refused
 
 Every refusal returns `error` (the code), `fix` (what to correct) and, where one applies, `cap`.
@@ -267,6 +294,8 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `routing_is_not_a_decision` | the answer would be a person: find the person in charge of the feature (the brief's owner first, then the spec's assignee, the ticket's assignee, the objective's owner or its team's leader, then `domain_list_owners`) and file the request TO them, or assign them the task |
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
 | `status_quo_is_not_a_decision` | the option you recommend changes nothing: do nothing, write it in your notes; ask only when you recommend an action |
+| `sql_script_is_not_a_decision` | playing a SQL script is an action: declare it on its ticket (`bug_declare_sql_script`, the ticket then requires a person on the ticket board) or its spec (`feature_spec_add_sql_script`) when unattended; ask the person at your keyboard when interactive |
+| `ticket_triage_is_not_a_decision` | what to do with a ticket is the ticket's workflow: settle it yourself (`bug_set_status`, `bug_send_back_to_auto`), park it with `bug_set_requires_human(true, reason)` or assign it to the person in charge when unattended; ask the person at your keyboard when interactive |
 | `batch_one_question_per_kind` | the same question already waits for other subjects: supersede the waiting one with ONE sheet listing every subject, and apply any precedent instead of asking |
 | `question_dismissed_as_useless` | a person declared this question useless: do not ask it again unless a fact changed, then under a new `dedupe_key` naming the change |
 
@@ -277,44 +306,10 @@ work settled on its own is withdrawn with `decision_cancel` and its reason, at t
 tab that filed it ends its work (`shared-conventions.md` § Your decisions, at the start and at the
 end).
 
-## Three complete sheets
+## Two complete sheets
 
 Each one passes the server's admission as written. Replace `subject_id` and `addressee_user_id`
 with ids of your workspace.
-
-### A script to play in production — an approval
-
-```json
-{
-  "title": "Correct the VAT on the 37 credit notes issued since 1 October?",
-  "description_80_md": "The VAT rounding fix on credit notes is released. 37 credit notes issued since 1 October still carry a wrong VAT amount, 0.71 € in all, counted today on production. The script writes a corrective line on each. I recommend playing it tonight, before the accounting export sends those lines out: no revert brings them back.",
-  "description_250_md": "The VAT rounding fix on credit notes is released: new credit notes are right. 37 credit notes issued since 1 October still carry a wrong VAT amount, 0.71 € in all, counted today on production by a read-only query.\n\nThe script writes a corrective line on each, so the ledger keeps both amounts. Tonight's accounting export sends those lines out, and no revert brings them back.\n\nI recommend playing it tonight: every day without it leaves the next export carrying the wrong totals.",
-  "description_500_md": "The VAT rounding fix on credit notes is released: new credit notes are right. 37 credit notes issued since 1 October still carry a wrong VAT amount, 0.71 € in all.\n\nRows counted today, read-only, on production:\n\n```sql\nSELECT COUNT(*) FROM credit_note_lines\nWHERE issued_at >= '2026-10-01' AND vat_amount <> ROUND(net_amount * vat_rate, 2);\n```\n\nResult: 37. The script writes a corrective line on each, so the ledger keeps both amounts. Tonight's accounting export sends those lines out, and no revert brings them back.\n\nNot playing it leaves the 37 credit notes as they are and the ticket with you. I recommend playing it tonight.",
-  "escalation_reason": "authorization",
-  "answer_shape": "approve",
-  "subject_kind": "bug",
-  "subject_id": 412,
-  "options": [
-    {
-      "title": "Play the script tonight",
-      "body_md": "The 37 credit notes are corrected before the export, and tonight's file carries the corrective lines.",
-      "risk": "low",
-      "is_recommended": true,
-      "effect": "continue"
-    },
-    {
-      "title": "Do not play it, I take the ticket over",
-      "body_md": "The 37 credit notes keep their wrong amount and the ticket is assigned to you.",
-      "risk": "low",
-      "effect": "take_over"
-    }
-  ],
-  "blocked_items": 1,
-  "addressee_user_id": 7,
-  "resume_mode": "subject",
-  "asked_by_agent": "bug-fix"
-}
-```
 
 ### A customer arbitration — a choice
 

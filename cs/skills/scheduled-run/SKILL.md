@@ -121,6 +121,10 @@ file nothing and write it in the run's notes. A question already answered is not
 a changed fact. A run asks ONE question per kind, never one per subject: ten models to upgrade are
 one sheet listing the ten, filed only when it recommends an action. The server refuses the rest
 (`status_quo_is_not_a_decision`, `batch_one_question_per_kind`, `question_dismissed_as_useless`).
+Two things are never asked at all, they are work on a ticket: playing a SQL script (declare it on the
+ticket with `bug_declare_sql_script` — the ticket then requires a person on the ticket board) and what
+to do with a ticket (settle it, or park it with `bug_set_requires_human`) — `sql_script_is_not_a_decision`,
+`ticket_triage_is_not_a_decision`, § « Two things that are never a decision » of the sheet.
 
 **The key.** Every decision of this task carries a `dedupe_key` built from what does not change
 between runs: `scheduled-task:<task id>:<what to decide>`, or the subject's own terms when it has
