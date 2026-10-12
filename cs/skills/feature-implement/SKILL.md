@@ -76,7 +76,16 @@ watchdog never fires — ideal.
    ready and say so in one line. Stop before the merge otherwise only when the person asked it in
    the current turn. No merge path declared by the host → one line, PR ready.
 8. **Close.** `mcp__castalie__feature_spec_complete(specId, prUrl)`. Adjust the brief's follow-up horizon if
-   delivery slipped (follow-up conventions). Then invoke `retro` (additive, never blocking).
+   delivery slipped (follow-up conventions).
+   **Then sweep the spec's decisions.** The answer's `pending_decisions` lists every decision still
+   waiting on the spec, its phases, its tickets, its follow-up runs and its acceptance remarks (an
+   older server returns none: read `decision_list(feature_spec_id=specId, status=pending)`, else
+   one `scope=subject` read for the spec and each phase). Cancel with `decision_cancel(id, reason)`
+   each one the finished work settled or left without a reason to exist, the reason naming the
+   pull request or the phase that settled it; supersede one whose facts moved; keep one that still
+   stands (a production gesture, a business choice the spec did not make) and name it in the
+   report. `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md` § Your decisions, at the start
+   and at the end. Then invoke `retro` (additive, never blocking).
    **Then go back up to the brief.** `mcp__castalie__feature_brief_get(briefId)`: when this spec was its
    last open one, Castalie has already moved the brief to `Acceptance`, and the stories this spec was
    linked to are closed. A brief in `Acceptance` is not finished — its need has not been replayed yet:

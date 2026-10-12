@@ -146,6 +146,8 @@ export function register(on: On, companion: Companion): void {
   let isRefreshQueued = false
   let isCardsOpen = false
   let hasAutoOpened = false
+  /** The person closed the cards in this session: nothing opens them unasked again, but a decision it files. */
+  let isClosedHere = false
 
   const timers = new Map<'refresh' | 'redraw', { cancel: () => void }>()
 
@@ -657,20 +659,27 @@ export function register(on: On, companion: Companion): void {
   }
 
   /**
-   * Opens by itself once per session where decisions wait, unless the person closed it last
-   * time. Opened unasked, a pane is only seated where it would be a sidebar; elsewhere it waits.
+   * The tab opens the panel itself (Castalie acceptance 28, remark 25): once per session, as soon
+   * as decisions wait on its objective — at its start, or at the end of a later turn once it has
+   * taken up work whose objective has some. A close in an earlier session does not hold a new tab
+   * back; a close in this one does, for the rest of it. Opened unasked, a pane is only seated where
+   * it would be a sidebar; elsewhere it waits.
    */
   async function openOnWaiting(engine: Host): Promise<void> {
-    if (isCardsOpen || hasAutoOpened) return
-
-    const preference = await engine.storeGet(Names.STORE_OPEN_KEY).catch(() => undefined)
-    if (preference === false) return
+    if (isCardsOpen || hasAutoOpened || isClosedHere) return
 
     await refresh(engine)
+    if (isCardsOpen || hasAutoOpened || isClosedHere) return
     const waiting = model.workspaces.some(workspace => (workspace.inbox?.cards.length ?? 0) > 0)
     if (!waiting) return
 
     await openCards(engine)
+  }
+
+  async function openOnWaitingIfStale(engine: Host): Promise<void> {
+    if (isRefreshing || timers.has('refresh')) return
+    if ((await engine.now()) - readAt < Names.INBOX_TTL_MS) return
+    await openOnWaiting(engine)
   }
 
   // ── The bind ────────────────────────────────────────────────────────────
@@ -827,9 +836,7 @@ export function register(on: On, companion: Companion): void {
     if (result.deny !== undefined) return result
 
     isCardsOpen = false
-    if (e.origin.kind === 'person' && host !== null) {
-      await host.storeSet(Names.STORE_OPEN_KEY, false).catch(() => undefined)
-    }
+    if (e.origin.kind === 'person') isClosedHere = true
 
     return result
   }).catch(($, e, next) => next(e))
@@ -878,17 +885,13 @@ export function register(on: On, companion: Companion): void {
 
     if (isCardsOpen) {
       await closeCards(engine)
-      await engine.storeSet(Names.STORE_OPEN_KEY, false).catch(() => undefined)
+      isClosedHere = true
 
       return { text: Names.HIDDEN_TEXT }
     }
 
     const placed = await openCards(engine)
-    if (placed.isPlaced) {
-      await engine.storeSet(Names.STORE_OPEN_KEY, true).catch(() => undefined)
-
-      return { text: Names.SHOWN_TEXT }
-    }
+    if (placed.isPlaced) return { text: Names.SHOWN_TEXT }
 
     await closeCards(engine)
     await refresh(engine)
@@ -909,7 +912,16 @@ export function register(on: On, companion: Companion): void {
   }
 
   companion.turnEnded = () => {
-    if (host !== null && isCardsOpen) void refreshIfStale(host).catch(() => undefined)
+    if (host === null) return
+    if (isCardsOpen) {
+      void refreshIfStale(host).catch(() => undefined)
+
+      return
+    }
+    // A tab that found nothing waiting at its start looks again once a turn has ended — it may
+    // have taken up a spec since — at most once per `INBOX_TTL_MS`, and never after it opened the
+    // panel or the person closed it.
+    if (!hasAutoOpened && !isClosedHere) void openOnWaitingIfStale(host).catch(() => undefined)
   }
 
   companion.cleared = async () => {

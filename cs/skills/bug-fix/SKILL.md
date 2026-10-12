@@ -238,6 +238,12 @@ line with `settings_url` — or the person in front of you asked, in this turn, 
 merge. A fix you judge risky ships with that risk written in the pull request, in one
 sentence with how it is reverted: a flag, never a wait.
 
+Then sweep the ticket's decisions: `decision_list(scope=subject, subject_kind=bug, subject_id=<id>,
+status=pending)`, plus the ones this session filed. Cancel with `decision_cancel(id, reason)` each
+one the released fix settled (the reason names the pull request), supersede one whose facts moved,
+and keep one that still stands — `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md` § Your
+decisions, at the start and at the end.
+
 Merge and release only through the commands the host declared — the ones `cs:adapt` wrote against
 their pipeline, or the ones their root instruction block names. **No path declared** → one line
 saying so, and the fix stops at "PR ready": a missing access, reported as the gesture a person

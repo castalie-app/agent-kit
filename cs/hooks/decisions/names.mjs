@@ -27,9 +27,6 @@ export const COMMAND_LABEL = `/${SKILL_COMMAND}`;
 export const COMMAND_DESCRIPTION =
   "Show, beside the transcript, the decisions waiting for you as cards, one group per agent; a number opens that decision whole";
 
-/** Where the person's own open/close choice is remembered, across sessions of this machine. */
-export const STORE_OPEN_KEY = "decisions/open";
-
 /**
  * Where the decisions this copy's sessions filed wait to be told back, once settled. Scoped to the
  * working copy: one server alias names a different workspace in each repository.
