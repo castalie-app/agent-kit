@@ -19,7 +19,7 @@ decode; two sessions ending a turn two different ways cost more than either shap
 verdicts: finished here for you, the session can be closed — only once its work item is closed
 where it is tracked, its code is merged into the main branch, its working copy is clean and parked
 on that branch's head, and nothing is left for the user; what only an outside event or a release
-still moves is a scheduled follow-up, and the turn ends finished; to do: the gesture you tried and only the user can finish, where it
+still moves is a scheduled follow-up, and the turn ends finished; for you to do: the gesture you tried and only the user can finish, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
 what; or, I need you: the question, its
 description in 80 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
@@ -74,7 +74,7 @@ The rules above stay in English; the verdict is written in the user's language. 
 ```
 
 ```
-> **À faire** : jouer le script ouvert dans l'éditeur SQL, qui débloque la suite du traitement.
+> **À faire par vous** : jouer le script ouvert dans l'éditeur SQL, qui débloque la suite du traitement.
 ```
 
 ```
@@ -87,8 +87,9 @@ The rules above stay in English; the verdict is written in the user's language. 
 > **D.** Autre réponse ou question.
 ```
 
-In English the headings are **Finished here for you**, **To do**, **In progress** and **I need you**.
-The finished heading always names its scope: never « Finished » or « Terminé » alone. The
+In English the headings are **Finished here for you**, **For you to do**, **In progress** and **I need you**.
+The finished heading always names its scope, and the to-do heading names who acts: never
+« Finished », « Terminé », « To do » or « À faire » alone. The
 blockquote is the whole mechanism: the terminal draws it as a vertical bar, and nothing else has to
 render it.
 
@@ -108,7 +109,7 @@ render it.
   Ordinary follow-ups (next day and later) never qualify a turn for this exception.
   `> **Terminé ici pour vous** : mise en production en cours, le travail sera relancé si besoin.`
 - **A gesture only the user can perform**, once you tried it yourself and everything else is delivered, ends the turn on
-  *To do*, never *Finished* nor *I need you*; one another session already took on is not asked
+  *For you to do*, never *Finished* nor *I need you*; one another session already took on is not asked
   again.
 - **I need you is the decision sheet, and nothing else.** The question in bold; its description in
   80 words, the fact that decides first and what you recommend; then one lettered line per option,

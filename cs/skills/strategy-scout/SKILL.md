@@ -206,7 +206,7 @@ A short report, in the leader's language, five lines at most before the links:
 - the gaps: a read refused, the cap reached, `idea` refused and filed as `private_knowledge`.
 
 **Attended**, close on the verdict of `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`:
-*To do* — judge the leads in the decisions inbox — when leads were filed; *Finished here for you*
+*For you to do* — judge the leads in the decisions inbox — when leads were filed; *Finished here for you*
 when none was.
 
 **Under `scheduled-run`**, a lead is not a decision the run waits on: nothing is blocked by the
