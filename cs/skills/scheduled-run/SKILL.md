@@ -127,7 +127,8 @@ configure, install, sign in, grant an access, restart, contact someone, make a t
 with `bug_set_requires_human`, the gesture as the reason, or `bug_create` one assigned to the person in
 charge when the work has none) — playing a SQL script (declare it on the ticket with
 `bug_declare_sql_script` — the ticket then requires a person on the ticket board) and what to do with a
-ticket (settle it, or park it with `bug_set_requires_human`) — `human_action_is_not_a_decision`,
+ticket (settle it, or park it with `bug_set_requires_human`; a validation is asked with
+`bug_request_validation`) — `human_action_is_not_a_decision`,
 `sql_script_is_not_a_decision`, `ticket_triage_is_not_a_decision`, § « Three things that are never a
 decision » of the sheet.
 

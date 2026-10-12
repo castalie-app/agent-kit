@@ -45,10 +45,11 @@ to a person only when the decision is genuinely someone else's — a decision on
 `decision_create(subject_kind="bug", subject_id=<ticket>)` written by
 `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, so the ticket says what it is waiting for
 and on whom — never as a way of not answering. **Never a decision on the ticket's fate, on playing
-a SQL script, on a gesture a person has to make or on which fix approach to take** — « Que faire du
-ticket ? », « Clore ce ticket ? », « Jouer le script ? », « Créer la ressource depuis un compte MFA ? »,
-« Quelle approche ? »: all are the ticket's own workflow (`bug_set_requires_human`,
-`bug_declare_sql_script`, `bug_add_decision_option`), and the server refuses them
+a SQL script, on a gesture a person has to make, on which fix approach to take or on validating the
+ticket** — « Que faire du ticket ? », « Clore ce ticket ? », « Jouer le script ? », « Créer la ressource
+depuis un compte MFA ? », « Quelle approche ? », « Valider le ticket ? »: all are the ticket's own
+workflow (`bug_set_requires_human`, `bug_declare_sql_script`, `bug_add_decision_option`,
+`bug_request_validation`), and the server refuses them
 (`ticket_triage_is_not_a_decision`, `sql_script_is_not_a_decision`, `human_action_is_not_a_decision`).
 **And when what you are handing over is a choice of remedy, hand over the choice itself**: the
 remedies written on the ticket the way step 4 writes them, never an approval of a sentence. A reason with nothing to pick is a question, and it asks the
