@@ -48,9 +48,11 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    (`mcp__castalie__followup_run_complete`): a run closed on `finalStatus="human_required"` is
    replayed automatically the next day, at most twice, then closed as failed with its reason. The one
    question a check may still put to a person is about its RULE, when it cannot be applied as
-   written: pass `rule_question_md` to `followup_run_complete` — the product files ONE decision for
-   that check, never again while it waits nor once answered, and its answer rewrites the check's
-   prompt. A run your own session left open is a run to finish or reschedule.
+   written: pass `rule_question_md` to `followup_run_complete` with `rule_readings` — 2 to 4
+   concrete readings of the rule, each a title, what the check then measures (`body_md`) and what it
+   leaves out (`gives_up_md`), one `is_recommended` — and the product files ONE decision for that
+   check, never again while it waits nor once answered; the reading picked rewrites the check's
+   prompt. A question without two readings is refused (`decision_needs_two_alternatives`). A run your own session left open is a run to finish or reschedule.
 5. **Reschedule.** Per `${CLAUDE_PLUGIN_ROOT}/instructions/followup-conventions.md`: green + stable →
    close the loop; green first cycle of a cascade → next horizon; minor anomaly → J+7 re-check; hard
    regression → stop + flag. Apply via `mcp__castalie__followup_check_update(checkId, scheduleOffsetDays=…,
