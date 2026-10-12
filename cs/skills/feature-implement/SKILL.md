@@ -29,7 +29,7 @@ watchdog never fires — ideal.
 1. **Lock the spec, under the right name.** Settle who leads it by
    `${CLAUDE_PLUGIN_ROOT}/instructions/on-whose-behalf.md`: `cs on-behalf` says whether this run is
    unattended. **Attended** → `mcp__castalie__feature_spec_pick(id=specId)`, and the caller leads it.
-   **Unattended** → the spec's current lead, else its brief's owner, else the workspace's robot
+   **Unattended** → the spec's current lead, else its brief's assignee, else the workspace's robot
    account, passed as `feature_spec_pick(id=specId, lead_user_id=<that id>)` — the token says who is
    calling, not who the work is for. Read `spec.lead_user_id` back from the answer.
    `success:false` → it is held by `current_lead_name`; stop, ask them to release it. (Skip on `--continue`.)
@@ -107,7 +107,7 @@ phase and what each answer changes in `resume_state_md` (`robot_prompt` with
 the phases and cases that do not depend on it, exactly those. **An action only a person can take**
 (a provider console, a secret on a server, an access to grant, someone to contact) is not a decision
 (`human_action_is_not_a_decision`): check it is not already made, then `bug_create` it under the spec,
-the gesture as its title, assigned to the brief's owner, and `bug_set_requires_human(true, reason)`;
+the gesture as its title, assigned to the person in charge (`decision-sheet.md`), and `bug_set_requires_human(true, reason)`;
 name the ticket in the report and carry on. On
 `--continue`, `decision_list(asked_by_agent="feature-implement", status=answered)`, kept to this
 spec and its phases, returns what was settled: build each answer as an instruction, then

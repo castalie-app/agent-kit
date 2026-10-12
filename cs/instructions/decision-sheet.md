@@ -57,8 +57,8 @@ do, not a choice to weigh. A decision asks a person to CHOOSE; it never asks the
 - **Unattended run**: put the work on a ticket waiting for a person. On the ticket you work,
   `bug_set_requires_human(true, reason)` — the reason is the gesture: what to do, where, with what.
   When the work has no ticket, `bug_create` one with the gesture as its title, under the brief or
-  spec it belongs to, assigned to the person in charge (the brief's owner first — the routing
-  below), then `bug_set_requires_human`. It shows on the ticket board as requiring a person.
+  spec it belongs to, assigned to the person in charge (the routing below), then
+  `bug_set_requires_human`. It shows on the ticket board as requiring a person.
 - **Interactive session**: ask the person at your keyboard, and end the turn on *For you to do*
   (`shared-conventions.md`).
 - **Before routing a gesture to anyone, check it is not already made**: read the real state —
@@ -118,13 +118,15 @@ six or decides. An instance that does not know `idea` yet refuses it; the lead i
 
 **Never ask a person to name a person.** A person's attention is the scarcest thing a workspace
 has, and a sheet that asks *who* validates, reviews, downloads or re-reads spends it to find out
-whose attention to spend next. That is routing, not a decision: questions go to the person in
-charge of the FEATURE, and the workspace already records who that is — the brief's owner first
-(`feature_brief_get`, `owner_user_id`), then the spec's assignee (`feature_spec_get`), then the
-ticket's assignee (`bug_get`), then the owner of the objective the work serves
-(`strategy_get_objective`) — the team's leader when a team carries it (`strategy_list_teams`),
-climbing to the parent objective while one names nobody — then the domain's owners
-(`domain_list_owners`). Find that person and address the actual request TO them: the decision filed with their `addressee_user_id`
+whose attention to spend next. That is routing, not a decision: questions go to the person IN
+CHARGE, and the workspace already records who that is, found by walking the tree from the work
+upward: the work item's own assignee (`bug_get` `assigned_to_user_id`, `feature_spec_get`
+`lead_user_id`), on a follow-up the person who shipped it, then the feature's carrier — the
+brief's assignee (`feature_brief_get` `assigned_to_user_id`), then the leader of the team the
+brief names — then the owner of the objective the brief serves or the leader of the team carrying
+it (`strategy_get_objective`, `strategy_list_teams`), climbing parent objectives, then the
+domain's owners (`domain_list_owners`). The brief's `owner_user_id` and any creator or author are
+never looked at: whoever created the work is not whoever carries it. Find that person and address the actual request TO them: the decision filed with their `addressee_user_id`
 (« Valides-tu la spec … avant le code ? »), the task assigned to them, or the question asked in the
 discussion. When nobody is recorded, set an owner from the strategy — the objective's owner — with
 `domain_set_owner`, rather than asking. The server refuses such a sheet on the MCP channel
@@ -292,12 +294,10 @@ not know `take_over`: refused with `effect_not_allowed_for_subject`.
 
 ## Name who decides
 
-`addressee_user_id` is the person who can answer. Omitted, Castalie picks
-the person in charge of the work, in the order above — brief owner, spec assignee, ticket assignee,
-objective owner or its team's leader, domain owners — then whoever the subject names, and the
-workspace owner only as the last resort — the worst inbox to land in.
-When you know who decides — the author of the code at stake (`git log`), the brief's owner —
-name them.
+`addressee_user_id` is the person who can answer. Omit it: Castalie routes to the person in
+charge, walking the tree in the order above, and the workspace owner only when nobody else is named
+anywhere in it — the worst inbox to land in. Name someone only when you know the work is theirs
+and the tree does not say so.
 
 ## A recurring question carries a `dedupe_key`
 
@@ -357,7 +357,7 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `subject_not_found`, `subject_closed` | the id of open work; `none` takes no id |
 | `subject_kind_unavailable` | this workspace does not know that kind yet: file on the brief the work belongs to |
 | `addressee_not_member` | an active member of the workspace |
-| `routing_is_not_a_decision` | the answer would be a person: find the person in charge of the feature (the brief's owner first, then the spec's assignee, the ticket's assignee, the objective's owner or its team's leader, then `domain_list_owners`) and file the request TO them, or assign them the task |
+| `routing_is_not_a_decision` | the answer would be a person: file the request itself and omit `addressee_user_id` — Castalie routes it to the person in charge (the order in *Never ask a person to name a person*) — or assign them the task |
 | `decision_already_pending` | that question already waits: `pending_decision_id`; add to it or supersede it |
 | `status_quo_is_not_a_decision` | the option you recommend changes nothing: do nothing, write it in your notes; ask only when you recommend an action |
 | `sql_script_is_not_a_decision` | playing a SQL script is an action: declare it on its ticket (`bug_declare_sql_script`, the ticket then requires a person on the ticket board) or its spec (`feature_spec_add_sql_script`) when unattended; ask the person at your keyboard when interactive |

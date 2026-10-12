@@ -1,6 +1,6 @@
 ---
 name: brief-acceptance
-description: Replay a delivered brief as its customer would, before it closes — each user story on the running product, each Given/When/Then criterion with a verdict written back, the gaps coded on one pull request through the acceptance queue, a disproportionate gap put to the brief's owner, and the brief accepted only when the replay conforms. Fires when a brief enters Acceptance (its last spec closed), on "recette du brief", "le brief est-il vraiment livré ?", "accept brief <id>". Its fix pull request ships through the host's own merge and release path without asking anyone; it ends on feature_brief_accept or on a decision filed for the owner.
+description: Replay a delivered brief as its customer would, before it closes — each user story on the running product, each Given/When/Then criterion with a verdict written back, the gaps coded on one pull request through the acceptance queue, a disproportionate gap put to the person in charge, and the brief accepted only when the replay conforms. Fires when a brief enters Acceptance (its last spec closed), on "recette du brief", "le brief est-il vraiment livré ?", "accept brief <id>". Its fix pull request ships through the host's own merge and release path without asking anyone; it ends on feature_brief_accept or on a decision filed for the person in charge.
 allowed-tools: Bash, Read, Edit, Write, Glob, Grep, Skill, mcp__castalie__whoami, mcp__castalie__feature_brief_get, mcp__castalie__feature_spec_get, mcp__castalie__feature_brief_acceptance_pick, mcp__castalie__feature_brief_acceptance_release, mcp__castalie__feature_brief_set_acceptance_test_status, mcp__castalie__feature_brief_update_user_story, mcp__castalie__feature_brief_accept, mcp__castalie__acceptance_open, mcp__castalie__acceptance_add_remark, mcp__castalie__acceptance_list, mcp__castalie__acceptance_close, mcp__castalie__decision_create, mcp__castalie__decision_list, mcp__castalie__decision_get, mcp__castalie__decision_mark_applied
 ---
 
@@ -20,7 +20,7 @@ it and closes the brief in one call. What the server cannot do is the replay —
 ## Arguments
 
 - `<briefId>` — required.
-- `--continue` — resume a replay whose owner answered a decision, or whose fix pull request has shipped.
+- `--continue` — resume a replay whose person in charge answered a decision, or whose fix pull request has shipped.
 
 ## Steps
 
@@ -54,21 +54,21 @@ it and closes the brief in one call. What the server cannot do is the replay —
    ground contradicts the brief (the story no longer makes sense, the criterion is wrong), do not code
    and do not decide: file a decision on the brief, `decision_create(subject_kind="feature_brief",
    subject_id=<brief>, escalation_reason="private_knowledge")` — what the need really is belongs to
-   the brief's owner, so name them as `addressee_user_id` — with the options you see, each with what
+   the person in charge — omit `addressee_user_id`, Castalie routes it to them — with the options you see, each with what
    it gives up, `resume_mode="asker"`, and in `resume_state_md` the criterion or story it holds and
    what you will do with each answer. `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md` says how
-   to write it. Then carry on with the rest. A doubt is lifted by asking the owner, never by one more
+   to write it. Then carry on with the rest. A doubt is lifted by asking the person in charge, never by one more
    implementation.
 5. **Fix the gaps on one pull request.** Hand them to `acceptance` with the brief as its subject
    (`acceptance_open` with `feature_brief_id` — the server re-enters the brief's open pass rather than
    opening a second one), one remark per gap, one commit per remark, one pull request, released by the
    environment's own release step. When it is served, replay the criteria that failed and rewrite their
-   verdicts. Repeat until everything conforms or only the owner's decisions remain.
-6. **Apply the owner's answers.** On `--continue`, `decision_list(scope=subject,
-   subject_kind="feature_brief", subject_id=<brief>, status=answered)` lists what the owner settled,
+   verdicts. Repeat until everything conforms or only the decisions of the person in charge remain.
+6. **Apply the answers.** On `--continue`, `decision_list(scope=subject,
+   subject_kind="feature_brief", subject_id=<brief>, status=answered)` lists what the person in charge settled,
    and `decision_get` gives each answer with the `resume_state_md` you left. Apply it as below, then
    `decision_mark_applied(id, note_md)`: an answer read and not marked looks, to everyone else, like
-   an answer nobody acted on. A story the owner drops: `feature_brief_update_user_story(id,
+   an answer nobody acted on. A story the person in charge drops: `feature_brief_update_user_story(id,
    status=Canceled, canceled_reason=<their words>)`. A criterion they rewrite: rewrite it, replay it.
    A story they keep: it goes back to step 5.
 7. **Accept.** When `feature_brief_get` answers `acceptance.can_be_done` for everything but the
@@ -90,7 +90,7 @@ it and closes the brief in one call. What the server cannot do is the replay —
 ## Report
 
 Two lines, then the link to the brief's page (`brief.url` from `feature_brief_get`): the verdict — accepted,
-or with its owner's decision filed, or with its release follow-up scheduled — and the count of criteria passed, not applicable and failed.
+or with its decision filed for the person in charge, or with its release follow-up scheduled — and the count of criteria passed, not applicable and failed.
 The detail lives on the page, where the verdicts are.
 
 ## Hand back
