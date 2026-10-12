@@ -21,7 +21,9 @@ that belongs to `feature-spec`.
 
 If the first token is `edit`, do only this: `feature_brief_get(briefId)`, summarize it in 2-3 sentences,
 ask what to change, then apply one change at a time (`feature_brief_update`, `feature_brief_add_user_story`),
-confirming each. Body edits go through the CLI (see below).
+confirming each. Body edits go through the CLI (see below). A brief changes objective by naming the
+new one; detaching it (`objective_id=0`) is refused with `objective_required` — a brief always
+serves an objective.
 
 ## Model
 
@@ -35,8 +37,13 @@ buffer synced by the CLI, never passed as a tool argument.
    by `${CLAUDE_PLUGIN_ROOT}/instructions/on-whose-behalf.md` → `ownerUserId`: attended, the userId
    (or whoever the person in front of you names); unattended (`cs on-behalf`), the person who asked
    for it when the input names one, else the workspace's robot account. Pick the objective the need serves —
-   invoke the `strategy` skill or `mcp__castalie__strategy_navigate_children` to find it. A brief with no
-   objective has no reason to exist: refuse to create one without it.
+   invoke the `strategy` skill, `mcp__castalie__strategy_search_objectives` or
+   `mcp__castalie__strategy_navigate_children` to find it; attended, name the two or three that fit and
+   let the person pick. A brief with no objective has no reason to exist: never create one without it.
+   Castalie refuses it too — `objective_required` without one, `objective_not_found` for an id naming
+   no live objective of this workspace, and nothing is created: answer by finding the right objective,
+   never by retrying without it. Unattended and no objective plainly fits → stop and ask the person who
+   asked for the work.
 2. **Read who this repository already writes for**, following
    `${CLAUDE_PLUGIN_ROOT}/instructions/host-instructions.md`: the lines carrying
    `<!-- castalie:instructions -->` (or the same marker under the legacy prefix — `g` followed by `aly`, one word, as `host-instructions.md` defines it) in the root instruction file name the files a skill must open, and a
@@ -58,7 +65,7 @@ buffer synced by the CLI, never passed as a tool argument.
    **A session that died between the create and the body leaves a brief with a title and nothing else**
    — invisible to whoever relaunches, so they frame it again, and the workspace ends with two records
    of one need and a spec hanging off whichever the second run remembered.
-   Nothing matches → `mcp__castalie__feature_brief_create(title, domain, objectiveId, owner_user_id=<ownerUserId>,
+   Nothing matches → `mcp__castalie__feature_brief_create(title, domain, objective_id=<objectiveId>, owner_user_id=<ownerUserId>,
    nextFollowupDate?)` → capture `brief_id`, and check `brief.owner_user_id` in the answer is the one
    you named. The author stays you — Castalie records it from the token. Never pass the body as an argument.
 5. **Write the body via the CLI.** `cs content pull feature-brief <brief_id>` to seed the buffer,
