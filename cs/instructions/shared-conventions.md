@@ -34,9 +34,13 @@ end the turn treating it as done.
 restating the request. Content the user must judge goes in the reply body itself. The turn's
 verdict goes in its own blockquote (`>`) at the end, opened by a bold heading; when it asks
 something, at most six items, each numbered and carrying its lettered options (1.A, 1.B, 2.A) and
-what each costs, answerable with a single label without reading back up. Never inside the recap bullets. Short, but in full sentences:
-keep the articles and the verb. Correct, plain French for a non-specialist; translate opaque
-anglicisms (gloss an unavoidable one once), keep the team's established abbreviations. Avoid em
+what each costs, answerable with a single label without reading back up. Several questions are laid
+out one under the other: each question on its own line, numbered and in bold, each of its options
+on its own line below it, an empty quoted line between two questions. A question already asked and
+unchanged since is recalled on one line, its labels and option titles inline (`**2.** Licence :
+toujours ouverte, **2.A** acheter, **2.B** compte local`), never reprinted in full. Never inside
+the recap bullets. Short, but in full sentences: keep the articles and the verb. Correct, plain
+French for a non-specialist; translate opaque anglicisms (gloss an unavoidable one once), keep the team's established abbreviations. Avoid em
 dashes, in replies and in any text written for the user: prefer a colon, a comma, parentheses or
 two sentences.
 
