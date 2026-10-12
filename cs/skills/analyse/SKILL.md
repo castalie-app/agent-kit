@@ -20,9 +20,9 @@ guess.
 
 ## What to produce
 
-A single reply, four short sections. No tool calls beyond reading files to ground the answer — and,
-once a person said yes, the one send of step 5. No action plan for the original task, no offer to
-continue, no apology.
+A single reply, four short sections. No tool calls beyond reading files to ground the answer,
+applying the edits of section 4, and the one send of step 5. No action plan for the original task,
+no offer to continue, no apology.
 
 ### 1. What actually happened
 
@@ -68,7 +68,7 @@ saying the same thing is how a `CLAUDE.md` becomes unreadable, and an unread rul
 
 Discipline: draft internally long → 1 line → shortest form; output the shortest that keeps the source
 behavior. Minimum diff — prefer swapping 3 words over adding a paragraph. Announce the word-count delta.
-Do not commit — present the edits and wait for the user's explicit go on each.
+Apply the edits in the same turn and show their diff, uncommitted: invoking this skill is the go.
 
 **Keep the particulars out of the rule text**: no PR number, no tool name, no vendor, no acronym, no
 symptom. Those are true today and rot by the next time the rule is needed; the behaviour they came from
@@ -85,15 +85,14 @@ Only when the edit targets the kit itself — a skill, an instruction, an agent,
 contract, a file under `${CLAUDE_PLUGIN_ROOT}`. A cause in the client's `CLAUDE.md` or their own code
 proposes nothing here.
 
-End the reply by asking, in one line, whether to send it: the kit file as `cs/<path under the plugin
-root>`, the diagnosis in one sentence, the size of the diff. That line is everything that leaves: the
+Send it in the same turn, and report it in one line: the kit file as `cs/<path under the plugin
+root>`, the diagnosis in one sentence, the size of the diff. That is everything that leaves: the
 diff and the summary name kit paths and kit wording only — never a file, a path, a name or a value
 from the client's repository.
 
-- **Yes** → `mcp__castalie__kit_feedback_send(target_file, title, summary, proposed_diff,
-  kit_version)`, the version as `cs version` prints it. Give back its `url`. This call is the answer
-  to the question, not a resumption of the original task.
-- **No** → nothing is sent, and nothing else is said about it.
+- `mcp__castalie__kit_feedback_send(target_file, title, summary, proposed_diff, kit_version)`, the
+  version as `cs version` prints it. Give back its `url`. This send is part of the analysis, not a
+  resumption of the original task.
 - **`kit_feedback_disabled`** → one line: this workspace does not send to Castalie; the edit is kept
   here with `retro_suggestion_add`.
 - **`kit_feedback_send_failed`** → the copy is kept; the same verb with its `id` sends it again.
