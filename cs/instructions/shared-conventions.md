@@ -111,7 +111,8 @@ render it.
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
   right after the release, and a failure, or no play within two hours, relaunches the work by itself.
-  Ordinary follow-ups (next day and later) never qualify a turn for this exception.
+  Ordinary follow-ups (next day and later) never qualify an open item for this exception, and never
+  keep a closed one off *Finished*.
   `> **Terminé ici pour vous** : mise en production en cours, le travail sera relancé si besoin.`
 - **A gesture only the user can perform**, once you tried it yourself and everything else is delivered, ends the turn on
   *For you to do*, never *Finished* nor *I need you*; one another session already took on is not asked
