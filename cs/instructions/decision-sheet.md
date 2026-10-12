@@ -85,7 +85,8 @@ a script: it is an action to do, not a choice to weigh.
   with a read-only query (the script's verification query, or its guards). Already played: attest
   it, and nobody is asked.
 
-A question ABOUT a script — what it should change, which approach to take — is still a decision.
+What a script should change is a business rule, and stays a decision when only a person knows it; which
+fix approach to take is chosen on the ticket (below).
 
 **What to do with a ticket** (`ticket_triage_is_not_a_decision`). « Que faire du ticket ? », « Clore
 ce ticket ? », « Reprendre ce ticket ou le clore ? » are the ticket's own workflow.
@@ -96,7 +97,10 @@ ce ticket ? », « Reprendre ce ticket ou le clore ? » are the ticket's own wor
   requiring a person, with no decision — or assign it to the person in charge of the work.
 - **Interactive session**: ask the person at your keyboard.
 
-A choice about the ticket's WORK — which approach, which business rule — is still a decision.
+**Which fix approach to take is chosen on the ticket too**: write each approach with
+`bug_add_decision_option` — the ticket then shows « Approche de correction à choisir » on the board
+and a person keeps one with `bug_choose_fix_approach`; `decision_create` refuses an approach question
+on a ticket. A business rule only a person knows — what the product should do — is still a decision.
 
 **One more reason, for a question nobody blocked on: `idea`.** A lead an agent raised on the
 strategy unprompted, which the leader judges good or not (`strategy-scout`). It is never a way to

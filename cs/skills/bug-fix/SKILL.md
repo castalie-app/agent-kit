@@ -44,12 +44,14 @@ of a customer with no reply costs an account, where a reasoned refusal costs an 
 to a person only when the decision is genuinely someone else's — a decision on the ticket,
 `decision_create(subject_kind="bug", subject_id=<ticket>)` written by
 `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, so the ticket says what it is waiting for
-and on whom — never as a way of not answering. **Never a decision on the ticket's fate or on playing
-a SQL script** — « Que faire du ticket ? », « Clore ce ticket ? », « Jouer le script ? »: both are the
-ticket's own workflow (`bug_set_requires_human`, `bug_declare_sql_script`), and the server refuses
-them (`ticket_triage_is_not_a_decision`, `sql_script_is_not_a_decision`). **And when what you are handing over is a choice,
-hand over the choice itself**: a `choice` whose options are the remedies, the way step 4 writes
-them, never an approval of a sentence. A reason with nothing to pick is a question, and it asks the
+and on whom — never as a way of not answering. **Never a decision on the ticket's fate, on playing
+a SQL script, on a gesture a person has to make or on which fix approach to take** — « Que faire du
+ticket ? », « Clore ce ticket ? », « Jouer le script ? », « Créer la ressource depuis un compte MFA ? »,
+« Quelle approche ? »: all are the ticket's own workflow (`bug_set_requires_human`,
+`bug_declare_sql_script`, `bug_add_decision_option`), and the server refuses them
+(`ticket_triage_is_not_a_decision`, `sql_script_is_not_a_decision`, `human_action_is_not_a_decision`).
+**And when what you are handing over is a choice of remedy, hand over the choice itself**: the
+remedies written on the ticket the way step 4 writes them, never an approval of a sentence. A reason with nothing to pick is a question, and it asks the
 person to compose the answer you already had the material for.
 
 A symptom that is measured and reproduces outside that account is not a demand. It is an ordinary
@@ -159,20 +161,23 @@ A defect rarely admits a single repair — the guard goes at the boundary or at 
 bad rows are migrated or tolerated, the contract is tightened or its caller is — and each of those
 gives something up. Settled in a commit message, the choice reaches the ticket as a fact and
 nobody can see there was a decision at all. So when the choice is not yours to make (one of the
-six reasons of `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), file it on the ticket:
-`decision_create(subject_kind="bug", subject_id=<ticket>, answer_shape="choice")`, one option per
-approach, each with **what it costs** (`cost_text`), **what it leaves behind** (`gives_up_md`), its
-`risk` and its `effect` — `continue` for the approaches the robot can carry, `take_over` for the one
-a person must — the one you recommend marked, and why in the description. Then carry on with
-what does not depend on it: the reproduction, the regression test. **A gesture a person must make
+six reasons of `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`), write the approaches ON THE
+TICKET, never as a decision — the ticket is worked by people as a ticket
+(`decision_create` refuses an approach question on a ticket): `bug_add_decision_option(id, title,
+approach_md, is_recommended, risk)`, once per approach, `approach_md` saying what it does, **what it
+costs** and **what it leaves behind**, the one you recommend marked. With two or more, the ticket
+shows on the board as « Approche de correction à choisir », waiting for a person, who keeps one with
+`bug_choose_fix_approach`. Then carry on with what does not depend on it: the reproduction, the
+regression test. **A gesture a person must make
 to finish the fix** — a provider console, a secret on a server, a resource only an MFA account
 creates, a customer to contact — is not an approach to choose: it is never a decision
 (`human_action_is_not_a_decision`). Check it is not already made, then park the ticket with
 `bug_set_requires_human(true, reason=<the gesture: what, where, with what>)`; with a person at the
 keyboard, ask them.
 
-**A ticket you picked up may already carry the answer.** `bug_get` returns its `decisions`: an
-answered one is **an instruction, not a suggestion** — its option, or the words written over it
+**A ticket you picked up may already carry the answer.** `bug_get` returns its `decision_options`
+(the approach kept) and its `decisions`: a kept approach or an answered decision is **an
+instruction, not a suggestion** — its option, or the words written over it
 (`answer.adjusted`), is the fix you build. When it is answered on a ticket you already hold,
 resume on it and call `decision_mark_applied(id, note_md)`, so the sheet says the work restarted;
 a ticket handed back to you by the answer is marked applied when you claim it.
@@ -181,11 +186,10 @@ This is `feature-spec`'s "at least two realistic options, and the criterion that
 at the moment a defect is repaired instead of a feature designed — the same discipline, for the
 same reason: an option nobody wrote down is proposed again by the next reader, and the argument is
 had twice, the second time without the facts. **A bug's version has one thing a spec's does not:
-a decision is superseded rather than erased.** When the evidence moves under a question still
-waiting, file the corrected sheet with `decision_supersede(id, …)`; when it moves under one already
-answered — a later comment undermines the premise the chosen approach rested on — file a new
-decision on the ticket that says what changed, instead of executing an answer the evidence has
-since disproved. The earlier sheet stays readable, so the ticket goes on saying what was decided,
+a choice is superseded rather than erased.** When the evidence moves under approaches still
+waiting, or under one already kept — a later comment undermines the premise it rested on — open
+the next round with `bug_add_decision_option(…, start_new_round=true)` and say what changed,
+instead of executing a choice the evidence has since disproved. The earlier round stays readable, so the ticket goes on saying what was decided,
 on what, and why it stopped holding.
 
 - First extend existing regression coverage and observe the relevant failure before implementing
