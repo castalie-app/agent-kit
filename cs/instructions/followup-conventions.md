@@ -33,8 +33,10 @@ is expensive, and a recurring one is never asked. Only the post-deploy check rel
 (`followup_decides_itself`): close the run with `followup_run_complete`, or push it back with
 `followup_run_reschedule`. A run closed on `finalStatus=human_required` is replayed the next day, at
 most twice, then closed as failed with its reason. The one question a check may put to a person is
-about its RULE, when it cannot be applied as written: `rule_question_md` on `followup_run_complete`
-files ONE decision for that check — never once per run — and its answer rewrites the check's prompt.
+about its RULE, when it cannot be applied as written: `rule_question_md` on `followup_run_complete`,
+with `rule_readings` — 2 to 4 concrete readings, one recommended — files ONE decision for that
+check, never once per run, and the reading picked rewrites the check's prompt. Without two readings
+the call is refused (`decision_needs_two_alternatives`) and the run stays open.
 A run left open by a session that stopped is not a decision: finish it, or reschedule it.
 
 **A phase is not held open for a measurement a follow-up carries.** Close the phase at delivery and

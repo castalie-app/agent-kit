@@ -187,8 +187,11 @@ is the fact the answer turns on, not the history of how you got there.
 
 ## Options pull on different axes
 
-`answer_shape` is `choice` (2 to 4 options), `approve` (yes / no) or `free_text` (a written
-answer only, no options, no recommendation).
+`answer_shape` is `choice` (2 to 4 options) or `approve` (yes / no). **A decision always offers
+at least two real alternatives**: a written answer only is refused (`decision_needs_two_alternatives`),
+and so is an option named after a card the sheet adds itself — « Décide-toi », « Question inutile »,
+« Autre réponse ». If you cannot name two concrete alternatives with their effect, the question is
+not ready: dig until you can, or settle it yourself.
 
 - **Each option names what it DOES** (120 characters at most), never how strong it is. Three
   options that differ by degree — cautious, moderate, ambitious — are a slider in disguise and are
@@ -200,7 +203,7 @@ answer only, no options, no recommendation).
 - **`risk`**: `low`, `medium` or `high`.
 - **Exactly one option `is_recommended`**, on a `choice` and on an `approve`: its card carries the
   mark, and the description says why. The reader decides against your choice, not between your
-  hesitations. A question with nothing to recommend is a `free_text`.
+  hesitations.
 - **Each option is a card the reader clicks to answer**: its title, its `body_md` (the
   consequence, plain text), its `cost_text` or `gives_up_md`. Keep `body_md` to a sentence or two;
   a link inside it cannot be followed from a card.
@@ -281,7 +284,8 @@ Correct and file again; never work around a refusal by changing the complexity a
 | `description_80_too_long`, `description_250_too_long`, `description_500_too_long` | that level is past 110 % of its target (`cap`): bring it back to an explanation in `cap` words; move the rest one level deeper |
 | `description_80_too_short`, `description_250_too_short`, `description_500_too_short` | that level is under 90 % of its target (`cap`): rewrite it as an explanation in `cap` words — what was checked, what each option leads to, the figures |
 | `complexity_mismatch` | `simple` takes an approval or two options |
-| `options_count` | `choice` 2 to 4, `approve` 0 or 2, `free_text` none |
+| `decision_needs_two_alternatives` | frame 2 to 4 concrete options (`choice`), each with its effect and what it gives up, or ask yes / no (`approve`); a card of the sheet is not an option |
+| `options_count` | `choice` at most 4, `approve` 0 or 2 |
 | `option_missing_gives_up`, `options_same_axis` | say what each option gives up, on a different axis |
 | `recommendation_missing`, `several_recommended` | mark exactly one option `is_recommended` |
 | `option_missing_cost` | a `cost_text` on every option of a `money` decision |

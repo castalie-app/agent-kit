@@ -2395,6 +2395,18 @@
           "type": "string",
           "required": false,
           "description": "Why the check relaunches the work, what was measured, what to do."
+        },
+        {
+          "name": "rule_question_md",
+          "type": "string",
+          "required": false,
+          "description": "Only when the check's RULE cannot be applied as written: the question that settles how it reads. Filed once per check, never once per run. Requires rule_readings."
+        },
+        {
+          "name": "rule_readings",
+          "type": "object[]",
+          "required": false,
+          "description": "With rule_question_md, required: 2 to 4 readings of the rule, each { title (what the rule becomes), body_md (what the check then measures), gives_up_md (what that reading leaves out), is_recommended (exactly one) }. Fewer than two is refused (decision_needs_two_alternatives) and the run stays open; the reading picked is written into the check's prompt."
         }
       ],
       "returns": {
@@ -3283,11 +3295,10 @@
           "name": "answer_shape",
           "type": "string",
           "required": true,
-          "description": "choice (2 to 4 options) | approve (yes / no, a reason is required on no) | free_text (a written answer only).",
+          "description": "choice (2 to 4 concrete options) | approve (yes / no; a no answers on its own). A decision always offers at least two real alternatives — « Décide-toi », « Question inutile » and « Autre réponse » are on every sheet and do not count — so a written answer only is refused (decision_needs_two_alternatives).",
           "enum": [
             "choice",
-            "approve",
-            "free_text"
+            "approve"
           ]
         },
         {
@@ -3336,7 +3347,7 @@
           "name": "options",
           "type": "object[]",
           "required": false,
-          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text. Each option may also carry exhibit_md (the picture that proves it — Markdown with a ```mermaid block or code, at most 8,000 characters, else exhibit_too_long) and removes_md (what it removes from the plan — \"point 4 goes\", at most 500 characters, else option_removes_too_long)."
+          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4 real alternatives, never named after a card the sheet adds — decision_needs_two_alternatives); for approve, two (yes then no) or none for a plain Yes / No. Each option may also carry exhibit_md (the picture that proves it — Markdown with a ```mermaid block or code, at most 8,000 characters, else exhibit_too_long) and removes_md (what it removes from the plan — \"point 4 goes\", at most 500 characters, else option_removes_too_long)."
         },
         {
           "name": "recommendation_md",
@@ -3644,7 +3655,7 @@
     {
       "name": "decision_answer",
       "kind": "write",
-      "description": "Record a person's answer through the tool contract instead of the sheet — the answer a person just gave you in this session, signed as them. Pick an option (option_id), or write the answer (text_md) and say what it does (effect), or hand the decision back with decide_yourself: true — the sheet's red « Décide-toi » card: answered with effect continue, no option, the text « Décide toi-même : c'était à toi de trancher. » (text_md follows it), answer_kind decide_yourself, journal handed_back. A free_text decision needs words (answer_text_required); a \"no\" on an approval answers on its own, a bare one reading « Refusé, sans motif. ». Refused decision_not_pending once answered; a service token never answers (answer_requires_person).",
+      "description": "Record a person's answer through the tool contract instead of the sheet — the answer a person just gave you in this session, signed as them. Pick an option (option_id), or write the answer (text_md) and say what it does (effect), or hand the decision back with decide_yourself: true — the sheet's red « Décide-toi » card: answered with effect continue, no option, the text « Décide toi-même : c'était à toi de trancher. » (text_md follows it), answer_kind decide_yourself, journal handed_back. A decision filed before options were required (free_text) needs words (answer_text_required); a \"no\" on an approval answers on its own, a bare one reading « Refusé, sans motif. ». Refused decision_not_pending once answered; a service token never answers (answer_requires_person).",
       "params": [
         {
           "name": "id",
@@ -3864,11 +3875,10 @@
           "name": "answer_shape",
           "type": "string",
           "required": true,
-          "description": "choice (2 to 4 options) | approve (yes / no, a reason is required on no) | free_text (a written answer only).",
+          "description": "choice (2 to 4 concrete options) | approve (yes / no; a no answers on its own). A decision always offers at least two real alternatives — « Décide-toi », « Question inutile » and « Autre réponse » are on every sheet and do not count — so a written answer only is refused (decision_needs_two_alternatives).",
           "enum": [
             "choice",
-            "approve",
-            "free_text"
+            "approve"
           ]
         },
         {
@@ -3905,7 +3915,7 @@
           "name": "options",
           "type": "object[]",
           "required": false,
-          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4); for approve, two (yes then no) or none for a plain Yes / No; none for free_text. Each option may also carry exhibit_md (the picture that proves it — Markdown with a ```mermaid block or code, at most 8,000 characters, else exhibit_too_long) and removes_md (what it removes from the plan — \"point 4 goes\", at most 500 characters, else option_removes_too_long)."
+          "description": "The options, each { title (what it DOES, at most 120 characters), body_md (its consequence), cost_text (at most 120 characters; mandatory on every option when escalation_reason is money), risk (low | medium | high), gives_up_md (mandatory on a choice), is_recommended (exactly one), effect (continue | take_over | close | none — what the answer does to the subject) }. Required for choice (2 to 4 real alternatives, never named after a card the sheet adds — decision_needs_two_alternatives); for approve, two (yes then no) or none for a plain Yes / No. Each option may also carry exhibit_md (the picture that proves it — Markdown with a ```mermaid block or code, at most 8,000 characters, else exhibit_too_long) and removes_md (what it removes from the plan — \"point 4 goes\", at most 500 characters, else option_removes_too_long)."
         },
         {
           "name": "recommendation_md",
