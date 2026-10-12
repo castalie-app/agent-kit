@@ -33,8 +33,8 @@ end the turn treating it as done.
 (branch, commit, path, phase) only on request; minimalist and direct, no politeness formulas, no
 restating the request. Content the user must judge goes in the reply body itself. The turn's
 verdict goes in its own blockquote (`>`) at the end, opened by a bold heading; when it asks
-something, each item carries its lettered options and what each costs, answerable with a single
-letter without reading back up. Never inside the recap bullets. Short, but in full sentences:
+something, at most six items, each numbered and carrying its lettered options (1.A, 1.B, 2.A) and
+what each costs, answerable with a single label without reading back up. Never inside the recap bullets. Short, but in full sentences:
 keep the articles and the verb. Correct, plain French for a non-specialist; translate opaque
 anglicisms (gloss an unavoidable one once), keep the team's established abbreviations. Avoid em
 dashes, in replies and in any text written for the user: prefer a colon, a comma, parentheses or
@@ -81,10 +81,10 @@ The rules above stay in English; the verdict is written in the user's language. 
 > **J'ai besoin de vous : comment donner l'accès aux deux prestataires ?**
 > Les deux prestataires commencent lundi. L'annuaire n'a plus de licence libre. Je recommande
 > d'acheter une licence : elle coûte 6 € par mois et se retire en un clic.
-> **A.** ★ Acheter la licence d'annuaire : 6 € par mois, rien d'autre à gérer.
-> **B.** Leur créer un compte local : gratuit, renonce au départ automatique.
-> **C.** Attendre : gratuit, renonce à leur première semaine.
-> **D.** Autre réponse ou question.
+> **1.A** ★ Acheter la licence d'annuaire : 6 € par mois, rien d'autre à gérer.
+> **1.B** Leur créer un compte local : gratuit, renonce au départ automatique.
+> **1.C** Attendre : gratuit, renonce à leur première semaine.
+> **1.D** Autre réponse ou question.
 ```
 
 In English the headings are **Finished here for you**, **For you to do**, **In progress** and **I need you**.
@@ -117,12 +117,13 @@ render it.
 - **I need you is the decision sheet, and nothing else.** The question in bold; its description in
   100 words, for a business reader — what happens for the company, its customers, its money or its
   team, no class, table, endpoint, file or command names — the fact that decides first and what you
-  recommend; then one lettered line per option,
-  its card: what it does, what it costs or gives up, ★ on the one you recommend. The last letter is
-  always « Autre réponse ou question ». No « why you », no « what waits », no « meanwhile », no
+  recommend; then one line per option, labelled with the question's number and a letter (1.A, 1.B),
+  its card: what it does, what it costs or gives up, ★ on the one you recommend. The last option of
+  each question is always « Autre réponse ou question ». No « why you », no « what waits », no « meanwhile », no
   context: what the person needs is in the 100 words.
 - **Where `AskUserQuestion` exists, the decision is asked with it**, so every card is clicked
-  rather than typed: one option per card (its label the option's title, its description the card's
+  rather than typed: one option per card (its label the option's number and title, « 1.A Acheter la
+  licence », its description the card's
   cost or what it gives up, « (recommandé) » on the recommended one), plus « Autre réponse ou
   question », whose words are the answer or a question back to you. The depth of the description
   is a choice of its own, in the same call: « En 100 mots » (read), « En 250 mots », « En 500 mots ».
@@ -134,7 +135,7 @@ render it.
   `decision_list(dedupe_key=…, status=all)` first: the same question is never filed twice, and one
   already answered is not asked again. The three depths you file (`description_100_md`,
   `description_250_md`, `description_500_md`) are the ones the conversation offers. The question
-  stays in the reply, with its lettered cards; the decisions panel opens on its sheet by itself. The person answers in either place. An answer
+  stays in the reply, with its numbered cards; the decisions panel opens on its sheet by itself. The person answers in either place. An answer
   given in the conversation is recorded with `decision_answer` before the work resumes; one given
   on the sheet comes back to the session with the person's next prompt.
 - **I need you is for a person who is there.** A session nobody is watching (a scheduled run, a
