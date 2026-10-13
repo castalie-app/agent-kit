@@ -1,6 +1,6 @@
 ---
 name: okr-review
-description: The state of play of your objectives, starting from the ones you pinned as your priorities — the tree with its progress, and the key results that are off track or that nobody has reported on in a fortnight, at the top, then the key results that read off no report. Use it before a review, at the start of a quarter check, or whenever someone asks how the period is going — and to prepare the person's CODIR review with them, written straight into the review screen. Reads via the Castalie MCP; writes nothing but the pins the person confirms and the CODIR review drafts they approve, and never submits the review.
+description: The state of play of your objectives, starting from the ones you pinned as your priorities — the tree with its progress, and the key results that are off track or that nobody has reported on in a fortnight, at the top, then the key results that read off no report. Use it before a review, at the start of a quarter check, or whenever someone asks how the period is going — and to prepare the person's CODIR review for a meeting with them, written straight into the review screen. Reads via the Castalie MCP; writes nothing but the pins the person confirms, the CODIR meeting date they give when none is scheduled, and the review drafts they approve, and never submits the review.
 ---
 
 # okr-review — where the objectives really stand
@@ -9,8 +9,8 @@ A stocktake, not a conversation. It reads the objectives of one period, ranks th
 how much doubt they carry, and says for each what is left to close. Output is your analysis, in the
 user's language.
 
-It **writes nothing** but a pin the person asked for or confirmed, and the CODIR review drafts they
-approved (*Preparing the CODIR review* below). Recording a figure is `okr-checkin`; mapping a piece
+It **writes nothing** but a pin the person asked for or confirmed, the date of the next CODIR meeting
+when they give it, and the CODIR review drafts they approved (*Preparing the CODIR review* below). Recording a figure is `okr-checkin`; mapping a piece
 of work to an objective is `strategy`.
 
 ## When it fires
@@ -18,8 +18,8 @@ of work to an objective is `strategy`.
 - "où en sont mes OKR ?", "how is the quarter going?", "fais le point sur les objectifs".
 - Before a board or team review, and at the start of the check-in ritual — `okr-checkin` calls it
   to know what to ask about.
-- "prépare ma revue CODIR", "écris ma revue mi-parcours", "help me write my CODIR review" — the
-  stocktake, then *Preparing the CODIR review*.
+- "prépare ma revue CODIR", "écris ma revue pour le CODIR de jeudi", "help me write my CODIR
+  review" — the stocktake, then *Preparing the CODIR review*.
 
 ## Scope, fixed on purpose
 
@@ -57,18 +57,23 @@ better with another one; if the user asks for a different one, say which you use
 - `mcp__castalie__strategy_get_objective_breadcrumb` — the parent chain, to name where a key result
   lives when the tree is deep.
 - `mcp__castalie__codir_review_get_context` — the person's CODIR review as the review screen shows
-  it: `period_id` and `review_type` (`mid_cycle` the mid-quarter review, `end_cycle` the quarter
-  handover; both default as the screen does), the objectives it walks through, each with its draft
-  in four sections (`progress_md` « Avancement », `demands_md` « Mes demandes », `biases_md` « Mes
-  parti pris », `shares_md` « Mes partages ») and `submitted`, the summary (`opening_md` « Vue
-  d'ensemble du trimestre », `closing_questions_md` « Mes questions au CODIR »), and `wizard_url`
-  for the screen and for each objective's step.
-- `mcp__castalie__codir_review_save_draft` — `objective_id` and the four sections, in markdown, for
-  the **authenticated caller only**. Each section is written as given: one left out is cleared, so
-  always send the four. Answers `objective_not_in_review` for an objective the review does not walk
-  through, `review_submitted` for a review already handed in.
-- `mcp__castalie__codir_review_save_summary` — `opening_md` and `closing_questions_md`, both sent
-  every time, for the caller only.
+  it, for one meeting: `meeting_date` (`yyyy-MM-dd`; left out, the next meeting from today on),
+  `meetings` (every meeting of the workspace, the most recent first) and `next_meeting_date`
+  (**null when no meeting is scheduled from today on**), the period holding the meeting, the
+  objectives it walks through, each with its draft in four sections (`progress_md` « Avancement »,
+  `demands_md` « Mes demandes », `biases_md` « Mes parti pris », `shares_md` « Mes partages ») and
+  `submitted`, the summary (`opening_md` « Vue d'ensemble du trimestre », `closing_questions_md`
+  « Mes questions au CODIR »), and `wizard_url` for the screen and for each objective's step.
+- `mcp__castalie__codir_meeting_schedule` — `meeting_date` (`yyyy-MM-dd`): schedules a CODIR
+  meeting of the workspace, as the review screen's calendar does. A date already scheduled answers
+  `already_scheduled: true` and changes nothing. Only on a date the person gave.
+- `mcp__castalie__codir_review_save_draft` — `objective_id`, `meeting_date` and the four sections,
+  in markdown, for the **authenticated caller only**. Each section is written as given: one left
+  out is cleared, so always send the four. Answers `objective_not_in_review` for an objective the
+  review does not walk through, `review_submitted` for a review already handed in,
+  `meeting_not_scheduled` for a date that is not one of the meetings.
+- `mcp__castalie__codir_review_save_summary` — `meeting_date`, `opening_md` and
+  `closing_questions_md`, both texts sent every time, for the caller only.
 
 ## Pinned first, the rest in one line
 
@@ -136,16 +141,21 @@ belongs to group 1 — say the silence on its line rather than listing it twice.
 When the person prepares their CODIR review, the stocktake above is the raw material and the review
 screen is where the text lands: the person never copies anything by hand.
 
-1. `codir_review_get_context` with the period and type the person names (else the screen's
-   defaults). Say which review it is, in the screen's words (« revue de mi-parcours » or « revue de
-   bascule »), the period, and how many objectives it walks through.
+1. **Settle the meeting first.** `codir_review_get_context` with the meeting the person names (else
+   the next one). When `next_meeting_date` comes back null and the person named none, no meeting is
+   scheduled: **ask the person the date of the next CODIR meeting** — in Claude Code with
+   `AskUserQuestion`, offering the likely dates (the same weekday as the last meetings in
+   `meetings`, a week or a month on) and leaving room for another — then schedule it with
+   `codir_meeting_schedule` and read the context again for that date. Never pick the date yourself,
+   and never write a review before the meeting exists. Then say which meeting the review is for
+   (its date), the period, and how many objectives it walks through.
 2. Objective by objective, in the screen's order: start from what is already written, then propose
    the four sections from the stocktake — the figures, the gap, the pace, the silences — in the
    person's voice and language. What the person needs from others, what they decided alone, what
    the others should know: ask them. These three are theirs; never invent a demand or a decision.
 3. Write a draft once the person approves it, with `codir_review_save_draft`, sending the four
-   sections. Then the summary, with `codir_review_save_summary`: the quarter's overview, and the
-   questions the person puts to the committee.
+   sections and the `meeting_date`. Then the summary, with `codir_review_save_summary` for the same
+   meeting: the quarter's overview, and the questions the person puts to the committee.
 4. Hand back the `wizard_url` of the review. The person rereads it on the screen, and **submits it
    there, themselves**: no verb submits a review, and none is to be looked for.
 
@@ -156,8 +166,9 @@ A review that comes back `submitted: true` is handed in: show it, never rewrite 
 
 - **Read-only, but for a pin and the CODIR review.** No `strategy_create_check_in`, no
   `strategy_update_key_result`, no objective created here, even to "fix" an obvious typo.
-  `strategy_pin_objective` only on the person's own word; `codir_review_save_draft` and
-  `codir_review_save_summary` only on text the person approved. The review is never submitted here.
+  `strategy_pin_objective` only on the person's own word; `codir_meeting_schedule` only on a date
+  the person gave; `codir_review_save_draft` and `codir_review_save_summary` only on text the
+  person approved. The review is never submitted here.
 - **Never invent a figure.** A key result with no check-in has no trend: say so. Deducing a value
   from progress is inventing it.
 - **Silent is not failing.** A key result nobody has reported on may well be on course; what is
