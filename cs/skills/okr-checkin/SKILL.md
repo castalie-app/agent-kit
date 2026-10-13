@@ -20,7 +20,8 @@ Reading the state of play without recording anything is `okr-review`.
 
 - `mcp__castalie__whoami` — the author. The check-in is signed from the token, so nothing to pass.
 - `mcp__castalie__strategy_my_okrs` — the key results the user owns, with their current value and
-  `days_since_check_in`. This is the working list.
+  `days_since_check_in`. This is the working list. The objectives the user pinned as priorities come
+  first, with `pinned: true`, whatever their period.
 - `mcp__castalie__strategy_check_in_history` — the last check-ins of one key result, when the user
   asks what the previous value was or since when it has been stuck.
 - `mcp__castalie__strategy_create_check_in` — the write: `key_result_id`, `new_value`, `confidence`,
@@ -60,8 +61,9 @@ what the link exists to prevent.
    workspace report. Their values are now the report's, before anyone is asked anything.
 3. **Show the whole list at once** — every key result the user owns, its current value, its target,
    how long it has been silent, and where its value comes from (recalculated from its report, read
-   off an external report with its address, or typed with no report behind it). Order it as
-   `okr-review` does: off track, at risk, silent, then the rest.
+   off an external report with its address, or typed with no report behind it). The key results of
+   the **pinned** objectives first, then the others; within each, order as `okr-review` does: off
+   track, at risk, silent, then the rest.
 4. **Ask once**, in a single message: which ones moved, and for each the new value, the confidence
    (`on_track` / `at_risk` / `off_track`) and a sentence explaining the figure — never the value of
    a key result just recalculated from its report. One question per key result turns a five-minute

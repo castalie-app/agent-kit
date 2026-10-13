@@ -1,6 +1,6 @@
 ---
 name: okr-review
-description: The state of play of your objectives, read-only — the tree with its progress, and the key results that are off track or that nobody has reported on in a fortnight, at the top, then the key results that read off no report. Use it before a review, at the start of a quarter check, or whenever someone asks how the period is going. Reads via the Castalie MCP; writes nothing.
+description: The state of play of your objectives, starting from the ones you pinned as your priorities — the tree with its progress, and the key results that are off track or that nobody has reported on in a fortnight, at the top, then the key results that read off no report. Use it before a review, at the start of a quarter check, or whenever someone asks how the period is going. Reads via the Castalie MCP; writes nothing but the pins the person confirms.
 ---
 
 # okr-review — where the objectives really stand
@@ -9,8 +9,8 @@ A stocktake, not a conversation. It reads the objectives of one period, ranks th
 how much doubt they carry, and says for each what is left to close. Output is your analysis, in the
 user's language.
 
-It **writes nothing**. Recording a figure is `okr-checkin`; mapping a piece of work to an objective
-is `strategy`.
+It **writes nothing** but a pin the person asked for or confirmed. Recording a figure is
+`okr-checkin`; mapping a piece of work to an objective is `strategy`.
 
 ## When it fires
 
@@ -25,7 +25,7 @@ Two runs a month apart have to be comparable, so these are not decided per run:
 | | Rule |
 |---|---|
 | Period | The latest one, which is what the "My OKRs" screen shows. `--period <id>` for another. |
-| Reach | Every objective of that period. `--mine` for the ones the user owns, `--team <id>` for a team's load. |
+| Reach | **The objectives the user pinned** as their priorities (« Mes objectifs prioritaires ») — `pinned: true` in `strategy_my_okrs`, whatever their period, each reviewed at the top level. Nothing pinned: see *No pinned objective* below. `--mine` for the ones the user owns in the period, `--all` for every objective of the period, `--team <id>` for a team's load (a team carries no pin). |
 | Silence | **14 days** without a check-in. A key result that has never been reported on is silent too, and counts as the worst case. A key result measured by a report of the workspace is never silent: the engine reads it every day. |
 | Report | A key result carries `report_id` (a report of this workspace) or `external_report_url` (a report elsewhere). **Neither is a finding.** |
 
@@ -38,7 +38,13 @@ better with another one; if the user asks for a different one, say which you use
 - `mcp__castalie__strategy_list_periods` — the periods, when the user names one.
 - `mcp__castalie__strategy_my_okrs` — one call: the objectives someone owns, their key results, the
   progress, and for each the `last_check_in` with `days_since_check_in` and its report link
-  (`report_id`, `external_report_url`). Takes `period_id` and `team_id`.
+  (`report_id`, `external_report_url`). Takes `period_id` and `team_id`. Each objective carries
+  `pinned`: the person's pinned objectives come **first**, with `pinned: true`, whatever their
+  period or owner; the others carry `pinned: false`.
+- `mcp__castalie__strategy_pin_objective` — `objective_id`, `pinned` (`true` pins, `false` unpins),
+  for the **authenticated caller only**; repeating it changes nothing. Answers `objective_not_found`
+  for an objective that does not exist. The only write this skill makes, and only on the person's
+  word.
 - `mcp__castalie__strategy_navigate_children` — the rest of the tree, one level at a time
   (`period_id` for the roots, then `parent_objective_id`). Key results arrive in the same shape,
   silence included.
@@ -47,6 +53,25 @@ better with another one; if the user asks for a different one, say which you use
   moving?", which one value cannot.
 - `mcp__castalie__strategy_get_objective_breadcrumb` — the parent chain, to name where a key result
   lives when the tree is deep.
+
+## Pinned first, the rest in one line
+
+The pinned objectives are the review. Each one is a root of its own — even when it hangs under
+another pinned objective or belongs to another period — with its key results ranked below.
+
+The objectives `strategy_my_okrs` returns with `pinned: false` are **« non prioritaires »**: one
+line at most, their count and titles, with the offer to pin one. They are not ranked.
+
+**When the person says an objective is (no longer) a priority**, pin or unpin it with
+`strategy_pin_objective` (`pinned=true` / `pinned=false`) and say so in one line. A pin is the
+caller's own: never offer one on a team's load or on another person's objectives.
+
+### No pinned objective
+
+When nothing comes back with `pinned: true`, propose pinning the person's **top-level objectives**
+of the period — the ones they own whose parent is not theirs — by title, in one question. Pin the
+ones they confirm with `strategy_pin_objective`, then review those. When they decline, or nobody is
+there to answer, review the objectives they own in the period, and say so in the first line.
 
 ## Order of presentation, fixed
 
@@ -78,21 +103,23 @@ belongs to group 1 — say the silence on its line rather than listing it twice.
 ## How to work
 
 1. `whoami`, then settle the period. Say which one you are reading.
-2. `strategy_my_okrs` for the owner's load. For the whole tree, walk down from the period roots
+2. `strategy_my_okrs` for the owner's load: the `pinned: true` objectives are the review (or
+   *No pinned objective* above). For the whole tree (`--all`), walk down from the period roots
    with `strategy_navigate_children`, one level at a time, only as deep as there are objectives.
 3. Rank with the rules above. Do not ask the user how to sort — the whole point is that the order
    is the same every time.
 4. Open with the count in one sentence: how many key results, how many off track, how many silent,
    how many read off no report. Then the ranked list, groups labelled, and the key results that read off
-   no report last.
+   no report last, then the « non prioritaires » line.
 5. Close with **the single next step**: the one check-in that would remove the most doubt, and the
    handover — `okr-checkin` to record it. When key results read off no report, add the second
    handover in one line: `okr-key-result` gives each one its report.
 
 ## Discipline
 
-- **Read-only.** No `strategy_create_check_in`, no `strategy_update_key_result`, no objective
-  created here, even to "fix" an obvious typo.
+- **Read-only, but for a pin.** No `strategy_create_check_in`, no `strategy_update_key_result`, no
+  objective created here, even to "fix" an obvious typo. `strategy_pin_objective` only on the
+  person's own word.
 - **Never invent a figure.** A key result with no check-in has no trend: say so. Deducing a value
   from progress is inventing it.
 - **Silent is not failing.** A key result nobody has reported on may well be on course; what is

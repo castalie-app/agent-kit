@@ -608,7 +608,7 @@
     {
       "name": "strategy_my_okrs",
       "kind": "read",
-      "description": "The objectives someone is accountable for, with their key results, their progress and the LAST CHECK-IN of each. One call for 'where do my key results stand?', and the same selection the 'My OKRs' screen shows, so an agent and the page cannot answer differently. Every key result carries days_since_check_in: a figure at 40% reads the same whether it was reported yesterday or never, and that is what tells the two apart.",
+      "description": "The objectives someone is accountable for, with their key results, their progress and the LAST CHECK-IN of each. One call for 'where do my key results stand?', and the same selection the 'My OKRs' screen shows, so an agent and the page cannot answer differently. Every key result carries days_since_check_in: a figure at 40% reads the same whether it was reported yesterday or never, and that is what tells the two apart. The objectives the person pinned as priorities (strategy_pin_objective) come first with pinned: true, whatever their period; the others carry pinned: false. A team's load reads no pin.",
       "params": [
         {
           "name": "owner_user_id",
@@ -633,7 +633,32 @@
         "success": "bool",
         "owner_user_id": "int",
         "period": "period?",
-        "objectives": "[{ objective, parent_title, key_results: [{ id, title, unit, start_value, target_value, current_value, computed_progress, last_check_in, days_since_check_in, report_id?, report_table_id?, external_report_url? }] }]"
+        "objectives": "[{ objective, parent_title, pinned, key_results: [{ id, title, unit, start_value, target_value, current_value, computed_progress, last_check_in, days_since_check_in, report_id?, report_table_id?, external_report_url? }] }]"
+      }
+    },
+    {
+      "name": "strategy_pin_objective",
+      "kind": "write",
+      "description": "Pin or unpin an objective among the authenticated person's priorities (« Mes objectifs prioritaires » on My OKRs). A pin belongs to the person who set it: it survives a change of owner, period or parent and a new quarter, and only their own unpin removes it. The weekly point and the CODIR review follow the pinned objectives. Acts for the caller only: nobody pins for somebody else. An id naming no live objective is refused with objective_not_found.",
+      "params": [
+        {
+          "name": "objective_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "pinned",
+          "type": "bool",
+          "required": false,
+          "default": true,
+          "description": "true pins it, false unpins it. Repeating either changes nothing."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "objective_id": "int",
+        "pinned": "bool",
+        "user_id": "int"
       }
     },
     {
