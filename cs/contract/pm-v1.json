@@ -966,6 +966,132 @@
       }
     },
     {
+      "name": "codir_review_get_context",
+      "kind": "read",
+      "description": "The authenticated person's CODIR review for a period, as the review wizard (/Strategy/CodirReview/Wizard) shows it: the period, the review type, the objectives the review walks through in the wizard's order (the person's pinned objectives, else those they own for the period), each with its draft in four markdown sections (progress_md « Avancement », demands_md « Mes demandes », biases_md « Mes parti pris », shares_md « Mes partages ») and whether it is submitted, then the summary (opening_md « Vue d'ensemble du trimestre », closing_questions_md « Mes questions au CODIR »). A submitted review is locked, and no verb submits: submitting stays the person's own gesture. Refused with not_codir_member or period_not_found.",
+      "params": [
+        {
+          "name": "period_id",
+          "type": "int",
+          "required": false,
+          "description": "The quarter under review, from strategy_list_periods. A sprint stands for its quarter. Left out, the current quarter, as the screen opens."
+        },
+        {
+          "name": "review_type",
+          "type": "string",
+          "required": false,
+          "description": "mid_cycle (the mid-quarter review) or end_cycle (the quarter handover). Left out, the screen's default: end_cycle in the period's last three weeks, mid_cycle before. Anything else is refused with unknown_review_type."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "user_id": "int",
+        "period_id": "int",
+        "period_name": "string",
+        "review_type": "string",
+        "review_type_label": "string",
+        "wizard_url": "string?",
+        "okr_count": "int",
+        "submitted_count": "int",
+        "okrs": "[{ objective_id, title, owner_name, status, progress_health, wizard_url?, review: { review_id, progress_md, demands_md, biases_md, shares_md, submitted, submitted_at, last_update }? }]",
+        "summary": "{ opening_md, closing_questions_md }"
+      }
+    },
+    {
+      "name": "codir_review_save_draft",
+      "kind": "write",
+      "description": "Write the authenticated person's CODIR review draft for one objective: its four sections in markdown, exactly as the wizard's step shows them. Created if absent. Every section is written as given (left out or empty clears it), so pass the four, starting from codir_review_get_context's text. The objective must be one codir_review_get_context lists (objective_not_in_review otherwise). A submitted review is locked (review_submitted). Nothing is submitted.",
+      "params": [
+        {
+          "name": "objective_id",
+          "type": "int",
+          "required": true,
+          "description": "An objective_id from codir_review_get_context's okrs."
+        },
+        {
+          "name": "progress_md",
+          "type": "string",
+          "required": false,
+          "description": "« Avancement »: where the objective stands, and what the figure hides."
+        },
+        {
+          "name": "demands_md",
+          "type": "string",
+          "required": false,
+          "description": "« Mes demandes »: what the person needs from the others."
+        },
+        {
+          "name": "biases_md",
+          "type": "string",
+          "required": false,
+          "description": "« Mes parti pris »: what the person decided alone and would defend."
+        },
+        {
+          "name": "shares_md",
+          "type": "string",
+          "required": false,
+          "description": "« Mes partages »: what the others should know without having to ask."
+        },
+        {
+          "name": "period_id",
+          "type": "int",
+          "required": false,
+          "description": "The quarter under review, from strategy_list_periods. A sprint stands for its quarter. Left out, the current quarter, as the screen opens."
+        },
+        {
+          "name": "review_type",
+          "type": "string",
+          "required": false,
+          "description": "mid_cycle (the mid-quarter review) or end_cycle (the quarter handover). Left out, the screen's default: end_cycle in the period's last three weeks, mid_cycle before. Anything else is refused with unknown_review_type."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "review_id": "int",
+        "objective_id": "int",
+        "period_id": "int",
+        "review_type": "string",
+        "wizard_url": "string?"
+      }
+    },
+    {
+      "name": "codir_review_save_summary",
+      "kind": "write",
+      "description": "Write the authenticated person's CODIR review summary for a period and review type: opening_md « Vue d'ensemble du trimestre » (the wizard's first step) and closing_questions_md « Mes questions au CODIR » (its last step), in markdown. Both are written as given (left out or empty clears it), so pass both, starting from codir_review_get_context's text. Nothing is submitted.",
+      "params": [
+        {
+          "name": "opening_md",
+          "type": "string",
+          "required": false,
+          "description": "« Vue d'ensemble du trimestre »."
+        },
+        {
+          "name": "closing_questions_md",
+          "type": "string",
+          "required": false,
+          "description": "« Mes questions au CODIR »."
+        },
+        {
+          "name": "period_id",
+          "type": "int",
+          "required": false,
+          "description": "The quarter under review, from strategy_list_periods. A sprint stands for its quarter. Left out, the current quarter, as the screen opens."
+        },
+        {
+          "name": "review_type",
+          "type": "string",
+          "required": false,
+          "description": "mid_cycle (the mid-quarter review) or end_cycle (the quarter handover). Left out, the screen's default: end_cycle in the period's last three weeks, mid_cycle before. Anything else is refused with unknown_review_type."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "period_id": "int",
+        "review_type": "string",
+        "wizard_url": "string?"
+      }
+    },
+    {
       "name": "report_get_context",
       "kind": "read",
       "description": "The report-building rules of this workspace — where the SQL runs, column formats, graphic types — and the schema a report may read. Served only where the workspace has reports, to those allowed to author them. Read it before report_create and report_save_table.",
