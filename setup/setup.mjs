@@ -66,6 +66,13 @@ const REPOSITORY = "castalie-app/agent-kit";
 // row under the prompt go on exactly as before, and `/where` simply is not there.
 const FUNCTION_HOOKS_FLAG = "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS";
 
+// What keeps every pane of the kit from opening by itself on this machine, at `off`: the commands
+// still open them, and a settled decision still reaches the agent. `--no-pane` removes the whole
+// module, that hand-back included; this stops the drawing alone.
+const PANES_SETTING = "CASTALIE_PANES";
+const PANES_OFF_TEXT =
+  "From the next start of Claude Code, no pane opens unasked; /cs:okr-panel and /cs:decisions-panel still open them.";
+
 // One namespace on the agent side, `cs` — and `castalie` for what carries it. A marketplace's name
 // is not cosmetic: an installed workstation keys its plugin cache and its `known_marketplaces.json`
 // by that name, so an entry does NOT follow a rename of the file it came from. It has to be
@@ -161,6 +168,7 @@ function parseArgs(argv) {
     else if (a === "--no-statusline") { out.statusline = false; }
     else if (a === "--no-pane") { out.pane = false; }
     else if (a === "--enable-pane") { out.paneOnly = true; }
+    else if (a === "--panes-off") { out.panesOff = true; }
     else out._.push(a);
   }
   return out;
@@ -180,6 +188,8 @@ const HELP = `castalie-setup — connect your agent to your Castalie workspace
   --no-statusline  do not touch the status line under your prompt
   --no-pane        do not enable the pane beside the transcript (/where)
   --enable-pane    enable that pane and do nothing else (no token needed)
+  --panes-off      keep every pane from opening by itself (${PANES_SETTING}=off); the commands
+                   still open them. Alone, it does nothing else (no token needed)
 
 Both are on one page in Castalie: Settings → Connect your assistant. It prints this exact
 command, address already filled in — copy it from there rather than typing it.
@@ -481,6 +491,32 @@ function installStatusLine(endpoint, token) {
  */
 function installFunctionHooksFlag() {
   step("Enabling the pane beside the transcript (/where)");
+  return setUserEnv(FUNCTION_HOOKS_FLAG, "1");
+}
+
+/**
+ * g) `--panes-off`: `CASTALIE_PANES=off` in the same `env`, read by the module each time a pane
+ * would open by itself. Nothing opens unasked from the next start — the strategy pane, the
+ * decisions cards, the sheet of a decision the session files — while `/cs:okr-panel` and
+ * `/cs:decisions-panel` still open them, and a settled decision still reaches the agent.
+ *
+ * @returns {"written" | "already" | "skipped"} what it did, for the closing message
+ */
+function installPanesOff() {
+  step("Keeping every Castalie pane from opening by itself");
+  return setUserEnv(PANES_SETTING, "off");
+}
+
+/**
+ * One variable in the `env` of the user's settings, where the harness sets the environment of
+ * every session it starts. Idempotent and never destructive: `env` keeps every other key, and a
+ * second run writes nothing.
+ *
+ * @param {string} name the variable
+ * @param {string} value its value
+ * @returns {"written" | "already" | "skipped"} what it did, for the closing message
+ */
+function setUserEnv(name, value) {
   const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
   const path = join(configDir, "settings.json");
 
@@ -492,20 +528,20 @@ function installFunctionHooksFlag() {
     } catch {
       // Settings nobody can parse are settings nobody should rewrite: the harness reads
       // this file, and a well-meant repair would drop whatever it could not understand.
-      warn(`${path} is not valid JSON — leaving it alone. Add "env": { "${FUNCTION_HOOKS_FLAG}": "1" } yourself.`);
+      warn(`${path} is not valid JSON — leaving it alone. Add "env": { "${name}": "${value}" } yourself.`);
       return "skipped";
     }
   }
 
   const env = settings.env && typeof settings.env === "object" ? settings.env : {};
-  if (env[FUNCTION_HOOKS_FLAG] === "1") {
-    ok(`${FUNCTION_HOOKS_FLAG} was already set — nothing changed.`);
+  if (env[name] === value) {
+    ok(`${name} was already set — nothing changed.`);
     return "already";
   }
 
   mkdirSync(configDir, { recursive: true });
-  writeFileSync(path, JSON.stringify({ ...settings, env: { ...env, [FUNCTION_HOOKS_FLAG]: "1" } }, null, 2) + "\n", "utf8");
-  ok(`${FUNCTION_HOOKS_FLAG}=1 in ${path} (your other settings are untouched).`);
+  writeFileSync(path, JSON.stringify({ ...settings, env: { ...env, [name]: value } }, null, 2) + "\n", "utf8");
+  ok(`${name}=${value} in ${path} (your other settings are untouched).`);
   return "written";
 }
 
@@ -513,12 +549,21 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { console.log(HELP); return; }
 
-  // The pane on its own: no token, no address, no network.
-  if (args.paneOnly) {
-    console.log("Castalie Agent Kit — enabling the pane beside the transcript");
-    const outcome = installFunctionHooksFlag();
-    if (outcome === "written") console.log("\n✅ Restart Claude Code, then type /where.\n");
-    else if (outcome === "already") console.log("\n✅ Already enabled — type /where in a session.\n");
+  // The pane on its own, or the panes kept shut on their own: no token, no address, no network.
+  // With a token, the setup below writes `--panes-off` as one more step.
+  if (args.paneOnly || (args.panesOff && !args._[0])) {
+    if (args.paneOnly) {
+      console.log("Castalie Agent Kit — enabling the pane beside the transcript");
+      const outcome = installFunctionHooksFlag();
+      if (outcome === "written") console.log("\n✅ Restart Claude Code, then type /where.\n");
+      else if (outcome === "already") console.log("\n✅ Already enabled — type /where in a session.\n");
+    }
+    if (args.panesOff) {
+      console.log("Castalie Agent Kit — keeping every pane from opening by itself");
+      const outcome = installPanesOff();
+      if (outcome === "written") console.log(`\n✅ ${PANES_OFF_TEXT}\n`);
+      else if (outcome === "already") console.log("\n✅ Already set — no pane opens unasked.\n");
+    }
     return;
   }
 
@@ -539,6 +584,7 @@ async function main() {
   await smoke(endpoint, token);
   if (args.statusline !== false) installStatusLine(endpoint, token);
   const pane = args.pane === false ? "skipped" : installFunctionHooksFlag();
+  const panesOff = args.panesOff ? installPanesOff() : "skipped";
 
   // THE DIRECTORY IS NAMED IN THE CONCLUSION, not only in the steps above. `claude mcp add
   // --scope local` and `.cs/config.json` are both attached to the current directory: run
@@ -553,6 +599,7 @@ async function main() {
   if (pane === "written") {
     console.log(`   That restart also loads the pane beside the transcript: type /where to show or hide it.`);
   }
+  if (panesOff === "written") console.log(`   ${PANES_OFF_TEXT}`);
   console.log("");
 }
 

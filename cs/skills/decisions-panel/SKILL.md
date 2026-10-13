@@ -10,7 +10,9 @@ closes it. `/cs:decisions-panel 42` opens decision 42 whole. The tab opens the
 panel itself: at the start of a session where decisions wait, and at the end of a later turn once
 the tab has taken up work whose objective has some. A close holds for the rest of that session
 only; the next tab opens it again. When this session files a decision (`decision_create`), the
-panel opens by itself on that decision's sheet, closed or not.
+panel opens by itself on that decision's sheet, closed or not. A machine whose settings set
+`CASTALIE_PANES=off` opens none of this by itself: there the command alone opens the panel, and an
+answered decision still comes back at the next prompt.
 
 What it draws: the part of your inbox that belongs to the objective this working copy works on —
 `decision_list(scope=mine, status=pending, objective_id=<it>)` — under a header that names that

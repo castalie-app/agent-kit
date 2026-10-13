@@ -77,6 +77,9 @@ export type Host = {
 
   /** `$.prompt.submit`: a turn of its own for the session's model, once the session is idle. */
   submitPrompt: (text: string) => Promise<PromptSubmitResult>
+
+  /** `$.env.get("CASTALIE_PANES")`: `off` keeps every pane from opening unasked (`unasked.mjs`). */
+  panesSetting: () => Promise<string | undefined>
 }
 
 /**

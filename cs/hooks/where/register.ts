@@ -5,6 +5,7 @@ import * as Names from './names.mjs'
 import { dockRows, inlineRows } from './render.mjs'
 import { payloadOf, readerOf, serverOf, serversOf } from './reader.mjs'
 import { buildModel, namesToForget, namesTouched } from './tree.mjs'
+import { opensUnasked } from './unasked.mjs'
 import { burstOf } from './writes.mjs'
 import { paneView, type Press, type Row } from './views.jsx'
 import { heldOf, holdsSomething, workFileOf, workingCopyRootOf } from './work-file.mjs'
@@ -222,9 +223,13 @@ export function register(on: On, also: Companion = NO_COMPANION) {
     isPaneOpen = false
   }
 
-  /** Opens by itself the first time this copy holds something, unless it was closed. */
+  /**
+   * Opens by itself the first time this copy holds something, unless it was closed, or this
+   * machine set `CASTALIE_PANES=off` — read here each time, so the setting holds from the next start.
+   */
   async function openOnFirstHold(engine: Host): Promise<void> {
     if (isPaneOpen || hasAutoOpened) return
+    if (!opensUnasked(await engine.panesSetting().catch(() => undefined))) return
 
     const preference = await engine.storeGet(Names.STORE_OPEN_KEY).catch(() => undefined)
     if (preference === false) return
@@ -302,6 +307,7 @@ export function register(on: On, also: Companion = NO_COMPANION) {
       registerCommand: spec => $.command.register(spec),
       focus: (requestId, key) => $.ui.focus({ requestId, key }),
       submitPrompt: text => $.prompt.submit({ text }),
+      panesSetting: () => $.env.get('CASTALIE_PANES'),
     }
 
     await bind(engine, e.cwd).catch(() => undefined)

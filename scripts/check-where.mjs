@@ -33,6 +33,7 @@ import { HORIZON_MS, MARKS, REFRESH_AFTER_WRITE_MS, TOO_LARGE_TEXT } from "../cs
 import { heldOf, holdsSomething, joinPath, parentOf, workingCopyRootOf } from "../cs/hooks/where/work-file.mjs";
 import { payloadOf, readerOf, serverOf, serversOf } from "../cs/hooks/where/reader.mjs";
 import { buildModel, namesToForget, namesTouched } from "../cs/hooks/where/tree.mjs";
+import { opensUnasked, PANES_VARIABLE } from "../cs/hooks/where/unasked.mjs";
 import { burstOf, touchedBy, writeVerbOf } from "../cs/hooks/where/writes.mjs";
 import {
   displayWidth,
@@ -1334,6 +1335,18 @@ let backOfficeRows;
       forgotten("mcp__castalie__followup_check_add", { feature_brief_id: 135, check_type: "business", title: "x" }) === "");
   check("the button forgets the checks with the spec",
     namesToForget(inlineModel.trees, keyOf).includes("followups/1109"));
+}
+
+// ── 30. CASTALIE_PANES=off: no pane opens unasked, any other value changes nothing ──
+// The switch both panes read before opening by themselves. That the binding reads it, and that
+// the commands and the hand-back of a settled decision go on, is `cs/hooks/decisions/panel.test.tsx`.
+{
+  check("the switch is CASTALIE_PANES", PANES_VARIABLE === "CASTALIE_PANES");
+  check("off stops a pane from opening by itself", !opensUnasked("off"));
+  check("written in capitals or padded, off is still off", !opensUnasked("OFF") && !opensUnasked(" off "));
+  check("unset, a pane opens as it always did", opensUnasked(undefined));
+  check("and so it does on any other value",
+    ["", "on", "1", "0", "false", "no", "offline"].every((value) => opensUnasked(value)));
 }
 
 if (failed) {

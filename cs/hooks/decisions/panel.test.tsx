@@ -544,6 +544,119 @@ test('a decision this session filed comes back with its answer at the next promp
   expect(again.context ?? []).toHaveLength(0)
 })
 
+// ── CASTALIE_PANES=off ────────────────────────────────────────────────────
+
+/**
+ * A session on the terminal whose copy holds spec 11, whose objective has decisions waiting, and
+ * whose machine sets `CASTALIE_PANES` to `panes` (unset when not given): everything that would open
+ * a pane unasked is there. Answers which panes opened, and the status decision 77 reads with.
+ */
+async function unasked($: Parameters<TestBody>[0], on: Parameters<TestBody>[1], panes?: string) {
+  const clock = mock.clock(on, { now: Date.parse('2026-10-06T12:00:00Z') })
+  mock.store(on)
+  if (panes !== undefined) mock.env(on, { CASTALIE_PANES: panes })
+
+  const opened: string[] = []
+  const decision = { status: 'pending' }
+  on('tool.list', () => ({
+    value: [
+      { name: 'mcp__castalie__feature_spec_get', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_list', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_get', description: '', isMcp: true },
+      { name: 'mcp__castalie__decision_create', description: '', isMcp: true },
+    ],
+  }) as never)
+  on('fs.exists', ($, e) => ({ value: slashed(e.path) === 'C:/repo/.git' }))
+  on('fs.read', ($, e) => {
+    if (slashed(e.path) === 'C:/repo/.cs/work.json') return { value: WORK }
+    throw new Error('no such file')
+  })
+  on('fs.stat', () => {
+    throw new Error('no such file')
+  })
+  on('mcp.call', ($, e) => {
+    const body =
+      e.tool === 'decision_list'
+        ? { ...INBOX, objective_id: e.args.objective_id }
+        : e.tool === 'decision_get'
+          ? {
+              ...SHEET,
+              decision: {
+                ...SHEET.decision,
+                status: decision.status,
+                answer: decision.status === 'answered' ? { option_title: 'A relay number, always', effect: 'continue', text_md: 'Relay, but only for Northwind.' } : null,
+              },
+            }
+          : NAMES[e.tool]
+    if (body === undefined) throw new Error(`${e.tool} is not served here`)
+
+    return { value: { content: [{ type: 'text', text: JSON.stringify(body) }] } } as never
+  })
+  on('command.list', () => ({ value: [{ name: 'cs:decisions-panel' }, { name: 'cs:okr-panel' }] }) as never)
+  on('session.cwd', () => ({ value: 'C:/repo' }))
+  on('session.surfaces', () => ({ value: ['terminal'] as const }))
+  on('ui.open', ($, e) => {
+    opened.push(e.id)
+
+    return { value: { isPlaced: true } } as never
+  })
+  on('ui.close', () => ({ value: undefined }))
+  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.log', () => ({ value: undefined }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  on('turn.complete', () => ({ text: '' }) as never)
+  on('tool.call', () => ({ result: {}, text: '{"success":true,"decision_id":77}' }) as never)
+  on('prompt.submit', ($, e) => ({ text: e.text, context: e.context }))
+
+  await $.session.start({ cwd: 'C:/repo', surface: 'terminal', isInteractive: true })
+  await clock.advance(2_000)
+
+  return { clock, opened, decision }
+}
+
+test('with CASTALIE_PANES=off no pane opens by itself, the commands still open them, and a filed decision still comes back', async ($, on) => {
+  const { clock, opened, decision } = await unasked($, on, 'off')
+
+  // The session's start: the copy holds spec 11 and decisions wait on its objective.
+  expect(opened).toEqual([])
+
+  // A turn ends, the work file is polled, the strategy pane's write lands, a decision is filed.
+  await clock.advance(60_000)
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
+  await $.tool.call({ tool: 'mcp__castalie__feature_spec_update', id: 11, title: 'Profil' } as never)
+  await $.tool.call({ tool: 'mcp__castalie__decision_create', title: 'Which phone number goes to the partner portals?' } as never)
+  await clock.advance(2_000)
+  expect(opened).toEqual([])
+
+  // The decision filed is kept all the same: answered elsewhere, it reaches the agent at the next prompt.
+  decision.status = 'answered'
+  const after = await $.prompt.submit({ text: "c'est tranché", wait: false } as never)
+  expect(after.context?.join('\n')).toMatch(/is now answered/)
+  expect(after.context?.join('\n')).toMatch(/decision-resume 77/)
+
+  // Asked for, both panes open.
+  const presentation = { isFullscreen: true, columns: 160 }
+  const origin = { kind: 'composer' } as never
+  const cards = await $.command.run({ command: 'cs:decisions-panel', args: '', origin, presentation })
+  expect(cards.text).toMatch(/Your decisions are beside the transcript/)
+  const where = await $.command.run({ command: 'cs:okr-panel', args: '', origin, presentation })
+  expect(where.text).toMatch(/Où j'en suis is beside the transcript/)
+  expect(opened).toEqual(['cs-decisions', 'bg-where'])
+})
+
+for (const panes of [undefined, 'on'] as const) {
+  test(`with CASTALIE_PANES${panes === undefined ? ' unset' : `=${panes}`} the panes open by themselves as they always did`, async ($, on) => {
+    const { clock, opened } = await unasked($, on, panes)
+
+    expect(opened).toContain('bg-where')
+    expect(opened).toContain('cs-decisions')
+
+    await $.tool.call({ tool: 'mcp__castalie__decision_create', title: 'Which phone number goes to the partner portals?' } as never)
+    await clock.advance(200)
+    expect(opened.at(-1)).toBe('cs-decision')
+  })
+}
+
 // ── Answering from the sheet ──────────────────────────────────────────────
 
 /** Decision 81 whole: an approval, still waiting — « Non » answers in one press, no reason asked. */

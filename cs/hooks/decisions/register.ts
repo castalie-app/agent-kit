@@ -3,6 +3,7 @@ import type { EngineInterface, On, ToolInfo } from 'claude-code'
 import type { Companion, Host } from '../where/host'
 import { payloadOf, readerOf, serverOf, serversOf } from '../where/reader.mjs'
 import { hrefOf } from '../where/render.mjs'
+import { opensUnasked } from '../where/unasked.mjs'
 import { heldOf, workFileOf, workingCopyRootOf } from '../where/work-file.mjs'
 import { burstOf } from '../where/writes.mjs'
 import {
@@ -94,8 +95,12 @@ function hostOf($: EngineInterface): Host {
     registerCommand: spec => $.command.register(spec),
     focus: (requestId, key) => $.ui.focus({ requestId, key }),
     submitPrompt: text => $.prompt.submit({ text }),
+    panesSetting: () => $.env.get('CASTALIE_PANES'),
   }
 }
+
+/** Whether this machine lets a pane open unasked: read at each decision to open, never cached. */
+const mayOpenUnasked = async (engine: Host) => opensUnasked(await engine.panesSetting().catch(() => undefined))
 
 type Drawn = { host: Host; cwd: string }
 
@@ -584,6 +589,8 @@ export function register(on: On, companion: Companion): void {
    * A decision this session just filed: the panel opens by itself on its sheet, without a
    * command, even where the person closed the cards last time — the agent is now waiting on it.
    * The sheet does not take the keyboard: the turn is still running, and the composer keeps it.
+   * On a machine that set `CASTALIE_PANES=off`, nothing opens: the decision is only kept, so its
+   * answer still reaches the agent at the next prompt.
    */
   async function openFiled(engine: Host, filed: { server: string; id: number }): Promise<void> {
     const known = await filedNow(engine)
@@ -591,6 +598,7 @@ export function register(on: On, companion: Companion): void {
       await keepFiled(engine, [...known, { ...filed, at: await engine.now() }])
     }
 
+    if (!(await mayOpenUnasked(engine))) return
     if (!isCardsOpen) await openCards(engine)
     await openSheet(engine, filed.id, filed.server, false)
   }
@@ -663,10 +671,12 @@ export function register(on: On, companion: Companion): void {
    * as decisions wait on its objective — at its start, or at the end of a later turn once it has
    * taken up work whose objective has some. A close in an earlier session does not hold a new tab
    * back; a close in this one does, for the rest of it. Opened unasked, a pane is only seated where
-   * it would be a sidebar; elsewhere it waits.
+   * it would be a sidebar; elsewhere it waits. A machine that set `CASTALIE_PANES=off` reads
+   * nothing here: the cards open on the command alone.
    */
   async function openOnWaiting(engine: Host): Promise<void> {
     if (isCardsOpen || hasAutoOpened || isClosedHere) return
+    if (!(await mayOpenUnasked(engine))) return
 
     await refresh(engine)
     if (isCardsOpen || hasAutoOpened || isClosedHere) return
