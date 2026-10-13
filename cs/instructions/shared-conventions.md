@@ -22,7 +22,7 @@ on that branch's head, and nothing is left for the user; what only an outside ev
 still moves is a scheduled follow-up, and the turn ends finished; for you to do: the gesture you tried and only the user can finish, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
 what; or, I need you: the question, its
-description in 100 words, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
+description in 100 words opening on the question's context, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
 ("I'll check X next", "j'enchaîne", "the loop/cron will resume it") — execute it in the same turn;
 a loop tick is a safety net for a dead turn, never a reason to defer work you can do now. A check
 the user asks for before a larger piece of work is the whole turn: deliver it and what it changes
@@ -119,13 +119,15 @@ render it.
   again. A gesture is never a decision (`human_action_is_not_a_decision`): a session nobody watches
   puts it on a ticket waiting for a person — `bug_set_requires_human` with the gesture as the reason,
   or `bug_create` assigned to the person in charge when the work has no ticket — never on a sheet.
-- **I need you is the decision sheet, and nothing else.** The question in bold; its description in
-  100 words, for a business reader — what happens for the company, its customers, its money or its
-  team, no class, table, endpoint, file or command names — the fact that decides first and what you
-  recommend; then one line per option, labelled with the question's number and a letter (1.A, 1.B),
+- **I need you is the decision sheet, and nothing else.** The question in bold, naming its subject
+  in plain words; its description in 100 words, for a business reader — what happens for the
+  company, its customers, its money or its team, no class, table, endpoint, file or command names —
+  opening on one or two sentences of context (which subject this is, what happened, why it comes up
+  now: the reader remembers nothing of the work, and understanding which subject it is about is the
+  whole difficulty), then the fact that decides and what you recommend; then one line per option, labelled with the question's number and a letter (1.A, 1.B),
   its card: what it does, what it costs or gives up, ★ on the one you recommend. The last option of
   each question is always « Autre réponse ou question ». No « why you », no « what waits », no « meanwhile », no
-  context: what the person needs is in the 100 words.
+  context section beside it: the context opens the 100 words, and what the person needs is in them.
 - **Where `AskUserQuestion` exists, the decision is asked with it**, so every card is clicked
   rather than typed: one option per card (its label the option's number and title, « 1.A Acheter la
   licence », its description the card's

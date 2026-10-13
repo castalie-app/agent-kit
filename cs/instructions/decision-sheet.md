@@ -9,8 +9,8 @@ a session poses it in the conversation:
 
 1. **the title**, the question;
 2. **the description**, written by you at three depths: an explanation in 100, in 250 and in 500
-   words — targets, not caps — for a business reader, not an engineer. The reader clicks the depth
-   they want; 100 words shows first;
+   words — targets, not caps — for a business reader, not an engineer, each opening on the context
+   of the question (below). The reader clicks the depth they want; 100 words shows first;
 3. **the options, as cards**: one card per option, with its title, its consequence, its cost or
    what it gives up, and the recommendation marked on its card. A click on the card answers. The
    last card is always « Autre réponse ou question : », a free field. Read by `bug-fix`,
@@ -191,15 +191,15 @@ decision that was yours to take, and did not take your responsibility. So:
 
 | Field | Length — a target, ±10 % | What it holds |
 |---|---|---|
-| `description_100_md` | an explanation in 100 words (90 to 110) | shown first, and often all that is read: the fact that decides, what it means for the business, and what you recommend |
-| `description_250_md` | an explanation in 250 words (225 to 275) | for the reader who wants more, still in business terms: what you checked, what each option leads to |
-| `description_500_md` | an explanation in 500 words (450 to 550) | the deepest level: the figures, the history, a diagram — and the only level that may carry technical detail |
+| `description_100_md` | an explanation in 100 words (90 to 110) | shown first, and often all that is read: the context of the question, then the fact that decides, what it means for the business, and what you recommend |
+| `description_250_md` | an explanation in 250 words (225 to 275) | for the reader who wants more, still in business terms: the context again, then what you checked, what each option leads to |
+| `description_500_md` | an explanation in 500 words (450 to 550) | the deepest level: the context again, then the figures, the history, a diagram — and the only level that may carry technical detail |
 
 All three are mandatory, and you write them when you file: the page never generates them. **100,
 250 and 500 words are targets, not caps**: the person asks for an explanation in 100 words, in 250
 words and in 500 words, and Castalie admits each level within 10 % of its target — shorter is
-refused as surely as longer. Count before you file. Each one stands alone; a deeper level repeats
-what decides, then adds what the reader needs at that depth — never padding to reach the count. A fenced block (a Mermaid diagram,
+refused as surely as longer. Count before you file. Each one stands alone and opens on the context; a deeper level repeats
+the context and what decides, then adds what the reader needs at that depth — never padding to reach the count. A fenced block (a Mermaid diagram,
 an illustration) is looked at, not read: it does not count. A level identical to the one above it
 is not offered to the reader.
 
@@ -230,15 +230,30 @@ an approval or a choice between two options.
 
 ## The title is the question
 
-12 to 160 characters, ending with `?`, about the choice — never a topic.
+12 to 160 characters, ending with `?`, about the choice — never a topic. It names its subject in
+plain words — the feature, the project, the ticket, as the business calls it — so it reads without
+any memory of the work.
 
 - Yes: "Merge the VAT fix on credit notes and ship it to production?"
-- No: "VAT fix", "Question about the export", "Decision needed".
+- No: "VAT fix", "Question about the export", "Decision needed", "Option B or C for phase 2?",
+  "Merge it now?".
 
-## The first level opens on the fact that decides
+## Each level opens on the context, then the fact that decides
 
-`description_100_md` is what a person reads on a phone, and often all they read. Its first sentence
-is the fact the answer turns on, said in business terms, not the history of how you got there.
+The reader remembers nothing of the work. A sheet is read days later, on a phone, among others,
+by a person who did not follow it — and the whole difficulty is first to understand which subject
+it is about. Castalie's CEO, on the sheets agents filed for him: « les questions sont posées comme
+si la personne se souvenait vachement bien du contexte et savait de quoi on parlait, alors qu'en
+fait, toute la difficulté est de comprendre d'abord de quel sujet on parle » — and the rule he
+gave: « dans le descriptif, commencer toujours par une explication du contexte de la question ».
+
+So **every level opens with one or two sentences of context**: which subject this is (the
+project, feature or ticket named in plain words), what happened, and why the question comes up
+now — enough for a reader who knows nothing to follow. Only then comes the question's substance.
+
+`description_100_md` is what a person reads on a phone, and often all they read. After the
+context, its next sentence is the fact the answer turns on, said in business terms, not the
+history of how you got there.
 
 - **Measured figures, never an estimate where a measure exists.** "37 credit notes since
   1 October", read from the database, not "a few dozen".
@@ -431,8 +446,8 @@ of your workspace.
 {
   "title": "Switch ticket triage to the provider's new model before the current one retires?",
   "description_100_md": "The service that sends each incoming support ticket to the right team stops working on 15 January, because its provider retires it. The replacement costs 323 $ a month instead of 212 $ today, so 111 $ more each month. Tested on 200 past tickets, it sends 93 % of them to the right team, against 88 % today: fewer customers wait while their ticket is passed from team to team. Switching takes minutes and can be undone until January. I recommend switching now: the change is unavoidable, and doing it early leaves time to go back if something goes wrong.",
-  "description_250_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today.\n\nSwitching is one configuration line and is reverted the same way until 15 January. I recommend switching now: the switch has to happen anyway, and doing it early leaves time to revert.",
-  "description_500_md": "The current triage model retires on 15 January: after that date, ticket triage stops. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today. The five points are mostly billing tickets the current model sends to support.\n\nSwitching is one configuration line and is reverted the same way until 15 January. Waiting until the retirement date saves about 330 $ and leaves no margin if the switch goes wrong that day. Staying means triage stops on 15 January unless someone switches by hand.\n\nI recommend switching now: the switch has to happen before 15 January anyway, the measured gain is five points of routing, and switching early leaves time to revert if something breaks.",
+  "description_250_md": "Ticket triage, the service that sends each incoming support ticket to the right team, stops on 15 January: its provider retires the model it runs on. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today.\n\nSwitching is one configuration line and is reverted the same way until 15 January. I recommend switching now: the switch has to happen anyway, and doing it early leaves time to revert.",
+  "description_500_md": "Ticket triage, the service that sends each incoming support ticket to the right team, stops on 15 January: its provider retires the model it runs on. The provider's replacement costs 323 $ a month at our volume, against 212 $ today: +111 $ a month. Measured over the last 30 days: 41,200 triage calls.\n\nReplayed on 200 past tickets, the replacement routes 93 % of them to the right team, against 88 % today. The five points are mostly billing tickets the current model sends to support.\n\nSwitching is one configuration line and is reverted the same way until 15 January. Waiting until the retirement date saves about 330 $ and leaves no margin if the switch goes wrong that day. Staying means triage stops on 15 January unless someone switches by hand.\n\nI recommend switching now: the switch has to happen before 15 January anyway, the measured gain is five points of routing, and switching early leaves time to revert if something breaks.",
   "escalation_reason": "money",
   "answer_shape": "choice",
   "subject_kind": "feature_brief",

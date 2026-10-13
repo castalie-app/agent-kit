@@ -166,9 +166,9 @@ dropped it).
 |---|---|
 | `title` | the lead as a question, ending with `?`: « Give "Grow recurring revenue" a key result before the quarter review? » |
 | `escalation_reason` | `idea`. Refused (an instance that does not know it yet): file again with `private_knowledge`, once |
-| `description_100_md` | the fact that decides, with its figure, and the move you recommend in one sentence — in business terms, no technical names |
-| `description_250_md` | what the data says, what it means, and what each move leads to |
-| `description_500_md` | the evidence: figures with their dates, the history or the weekly lines quoted, the links to the objective (`/strategie/objectif/<id>`), key results (`/strategie/resultat/<id>`) and briefs; a `mermaid` block when the topic is a flow |
+| `description_100_md` | one or two sentences of context — which objective or topic this is and why it comes up now, for a leader who remembers nothing of it — then the fact that decides, with its figure, and the move you recommend in one sentence — in business terms, no technical names |
+| `description_250_md` | the same context, then what the data says, what it means, and what each move leads to |
+| `description_500_md` | the same context, then the evidence: figures with their dates, the history or the weekly lines quoted, the links to the objective (`/strategie/objectif/<id>`), key results (`/strategie/resultat/<id>`) and briefs; a `mermaid` block when the topic is a flow |
 | `answer_shape`, `options` | `choice`: the two or three moves, each with `body_md` (its effect), `cost_text`, `gives_up_md`, `risk`, `effect: "continue"`, exactly one `is_recommended`; then **always a last option « Not a good idea »** (in the leader's language), `effect: "close"`, `gives_up_md` naming what is left as it is. Four options at most in all |
 | `subject_kind`, `subject_id` | `feature_brief` and its id when the lead concerns a brief. Castalie has no objective subject: anything else is `none`, and the objective is named in the title and linked in the descriptions |
 | `addressee_user_id` | the leader (step 1) |
