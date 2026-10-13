@@ -968,39 +968,36 @@
     {
       "name": "codir_review_get_context",
       "kind": "read",
-      "description": "The authenticated person's CODIR review for a period, as the review wizard (/Strategy/CodirReview/Wizard) shows it: the period, the review type, the objectives the review walks through in the wizard's order (the person's pinned objectives, else those they own for the period), each with its draft in four markdown sections (progress_md « Avancement », demands_md « Mes demandes », biases_md « Mes parti pris », shares_md « Mes partages ») and whether it is submitted, then the summary (opening_md « Vue d'ensemble du trimestre », closing_questions_md « Mes questions au CODIR »). A submitted review is locked, and no verb submits: submitting stays the person's own gesture. Refused with not_codir_member or period_not_found.",
+      "description": "The authenticated person's CODIR review for one meeting, as the review wizard (/Strategy/CodirReview/Wizard) shows it: the meeting_date it is written for, the workspace's scheduled meetings (most recent first) and next_meeting_date (the next one from today on; null when none is scheduled — then ask the person the date of the next CODIR meeting and call codir_meeting_schedule), the period holding the meeting, hands_over (the meeting falls in its period's last three weeks, so the next quarter's objectives are walked too), the objectives the review walks through in the wizard's order (the person's pinned objectives, else those they own for the period), each with its draft in four markdown sections (progress_md « Avancement », demands_md « Mes demandes », biases_md « Mes parti pris », shares_md « Mes partages ») and whether it is submitted, then the summary (opening_md « Vue d'ensemble du trimestre », closing_questions_md « Mes questions au CODIR »). A submitted review is locked, and no verb submits: submitting stays the person's own gesture. Refused with not_codir_member, invalid_meeting_date, meeting_not_scheduled or period_not_found.",
       "params": [
         {
-          "name": "period_id",
-          "type": "int",
-          "required": false,
-          "description": "The quarter under review, from strategy_list_periods. A sprint stands for its quarter. Left out, the current quarter, as the screen opens."
-        },
-        {
-          "name": "review_type",
+          "name": "meeting_date",
           "type": "string",
           "required": false,
-          "description": "mid_cycle (the mid-quarter review) or end_cycle (the quarter handover). Left out, the screen's default: end_cycle in the period's last three weeks, mid_cycle before. Anything else is refused with unknown_review_type."
+          "description": "The CODIR meeting, yyyy-MM-dd: one of the meetings codir_review_get_context lists. Left out, the next meeting from today on, as the screen opens."
         }
       ],
       "returns": {
         "success": "bool",
         "user_id": "int",
+        "meeting_date": "string?",
+        "next_meeting_date": "string?",
+        "meetings": "string[]",
         "period_id": "int",
         "period_name": "string",
-        "review_type": "string",
-        "review_type_label": "string",
+        "hands_over": "bool",
         "wizard_url": "string?",
         "okr_count": "int",
         "submitted_count": "int",
         "okrs": "[{ objective_id, title, owner_name, status, progress_health, wizard_url?, review: { review_id, progress_md, demands_md, biases_md, shares_md, submitted, submitted_at, last_update }? }]",
-        "summary": "{ opening_md, closing_questions_md }"
+        "summary": "{ opening_md, closing_questions_md }",
+        "next_step": "string?"
       }
     },
     {
       "name": "codir_review_save_draft",
       "kind": "write",
-      "description": "Write the authenticated person's CODIR review draft for one objective: its four sections in markdown, exactly as the wizard's step shows them. Created if absent. Every section is written as given (left out or empty clears it), so pass the four, starting from codir_review_get_context's text. The objective must be one codir_review_get_context lists (objective_not_in_review otherwise). A submitted review is locked (review_submitted). Nothing is submitted.",
+      "description": "Write the authenticated person's CODIR review draft for one objective and one meeting: its four sections in markdown, exactly as the wizard's step shows them. Created if absent. Every section is written as given (left out or empty clears it), so pass the four, starting from codir_review_get_context's text. The objective must be one codir_review_get_context lists for that meeting (objective_not_in_review otherwise). A submitted review is locked (review_submitted). Nothing is submitted. Refused with no_meeting_scheduled (ask the person, then codir_meeting_schedule), meeting_not_scheduled, invalid_meeting_date.",
       "params": [
         {
           "name": "objective_id",
@@ -1033,31 +1030,25 @@
           "description": "« Mes partages »: what the others should know without having to ask."
         },
         {
-          "name": "period_id",
-          "type": "int",
-          "required": false,
-          "description": "The quarter under review, from strategy_list_periods. A sprint stands for its quarter. Left out, the current quarter, as the screen opens."
-        },
-        {
-          "name": "review_type",
+          "name": "meeting_date",
           "type": "string",
           "required": false,
-          "description": "mid_cycle (the mid-quarter review) or end_cycle (the quarter handover). Left out, the screen's default: end_cycle in the period's last three weeks, mid_cycle before. Anything else is refused with unknown_review_type."
+          "description": "The CODIR meeting, yyyy-MM-dd: one of the meetings codir_review_get_context lists. Left out, the next meeting from today on."
         }
       ],
       "returns": {
         "success": "bool",
         "review_id": "int",
         "objective_id": "int",
+        "meeting_date": "string",
         "period_id": "int",
-        "review_type": "string",
         "wizard_url": "string?"
       }
     },
     {
       "name": "codir_review_save_summary",
       "kind": "write",
-      "description": "Write the authenticated person's CODIR review summary for a period and review type: opening_md « Vue d'ensemble du trimestre » (the wizard's first step) and closing_questions_md « Mes questions au CODIR » (its last step), in markdown. Both are written as given (left out or empty clears it), so pass both, starting from codir_review_get_context's text. Nothing is submitted.",
+      "description": "Write the authenticated person's CODIR review summary for one meeting: opening_md « Vue d'ensemble du trimestre » (the wizard's first step) and closing_questions_md « Mes questions au CODIR » (its last step), in markdown. Both are written as given (left out or empty clears it), so pass both, starting from codir_review_get_context's text. Nothing is submitted. Refused with no_meeting_scheduled, meeting_not_scheduled, invalid_meeting_date.",
       "params": [
         {
           "name": "opening_md",
@@ -1072,22 +1063,36 @@
           "description": "« Mes questions au CODIR »."
         },
         {
-          "name": "period_id",
-          "type": "int",
-          "required": false,
-          "description": "The quarter under review, from strategy_list_periods. A sprint stands for its quarter. Left out, the current quarter, as the screen opens."
-        },
-        {
-          "name": "review_type",
+          "name": "meeting_date",
           "type": "string",
           "required": false,
-          "description": "mid_cycle (the mid-quarter review) or end_cycle (the quarter handover). Left out, the screen's default: end_cycle in the period's last three weeks, mid_cycle before. Anything else is refused with unknown_review_type."
+          "description": "The CODIR meeting, yyyy-MM-dd: one of the meetings codir_review_get_context lists. Left out, the next meeting from today on."
         }
       ],
       "returns": {
         "success": "bool",
+        "meeting_date": "string",
         "period_id": "int",
-        "review_type": "string",
+        "wizard_url": "string?"
+      }
+    },
+    {
+      "name": "codir_meeting_schedule",
+      "kind": "write",
+      "description": "Schedule a CODIR meeting of the workspace on a date, as the review wizard's calendar does and under the same rule: whoever may open the review screen may schedule. A date already scheduled is left as it is (already_scheduled: true). Use it when codir_review_get_context answers next_meeting_date null: ask the person the date of the next CODIR meeting, schedule it, then write the review for it. Refused with not_codir_member or invalid_meeting_date.",
+      "params": [
+        {
+          "name": "meeting_date",
+          "type": "string",
+          "required": true,
+          "description": "The meeting's date, yyyy-MM-dd."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "meeting_date": "string",
+        "already_scheduled": "bool",
+        "next_meeting_date": "string?",
         "wizard_url": "string?"
       }
     },
