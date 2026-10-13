@@ -210,6 +210,11 @@ remembers that choice for the next session. Below 110 columns, and outside fulls
 sits inline above the prompt as an eight-row summary instead. With nothing in hand it does
 not open at all, and opened by hand it says `Pas de travail en cours.`
 
+**`CASTALIE_PANES=off` keeps it shut until asked.** Written in the `env` of the user settings
+(`"env": { "CASTALIE_PANES": "off" }`), it stops the pane from opening by itself on that machine
+from the next start of Claude Code; `/cs:okr-panel` still opens it. Any other value, or none,
+changes nothing.
+
 What is in hand belongs to the conversation that took it up, not to the copy. A conversation
 resumed on the same copy — `claude --resume`, `/resume`, after a compaction — gets its pane
 back with what it held; a new conversation on that copy starts with nothing, and `/clear`
@@ -289,6 +294,9 @@ settings — `--no-pane` skips it, `npx -y github:castalie-app/agent-kit --enabl
 alone on a workstation installed before this existed — and it takes effect at the next
 start of Claude Code. Without the flag nothing of the module loads: the row under the
 prompt and the classic hooks go on exactly as they did, and `/cs:okr-panel` is simply not there.
+`--no-pane` leaves the whole module out, the hand-back of answered decisions with it;
+`--panes-off` (`npx -y github:castalie-app/agent-kit --panes-off`, no token needed) writes
+`CASTALIE_PANES=off` instead, which only stops the panes from opening by themselves.
 
 One limit is worth knowing before you meet it: Claude Code caps what an MCP call may
 answer, and past the cap it replaces the result with a notice of its own. A spec whose
@@ -431,6 +439,11 @@ objective wait: at the session's start, or at the end of a later turn once the t
 work whose objective has some. A close holds for that session only; the next tab opens it again.
 At the end of its work, the tab sweeps the decisions it filed or that trace to its work item and
 cancels the ones the work settled (`instructions/shared-conventions.md`).
+
+**`CASTALIE_PANES=off` keeps the panel shut until asked.** With it in the `env` of the user
+settings, neither the cards nor the sheet of a decision this session files open by themselves;
+`/cs:decisions-panel` still opens them. The rest goes on: a filed decision is kept, and its
+answer reaches the agent at the next prompt as above.
 
 **Terminal and desktop.** The panel is a pane of the plugin's hooks module, and the same module
 draws it on both surfaces, each with its own elements: the terminal docks it beside the

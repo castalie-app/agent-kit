@@ -6,7 +6,8 @@ description: Show or hide, beside the transcript, the strategy tree of what this
 # okr-panel — the strategy tree, beside the transcript
 
 `/cs:okr-panel` opens the panel named « Où j'en suis » next to the conversation, and run again it
-closes it. The choice is remembered across sessions of this machine.
+closes it. The choice is remembered across sessions of this machine. A machine whose settings set
+`CASTALIE_PANES=off` never opens it by itself: there the command alone does.
 
 What it draws, for whatever this working copy currently holds: the objective a brief serves, the
 brief, its specs, the phases of each spec with the one in progress pointing at itself, and the
