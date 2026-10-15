@@ -8,7 +8,10 @@ them.
 A **scheduled task** is a prompt for an agent with a schedule: a five-field cron expression read in
 the task's time zone (daylight saving included), a maximum duration (5 to 480 minutes), and the model
 and effort it recommends. Castalie keeps it, shows it on its screen and serves it through its MCP
-verbs, with the same rights on both.
+verbs, with the same rights on both. A task may also name the workstation that plays it
+(`workstation_hostname`, a host name as `workstation_list` reports it, compared ignoring case); empty,
+any workstation of the team plays it. A task that needs one machine's local services — a database, a
+signed-in browser, a device — names that machine.
 
 Each occurrence produces a **run**. The run carries a copy of the prompt as it stood when the run was
 created (`prompt_snapshot_md`), so the history says what was asked that day even after the prompt
@@ -30,7 +33,8 @@ occurrences give one run, whose `missed_occurrences` counts them. A scheduled ru
 the next occurrence comes due is closed `skipped`, replaced by the next. A run being played blocks
 the next one of the same task: two runs of one task never play at once. A run whose last verdict is
 failed or human_required, and a task whose oldest due occurrence has gone unplayed for more than 30
-minutes, show on the attention screen — the second is the sign that no launcher is running.
+minutes, show on the attention screen — the second is the sign that no launcher is running, or, for
+a task that names its workstation, that this one is not; the screen names the workstation it waits for.
 
 ## Who writes it, who launches it
 
@@ -52,10 +56,13 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
 1. **A periodic trigger and a fixed number of slots.** For example every 5 minutes, with two slots,
    each guarded by a lock of its own. No free slot: exit. One run per invocation, then exit.
 2. **Pick.** `scheduled_task_run_pick_next(picked_by=<host name>, lease_minutes=<maximum duration +
-   15>)`. The host name is what `hostname` prints; on Windows, `$env:COMPUTERNAME` is accepted too —
-   `scheduled-run` compares both, ignoring case. The task is known only once the run is picked, so a
-   launcher passes the longest maximum duration it plays, plus 15 (at most 495). `picked=false`:
-   release the slot, exit.
+   15>)`. The host name is the one `workstation_list` shows for this machine — what `hostname` prints,
+   which `cs agent-tasks` reports; on Windows, `$env:COMPUTERNAME` is accepted too — because Castalie
+   compares it, ignoring case, with the workstation a task names: a run of a named task goes only to
+   the launcher whose `picked_by` is that workstation, and every other launcher passes it by. A
+   launcher on a station kept for its own work passes `only_targeted=true` and takes only the runs of
+   the tasks that name it. The task is known only once the run is picked, so a launcher passes the
+   longest maximum duration it plays, plus 15 (at most 495). `picked=false`: release the slot, exit.
 3. **Screen the prompt, before any session.** `cs prompt gate scheduled-run <run_id>` reads the
    run's `prompt_snapshot_md` (and `continuation_md`) from Castalie and asks Jev, failing closed.
    Exit 2: refused, and the gate already closed the run `failed` with Jev's reasons in its notes —

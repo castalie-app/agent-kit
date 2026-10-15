@@ -2662,7 +2662,7 @@
     {
       "name": "scheduled_task_list",
       "kind": "read",
-      "description": "List the workspace's scheduled tasks: the schedule in plain words, the next run in the task's time zone and in UTC, the last run and its label, whether an occurrence went unplayed and since when, and the number of runs. Archived tasks only on request.",
+      "description": "List the workspace's scheduled tasks: the schedule in plain words, the workstation that plays it (workstation_hostname, empty for any), the next run in the task's time zone and in UTC, the last run and its label, whether an occurrence went unplayed and since when, and the number of runs. Archived tasks only on request.",
       "params": [
         {
           "name": "include_archived",
@@ -2679,7 +2679,7 @@
     {
       "name": "scheduled_task_get",
       "kind": "read",
-      "description": "Read one scheduled task: title, description, prompt, cron expression, time zone, maximum duration, recommended model and effort, enabled, next run.",
+      "description": "Read one scheduled task: title, description, prompt, cron expression, time zone, maximum duration, recommended model and effort, the workstation that plays it (workstation_hostname, empty for any), enabled, next run.",
       "params": [
         {
           "name": "id",
@@ -2762,19 +2762,25 @@
       ],
       "returns": {
         "success": "bool",
-        "run": "object: id, scheduled_task_id, scheduled_for (UTC), trigger (schedule | manual), missed_occurrences, prompt_snapshot_md, continuation_md, picked_at, pick_lease_until, assigned_pc_hostname, ran_at, outcome, final_status, notes_md, outcome_type, outcome_ref_id, model_used, total_cost_usd, status_label, task { id, title, time_zone, max_duration_minutes, recommended_model, recommended_effort }"
+        "run": "object: id, scheduled_task_id, scheduled_for (UTC), trigger (schedule | manual), missed_occurrences, prompt_snapshot_md, continuation_md, picked_at, pick_lease_until, assigned_pc_hostname, ran_at, outcome, final_status, notes_md, outcome_type, outcome_ref_id, model_used, total_cost_usd, status_label, task { id, title, time_zone, max_duration_minutes, recommended_model, recommended_effort, workstation_hostname }"
       }
     },
     {
       "name": "scheduled_task_run_pick_next",
       "kind": "write",
-      "description": "The launcher's gesture: materialise the runs that came due, then take the oldest one atomically under a lease. Never a run of a task that already has a run held. Returns picked=false when nothing is due.",
+      "description": "The launcher's gesture: materialise the runs that came due, then take the oldest one atomically under a lease. Never a run of a task that already has a run held, and a run of a task that names its workstation only for the launcher whose picked_by is that workstation. Returns picked=false when nothing is due.",
       "params": [
         {
           "name": "picked_by",
           "type": "string",
           "required": true,
-          "description": "The workstation's host name."
+          "description": "The workstation's host name, as workstation_list reports it; compared ignoring case with the workstation a task names."
+        },
+        {
+          "name": "only_targeted",
+          "type": "bool",
+          "required": false,
+          "description": "Defaults to false. true takes only the runs of the tasks that name this workstation — for a station kept for its own work."
         },
         {
           "name": "lease_minutes",
