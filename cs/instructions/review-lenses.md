@@ -40,6 +40,10 @@ and a hesitation between two goes to the higher.
 
 The **design** lens joins at any effort when the diff is visual.
 
+**A tripped delivery breaker never raises the effort** (`delivery-breaker.md`): the change keeps the
+level its own files call for, and the correctness lens receives the breaker's `correctness_focus` —
+the regressions behind the trip — as the first things it checks, within the same budget.
+
 ## Visual diff (the design trigger)
 
 Computed once, with the effort. A diff is **visual** when it touches a stylesheet, an image or an icon

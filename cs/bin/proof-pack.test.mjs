@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { computePack, gatePack, meetsExpectation, mutateLine, packFromBody, parseTestResults, renderBlock, runCanary, loadConfig, validatePack, verdictOf } from "./proof-pack.mjs";
+import { breakerDemands, computePack, gatePack, meetsExpectation, mutateLine, packFromBody, parseTestResults, renderBlock, runCanary, loadConfig, validatePack, verdictOf } from "./proof-pack.mjs";
 
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 
@@ -246,6 +246,35 @@ test("the gate: NOT_PROVEN blocks, PARTLY_PROVEN passes only while the descripti
   const strict = { ...loadConfig(root), pipeline: { ...loadConfig(root).pipeline, blockingChecks: ["canary"] } };
   assert.equal(gatePack({ root, pack: packFromBody(body), body, head, config: strict }).pass, false);
   assert.equal(gatePack({ root, pack: null, body: "no block", head }).pass, false);
+});
+
+test("the delivery breaker: a tripped domain blocks a canary gap and wants the acceptance on the preview, an armed one changes nothing", () => {
+  const { root, base } = repo({ config: { ...CONFIG, lang: "fr" } });
+  write(root, ".tmp/proof/tests/r.trx", trx([["App.Same", "Passed"]]));
+  later(root, ".tmp/proof/tests/r.trx");
+  git(root, "add", "-A"); git(root, "commit", "-qm", "change");
+  const head = git(root, "rev-parse", "HEAD");
+  const pack = computePack({ root, base });
+  const body = `Fix.
+
+${renderBlock(pack)}
+`;
+  const tripped = { success: true, any_tripped: true, controls: { mutation_canary_blocking: true, staging_acceptance_required: true, correctness_focus: [] }, domains: [{ domain_key: "adverts", label: "Annonces", state: "tripped" }] };
+  const armed = { success: true, any_tripped: false, controls: { mutation_canary_blocking: false, staging_acceptance_required: false, correctness_focus: [] }, domains: [{ domain_key: "adverts", state: "armed" }] };
+  assert.equal(breakerDemands(armed), null);
+  assert.deepEqual(breakerDemands(tripped), { canary: true, acceptance: true, domains: ["Annonces"] });
+  assert.equal(gatePack({ root, pack, body, head, breaker: armed }).pass, true, "an armed domain leaves the gate as it was");
+  const r = gatePack({ root, pack, body, head, breaker: tripped });
+  assert.equal(r.pass, false);
+  assert.ok(r.reasons.some((x) => x.includes("canary is gap") && x.includes("Annonces")));
+  assert.ok(r.reasons.some((x) => x.includes("acceptance on the running preview")));
+  const modules = pack.modules.map((m) => {
+    const checks = m.checks.map((c) => (c.id === "canary" || c.id === "queries") ? { ...c, state: "pass" } : c);
+    return { ...m, checks, verdict: verdictOf(checks) };
+  });
+  const proven = { ...pack, modules, verdict: modules.every((m) => m.verdict === "PROVEN") ? "PROVEN" : "PARTLY_PROVEN" };
+  assert.deepEqual(validatePack(proven), []);
+  assert.deepEqual(gatePack({ root, pack: proven, head, breaker: tripped }).reasons, [], "a canary that passed and an acceptance recorded let a tripped domain merge");
 });
 
 test("the gate blocks a pack computed on another state of a module", () => {
