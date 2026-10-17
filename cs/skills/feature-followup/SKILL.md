@@ -21,7 +21,7 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
 1. **Load the checks.** `mcp__castalie__followup_check_list(featureSpecId=<id>)` (or `featureBriefId`). Each
    check carries `followupPromptMd` — the executable instructions + explicit pass/fail thresholds — and
    an `onFailAction`.
-   **Then read the delivery's proof pack**: `mcp__castalie__proof_pack_get(subject_type, subject_id)`
+   **Then read the delivery's proof pack**: `mcp__castalie__proof_pack_get(subject_kind, subject_id)`
    for the spec, the ticket or the brief (`${CLAUDE_PLUGIN_ROOT}/instructions/proof-pack.md`). What it proved is
    not proved again. What it lists under `missing` and `needsPerson` is replayed on the running
    product with the checks, and the verdict says, for each, what was observed. No pack stored, or

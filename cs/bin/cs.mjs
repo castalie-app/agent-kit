@@ -238,7 +238,7 @@ async function cmdProofPackPush(args) {
   if (problems.length) die(`The pack at ${packPath} is refused before it is sent:\n${problems.join("\n")}`);
   const prUrl = typeof args.pr === "string" ? args.pr : null;
   const stored = await request("POST", `/api/pm/proof-packs/${kind}/${id}`, { json: { pack, pr_url: prUrl } });
-  console.log(`Stored the pack on ${kind} ${id}: ${pack.verdict}, commit ${String(pack.commit ?? "").slice(0, 7)}${stored.url ? ` — ${stored.url}` : ""}`);
+  console.log(`Stored the pack on ${kind} ${id}: ${stored.verdict ?? pack.verdict}, commit ${String(pack.commit ?? "").slice(0, 7)}${stored.proof_pack_id ? ` (pack ${stored.proof_pack_id})` : ""}`);
 }
 
 // ── arg parsing / output ────────────────────────────────────────────────────

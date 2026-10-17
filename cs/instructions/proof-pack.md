@@ -296,7 +296,7 @@ which hand it their evidence. The steps, in this order:
    report names it — a legitimate stop, never a pack written by hand.
 6. **Publish**: put `cs proof-pack render` unchanged in the PR description, then
    `cs proof-pack push (--bug|--spec|--brief) <id> --pr <url>`. A refusal from Castalie
-   (`verdict_mismatch`, `pack_too_large`) is read and corrected, never retried as is. A Castalie
+   (`verdict_mismatch`, `subject_mismatch`, `proof_pack_too_large`) is read and corrected, never retried as is. A Castalie
    that does not serve the route yet answers HTTP 404: the pack stays in the description, and the
    report says in one line that it is not stored on the work item.
 7. **Report the computed verdict**: the report quotes the verdict and its `missing` lines as

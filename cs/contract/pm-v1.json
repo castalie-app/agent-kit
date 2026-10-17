@@ -112,8 +112,14 @@
       {
         "method": "POST",
         "path": "/api/pm/proof-packs/{kind}/{id}",
-        "body": "{ \"pack\": { …castalie-proof-pack/1… }, \"pr_url\": \"<url>\" }",
-        "note": "kind = bug | spec | brief. The same service and the same right as proof_pack_record; the same refusals. `cs proof-pack push` checks the pack by the same rules before it sends it."
+        "body": "{ \"pack\": { …castalie-proof-pack/1… }, \"pr_url\": \"<url>\", \"author_kind\": \"agent\" }",
+        "note": "kind = bug | spec | brief. The same service and the same right as proof_pack_record, the same refusals (403 forbidden, 404 not found, 413 proof_pack_too_large, 400 otherwise). `cs proof-pack push` checks the pack by the same rules before it sends it.",
+        "returns": "{ success, proof_pack_id, verdict, fingerprint }"
+      },
+      {
+        "method": "GET",
+        "path": "/api/pm/proof-packs/{kind}/{id}?proof_pack_id=<n>",
+        "returns": "{ success, proof_pack } — the latest pack, or the one named; null when none"
       }
     ]
   },
@@ -4893,10 +4899,10 @@
     {
       "name": "proof_pack_record",
       "kind": "write",
-      "description": "Store the proof pack `cs proof-pack compute` wrote (schema castalie-proof-pack/1, instructions/proof-pack.md) on the bug, spec or brief it proves. Castalie validates the schema and derives the verdict again from the checks: a pack whose stated verdict disagrees is refused with verdict_mismatch and nothing is written. The latest pack of a subject is the one that counts; earlier ones stay readable. A pack carries paths, line numbers, test names, counts and hashes — never code, a diff or a file content. The same right as the sheet: writing on that bug, spec or brief. Refusals: unknown_schema, verdict_mismatch, person_item_ticked, pack_too_large (256 KiB), subject_not_found, forbidden.",
+      "description": "Store the proof pack `cs proof-pack compute` wrote (schema castalie-proof-pack/1, instructions/proof-pack.md) on the bug, spec or brief it proves. Every call adds a pack; the latest is the one the sheet shows and followup_run_get hands back. Castalie derives the verdict again from the checks and refuses, with nothing written: unknown_schema, verdict_mismatch (a stated verdict, module verdict or counts that disagree with the checks), person_item_ticked, subject_mismatch (the pack names another item), proof_pack_too_large (256 KiB). A pack carries paths, line numbers, test names, counts and hashes — never code, a diff or a file content. The same right as the sheet: writing on that item; a viewer answers forbidden.",
       "params": [
         {
-          "name": "subject_type",
+          "name": "subject_kind",
           "type": "string",
           "required": true,
           "description": "bug, spec or brief — the work item the pack proves.",
@@ -4910,7 +4916,7 @@
           "name": "subject_id",
           "type": "int",
           "required": true,
-          "description": "The id of that bug, spec or brief."
+          "description": "The ticket, spec or brief id."
         },
         {
           "name": "pack",
@@ -4922,22 +4928,30 @@
           "name": "pr_url",
           "type": "string",
           "required": false,
-          "description": "The pull request whose description carries the same pack."
+          "description": "The pull request the pack proves, an http(s) address of at most 500 characters."
+        },
+        {
+          "name": "author_kind",
+          "type": "string",
+          "required": false,
+          "description": "person or agent. Defaults to agent."
         }
       ],
       "returns": {
         "success": "bool",
-        "proof_pack": "object",
+        "proof_pack_id": "int",
+        "verdict": "string",
+        "fingerprint": "string",
         "error": "string"
       }
     },
     {
       "name": "proof_pack_get",
       "kind": "read",
-      "description": "The latest proof pack stored on a bug, spec or brief — its verdict, its checks, what is missing and what waits for a person, with the commit, the fingerprint, the pull request and who pushed it — or proof_pack null when none was ever pushed. feature-followup reads it first and replays only missing and needsPerson.",
+      "description": "The current proof pack of a bug, spec or brief — or the one proof_pack_id names — with the pack itself: its modules and checks, what is missing, what waits for a person. proof_pack is null when the item has none yet. feature-followup reads it first and replays only missing and needsPerson. Needs the right to read the item.",
       "params": [
         {
-          "name": "subject_type",
+          "name": "subject_kind",
           "type": "string",
           "required": true,
           "description": "bug, spec or brief — the work item the pack proves.",
@@ -4951,13 +4965,13 @@
           "name": "subject_id",
           "type": "int",
           "required": true,
-          "description": "The id of that bug, spec or brief."
+          "description": "The ticket, spec or brief id."
         },
         {
-          "name": "id",
+          "name": "proof_pack_id",
           "type": "int",
           "required": false,
-          "description": "A given pack, from proof_pack_list, instead of the latest."
+          "description": "One pack of that item, from proof_pack_list. Omit for the latest."
         }
       ],
       "returns": {
@@ -4968,10 +4982,10 @@
     {
       "name": "proof_pack_list",
       "kind": "read",
-      "description": "Every proof pack pushed on a bug, spec or brief, newest first: id, verdict, commit, fingerprint, pull request, author, date. Without the pack itself — proof_pack_get reads one.",
+      "description": "The proof packs stored on a bug, spec or brief, oldest first — metadata only (verdict, commit, fingerprint, when, by whom, the pull request), never the pack itself: proof_pack_get with proof_pack_id reads one. Needs the right to read the item.",
       "params": [
         {
-          "name": "subject_type",
+          "name": "subject_kind",
           "type": "string",
           "required": true,
           "description": "bug, spec or brief — the work item the pack proves.",
@@ -4985,19 +4999,12 @@
           "name": "subject_id",
           "type": "int",
           "required": true,
-          "description": "The id of that bug, spec or brief."
-        },
-        {
-          "name": "take",
-          "type": "int",
-          "required": false,
-          "description": "1 to 100, 20 by default."
+          "description": "The ticket, spec or brief id."
         }
       ],
       "returns": {
         "success": "bool",
-        "proof_packs": "object[]",
-        "total_count": "int"
+        "proof_packs": "object[]"
       }
     }
   ]
