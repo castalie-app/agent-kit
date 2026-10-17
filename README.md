@@ -650,17 +650,12 @@ cs review-catalog --markdown        # the host's rules, one per heading, with th
 cs prompt screen --kind master_red --file msg.md   # Jev screens a text before an unattended agent reads it
 cs prompt gate scheduled-run 412 -- claude --print "/cs:scheduled-run 412"
                                                    # the stored prompt screened first; launched on a pass only
-cs inbox watch --endpoint <url> --dry-run          # one pass of the agents' inbox round, launching nothing
-cs inbox install --endpoint <url> --repo <path>    # that round every minute, as a scheduled task
 ```
 
-`cs inbox` hands a message Castalie holds for one of this machine's agent sessions to that session:
-relayed to its open tab, resumed in its worktree, or opened in a new session, after a Jev screen
-that fails closed. Any unattended launch of a prompt written elsewhere goes through
-`cs prompt screen` first — a scheduled task's run and a decision's robot resume through
+Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first, a Jev
+screen that fails closed — a scheduled task's run and a decision's robot resume through
 `cs prompt gate`, which reads the stored prompt from Castalie and closes the run or the resume on a
-refusal. The round, the host's tab templates and the thresholds are in
-`cs/instructions/agent-inbox.md`.
+refusal. The screen, its policy by kind and its thresholds are in `cs/instructions/prompt-screen.md`.
 
 It reads its config from `CASTALIE_ENDPOINT` / `CASTALIE_TOKEN` or `.cs/config.json` (the variables and
 the folder the kit used under its former names are still read, after these). Like the tools, it only
@@ -802,7 +797,6 @@ cs/
   bin/auth.mjs                    # the workspace sign-in (OAuth, PKCE, loopback) and its renewal
   bin/config.mjs                  # where the endpoint and a hand-written token are read from
   bin/agent-tasks.mjs             # cs agent-tasks: this workstation's agent tasks, reported to Castalie
-  bin/inbox.mjs                   # cs inbox: the round that hands agent messages to their sessions
   bin/prompt-screen.mjs           # cs prompt screen: Jev screens a text before an unattended agent reads it
   bin/prompt-gate.mjs             # cs prompt gate: a stored scheduled-run or resume prompt screened before it is played
   bin/image.mjs                   # image compression with sharp, installed on first use

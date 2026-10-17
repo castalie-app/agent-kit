@@ -354,31 +354,5 @@ export function filedOf(tool, said) {
   return { server: match[1], id, url: textOf(fieldOf(body, "url", "Url") ?? fieldOf(record, "url", "Url")) };
 }
 
-const SESSION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * The asking session's address, for a `decision_create` whose resume is the asker's and that names
- * none: the session id, its workstation and its working copy — the fields Castalie writes an agent
- * message to when the person answers, so the session that asked is woken instead of left to poll.
- * Null when the call is another verb, another resume mode, already names a session, or this session
- * cannot say where it runs: then the call goes out as it was written.
- *
- * @param {string} tool the tool's full name (`mcp__castalie__decision_create`)
- * @param {Record<string, unknown>} args the call's own arguments
- * @param {{ id?: unknown, hostname?: unknown, cwd?: unknown }} session what this session knows of itself
- * @returns {{ asker_session_id: string, asker_hostname: string, asker_worktree?: string } | null}
- */
-export function askerSessionFieldsOf(tool, args, session) {
-  if (!/^mcp__.+?__decision_create$/.test(String(tool ?? ""))) return null;
-  if (textOf(args?.resume_mode) !== "asker" || textOf(args?.asker_session_id) !== null) return null;
-  const id = textOf(session?.id);
-  const hostname = textOf(session?.hostname);
-  if (id === null || !SESSION_ID.test(id) || hostname === null) return null;
-  const worktree = textOf(session?.cwd);
-  return worktree === null
-    ? { asker_session_id: id, asker_hostname: hostname }
-    : { asker_session_id: id, asker_hostname: hostname, asker_worktree: worktree };
-}
-
 /** The statuses a filed decision has left the inbox for: its asker has something to read. */
 export const SETTLED_STATUSES = new Set(["answered", "applied", "cancelled", "superseded"]);

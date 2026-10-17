@@ -37,7 +37,6 @@
 //   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
 //   cs prompt screen --kind <k> ...    # screen a text written elsewhere with Jev (prompt-screen.mjs)
 //   cs prompt gate <target> <id>       # screen a stored scheduled-task or resume prompt before it is played (prompt-gate.mjs)
-//   cs inbox watch|install             # hand this workstation's agent messages to their sessions (inbox.mjs)
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
 //   cs review-catalog [--markdown]     # the host's rules with the ids review findings cite (review-catalog.mjs)
@@ -255,7 +254,6 @@ const HELP = `cs — Castalie project-management CLI
   cs prompt gate scheduled-run|decision-resume <id> [-- <command> <args...>]
                                     # read a stored prompt from Castalie, screen it, close the run or
                                     #   the resume on a refusal; launch <command> on a pass only
-  cs inbox help                     # the round that hands Castalie's agent messages to their sessions
   cs version                        # the version of the kit that is running
   cs codex [--verify|--check]       # project this kit's skills, instructions and agents into
                                     #   .agents/ and .codex/ here, for a Codex session
@@ -294,10 +292,6 @@ async function main() {
     const screen = await import("./prompt-screen.mjs");
     process.exitCode = await screen.runCli(rest);
     return;
-  }
-  if (cmd === "inbox") {
-    const inbox = await import("./inbox.mjs");
-    return inbox.runCli(rest);
   }
   if (cmd === "codex") {
     const projection = await import("./build-codex.mjs");

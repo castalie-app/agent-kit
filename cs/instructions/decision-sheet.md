@@ -370,13 +370,6 @@ refusal names the decision and its answer — while an answer on that subject wa
 Apply it, mark it applied, then close. A decision nobody has answered yet is cancelled with the
 subject, as before.
 
-**Your session is woken when the person answers.** With `resume_mode = asker`, the decision
-carries your session — `asker_session_id` (`CLAUDE_CODE_SESSION_ID`), `asker_hostname`
-(`COMPUTERNAME`), `asker_worktree` — and the kit's hook fills them on `decision_create` when you
-leave them out. Castalie then sends that session an agent message carrying the answer and your
-`resume_state_md`; your workstation's round hands it to you live, resumes you, or opens a fresh
-session (`agent-inbox.md`). Take it with `agent_message_take`, then follow the three steps above.
-
 ## When it is refused
 
 Every refusal returns `error` (the code), `fix` (what to correct) and, where one applies, `cap`.

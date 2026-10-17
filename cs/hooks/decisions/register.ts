@@ -24,7 +24,6 @@ import {
   DECISION_READS,
   INBOX_ID,
   SETTLED_STATUSES,
-  askerSessionFieldsOf,
   decisionServersOf,
   decisionTouchedBy,
   decisionWriteOf,
@@ -921,10 +920,6 @@ export function register(on: On, companion: Companion): void {
     const filed = filedOf(tool, said)
     if (filed !== null) void openFiled(host, filed).catch(error => host?.uiLog(`décisions : ${message(error)}`))
   }
-
-  // Read in every session, a headless one included: an unattended run's question wakes it too.
-  companion.filling = async (tool, args, session) =>
-    /__decision_create$/.test(tool) ? askerSessionFieldsOf(tool, args, await session()) : null
 
   companion.turnEnded = () => {
     if (host === null) return
