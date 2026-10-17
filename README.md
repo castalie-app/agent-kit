@@ -619,6 +619,8 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `decision-resume` | Pick the work back up once a person has answered an agent's decision: play a robot's resume, answer a reader who asked for more context, or resume one decision by its id. Never answers in a person's place. |
 | `scheduled-run` | Play one run of a scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
+| `retro-review` | Work the retrospective queue: the 100 oldest pending suggestions, each claim verified against the current code, the lessons that hold written at the file that owns them in one pull request, every suggestion closed with a reason. |
+| `review-rules` | Once a week, act on what the review panel learned: at most three proposed pull requests turning undisputed rules into a hook or an analyzer rule with its test, or retiring the rules the team keeps declining; the pre-existing findings fixed or closed. `--install` schedules it with `retro-review` (about 8 to 10 $ a pass). |
 | `contrarian` | Challenge an idea before you commit — adversarial sub-agents + a verdict you own. |
 | `plain-french` | Write and check French in a controlled style modelled on ASD-STE100: short sentences, active voice, no conditional hedging, one name per thing, French typography. Ships a check that finds what a machine can see. |
 | `analyse` | Meta-reflection on the assistant's own behavior, producing concrete rule edits. |
