@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Commit your work, open a PR, run a self-review panel (correctness / security / conventions / perf sub-agents over the diff), fix the blockers, then hand the ready PR to the host's own merge and release path and follow it to the release — without asking anyone's authorisation. Stops at "PR ready" only when the person asks it in the current turn, the workspace's administrator denies it, or the host declares no merge path. The diff stays in your repo; nothing is sent to Castalie.
+description: Commit your work, open a PR, run a self-review panel (correctness / security / conventions / perf sub-agents over the diff), fix the blockers, then hand the ready PR to the host's own merge and release path and follow it to the release — without asking anyone's authorisation. Stops at "PR ready" only when the person asks it in the current turn, the workspace's administrator denies it, or the host declares no merge path. The diff stays in your repo; Castalie receives only the findings' one-line titles and outcomes.
 ---
 
 # ship — commit, PR, self-review panel, merge and release
@@ -45,6 +45,8 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
    - Auto-fix every retained blocker (and clear-win warning) with `business_impact = false`; commit;
      re-run the panel on the new HEAD; max 3 rounds.
    - Escalate only `business_impact = true` findings to the user.
+   - Each finding cites the host rule it applies (`rule_id` from `cs review-catalog`) and is
+     recorded with its outcome after the last round, per `review-lenses.md` § Recording.
 4. **Mark the PR ready.** 0 blockers → mark it ready. A risk the panel or you still see goes into
    the body as one sentence with how it is reverted — a flag, never a reason to wait.
 5. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to

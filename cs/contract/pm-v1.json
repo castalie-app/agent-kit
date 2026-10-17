@@ -4373,6 +4373,76 @@
         "status": "string",
         "resume_job_state": "string"
       }
+    },
+    {
+      "name": "review_record",
+      "kind": "write",
+      "description": "Record the self-review panel of one pull request, once, after its last round (review-lenses.md § Recording): every finding, retained and rejected, with the host rule it cites and what became of it. Castalie ranks the rules from these, per repository and rule over 90 days - findings, rejection rate, rounds cost - and proposes automate (>= 10 findings, rejection rate <= 0.2), retire (>= 10, >= 0.8) or watch. Never a code excerpt: a finding carries a path, a line and a one-line title, and the rationale and suggested fix stay on the machine. A Castalie that does not serve this verb leaves the findings local; the ship carries on.",
+      "params": [
+        {
+          "name": "repository",
+          "type": "string",
+          "required": true,
+          "description": "owner/name of the reviewed repository."
+        },
+        {
+          "name": "pr_number",
+          "type": "int",
+          "required": true,
+          "description": "The pull request's number."
+        },
+        {
+          "name": "pr_url",
+          "type": "string",
+          "required": true,
+          "description": "The pull request's address."
+        },
+        {
+          "name": "head_sha",
+          "type": "string",
+          "required": true,
+          "description": "The commit the last round reviewed."
+        },
+        {
+          "name": "skill",
+          "type": "string",
+          "required": true,
+          "description": "The skill that ran the panel.",
+          "enum": [
+            "ship",
+            "bug-fix",
+            "feature-implement"
+          ]
+        },
+        {
+          "name": "review_mode",
+          "type": "string",
+          "required": true,
+          "description": "panel (the four lenses, plus design on a visual diff) or light (one generalist, docs-only diff).",
+          "enum": [
+            "panel",
+            "light"
+          ]
+        },
+        {
+          "name": "review_rounds",
+          "type": "int",
+          "required": true,
+          "description": "How many panel rounds ran, from 1."
+        },
+        {
+          "name": "findings",
+          "type": "object[]",
+          "required": true,
+          "description": "Each { lens, severity, rule_id, outcome, reject_reason, round, file, line, title }. lens: correctness | security | conventions | perf | design. severity: blocker | warning | nit. rule_id: <instruction file name without its last extension>#<GitHub anchor slug of the section heading> (cs review-catalog), or off-catalog. outcome: autofixed | fixed | rejected | accepted_residual; reject_reason required when rejected. round: the round that first raised it. title: one line, never a code excerpt."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "id": "int",
+        "findings": "int",
+        "error": "string"
+      }
     }
   ]
 }

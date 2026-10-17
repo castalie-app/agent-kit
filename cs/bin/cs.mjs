@@ -40,6 +40,7 @@
 //   cs inbox watch|install             # hand this workstation's agent messages to their sessions (inbox.mjs)
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
+//   cs review-catalog [--markdown]     # the host's rules with the ids review findings cite (review-catalog.mjs)
 //   cs attach <brief|spec|bug> <id> <file...>   # join local files to a thread (attach.mjs)
 //   cs login [<workspace url>]         # sign this machine in when it has no token (auth.mjs)
 
@@ -258,6 +259,9 @@ const HELP = `cs — Castalie project-management CLI
   cs version                        # the version of the kit that is running
   cs codex [--verify|--check]       # project this kit's skills, instructions and agents into
                                     #   .agents/ and .codex/ here, for a Codex session
+  cs review-catalog [--root <dir>] [--markdown]
+                                    # the host's instruction files, one rule per heading, with the
+                                    #   rule_id a review finding cites
   cs bug-evaluation help              # local isolated bug-evaluation runner
 
 Config: env CASTALIE_ENDPOINT / CASTALIE_TOKEN, or .cs/config.json { "endpoint", "token" }.
@@ -298,6 +302,11 @@ async function main() {
   if (cmd === "codex") {
     const projection = await import("./build-codex.mjs");
     return projection.runCli(rest);
+  }
+  if (cmd === "review-catalog") {
+    const catalog = await import("./review-catalog.mjs");
+    process.exitCode = catalog.runCli(rest);
+    return;
   }
   const args = parseArgs(rest);
   switch (cmd) {

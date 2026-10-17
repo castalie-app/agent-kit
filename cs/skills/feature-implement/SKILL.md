@@ -73,8 +73,9 @@ watchdog never fires — ideal.
    `${CLAUDE_PLUGIN_ROOT}/instructions/acceptance-criteria.md`); set each status; screenshot visual blocks.
 7. **Ship.** Invoke `ship` with the spec/phase ids and case evidence: it opens/finishes the PR through
    the self-review panel, reusing the coverage and checking for gaps, then hands the ready PR to the
-   host's merge and release path and follows it to the release (`ship` § Delivery). Resolve
-   `feature-implement`/`merge_mode` (`${CLAUDE_PLUGIN_ROOT}/instructions/workflow-defaults.md`): it
+   host's merge and release path and follows it to the release (`ship` § Delivery). Each panel
+   finding cites its host rule and is recorded with its outcome (`review-lenses.md` § Recording).
+   Resolve `feature-implement`/`merge_mode` (`${CLAUDE_PLUGIN_ROOT}/instructions/workflow-defaults.md`): it
    ships, whatever is stored, unless the workspace's administrator denied it — then stop at PR
    ready and say so in one line. Stop before the merge otherwise only when the person asked it in
    the current turn. No merge path declared by the host → one line, PR ready.

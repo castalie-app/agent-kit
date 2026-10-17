@@ -644,6 +644,7 @@ cs content push feature-spec 42     # after you edit the buffer
 cs content push bug 7               # a ticket: sections description and technical-detail
 cs on-behalf                        # unattended or not, and the workspace's robot account
 cs codex                            # project the kit into .agents/ + .codex/ for a Codex session
+cs review-catalog --markdown        # the host's rules, one per heading, with the rule_id a review finding cites
 cs prompt screen --kind master_red --file msg.md   # Jev screens a text before an unattended agent reads it
 cs prompt gate scheduled-run 412 -- claude --print "/cs:scheduled-run 412"
                                                    # the stored prompt screened first; launched on a pass only
@@ -792,6 +793,7 @@ cs/
   contract/conformance/           # the outward-only conformance suite (MCP + REST)
   bin/cs.mjs                      # the cs CLI
   bin/build-codex.mjs             # the Codex projection, shipped so a client can run `cs codex`
+  bin/review-catalog.mjs          # cs review-catalog: the host's rules with the ids the review panel cites
   bin/playwright-mcp.mjs          # starts the browser the plugin declares in .mcp.json, on every OS
   bin/castalie-files-mcp.mjs      # starts castalie-files: attach_file and login (castalie-files.mjs)
   bin/attach.mjs                  # reads, lightens and uploads a local file — shared by attach_file and cs attach
