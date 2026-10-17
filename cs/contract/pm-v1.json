@@ -5008,6 +5008,72 @@
       }
     },
     {
+      "name": "delivery_breaker_list",
+      "kind": "read",
+      "description": "The delivery breaker of each business domain on a day (instructions/delivery-breaker.md): regressions per 100 merges over 28 days against the rate the domain's baseline expects, its state (armed or tripped), and — for the domains of the ticket or spec given — any_tripped and the controls a pull request must pass: mutation_canary_blocking, staging_acceptance_required, correctness_focus. Computed without a model; never asks a person anything. Any active member reads.",
+      "params": [
+        {
+          "name": "as_of",
+          "type": "string",
+          "required": false,
+          "description": "The day to evaluate, YYYY-MM-DD, at most yesterday. Omitted: yesterday, the live state."
+        },
+        {
+          "name": "domain_keys",
+          "type": "array",
+          "required": false,
+          "description": "Only these domains, by key."
+        },
+        {
+          "name": "bug_id",
+          "type": "int",
+          "required": false,
+          "description": "Only the domains of this ticket — the one the pull request fixes."
+        },
+        {
+          "name": "feature_spec_id",
+          "type": "int",
+          "required": false,
+          "description": "Only the domains of this spec — the one the pull request delivers."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "as_of": "string",
+        "rule": "object",
+        "workspace": "object",
+        "any_tripped": "bool",
+        "controls": "object",
+        "domains": "array"
+      }
+    },
+    {
+      "name": "delivery_breaker_replay",
+      "kind": "read",
+      "description": "Replay the delivery breaker's rule over a past period, each domain armed on the first day: every trip and re-arm with its figures. Writes nothing and posts nothing. At most 366 days.",
+      "params": [
+        {
+          "name": "from",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYY-MM-DD."
+        },
+        {
+          "name": "to",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYY-MM-DD."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "trips": "int",
+        "domains_tripped": "int",
+        "domain_count": "int",
+        "domains": "array"
+      }
+    },
+    {
       "name": "bug_evaluation_review_case_upsert",
       "kind": "write",
       "description": "File or refresh one reviewer-bench case, keyed by repository_key + pr_url: a regression (the pull request that caused it, with the zones its fix or revert touched — a candidate until an expert confirms it) or a clean pull request (confirmed at once). Paths and line numbers only, never code. review-bench seed calls it. Owner or member.",

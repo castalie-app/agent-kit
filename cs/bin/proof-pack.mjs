@@ -957,8 +957,24 @@ export function packFromBody(body) {
   try { return JSON.parse(m[1]); } catch { return null; }
 }
 
-/** Whether the host's pipeline lets this pack merge: { pass, reasons, verdict }. The policy is the host's, never the pack's. */
-export function gatePack({ root, pack, body, head, config = loadConfig(root) }) {
+/**
+ * The domains of a delivery_breaker_list answer that are tripped, when its controls ask for anything —
+ * the tighter gate of a degraded domain (instructions/delivery-breaker.md). Null when nothing is tripped.
+ */
+export function breakerDemands(breaker) {
+  if (!breaker || typeof breaker !== "object" || breaker.success === false) return null;
+  const controls = breaker.controls ?? {};
+  if (!breaker.any_tripped || !(controls.mutation_canary_blocking || controls.staging_acceptance_required)) return null;
+  const domains = (breaker.domains ?? []).filter((d) => d?.state === "tripped").map((d) => d.label || d.domain_key).filter(Boolean);
+  return { canary: controls.mutation_canary_blocking === true, acceptance: controls.staging_acceptance_required === true, domains };
+}
+
+/**
+ * Whether the host's pipeline lets this pack merge: { pass, reasons, verdict }. The policy is the host's, never the pack's.
+ * `breaker`, the delivery_breaker_list answer for the pull request's ticket or spec, adds what a tripped domain demands:
+ * a canary that passed (a gap blocks), no mutant left alive, and the acceptance on the running preview recorded.
+ */
+export function gatePack({ root, pack, body, head, config = loadConfig(root), breaker }) {
   const reasons = [];
   if (!pack) return { pass: false, verdict: "NOT_PROVEN", reasons: ["No proof pack: the description carries no readable castalie-proof-pack block. Compute it (cs proof-pack compute, kit 1.62.0 or later) and put cs proof-pack render in the description."] };
   const problems = validatePack(pack);
@@ -987,7 +1003,21 @@ export function gatePack({ root, pack, body, head, config = loadConfig(root) }) 
       if (c && (c.state === "gap" || c.state === "fail")) reasons.push(`${m.name}: ${id} is ${c.state}, and this repository blocks on it.`);
     }
   }
-  return { pass: reasons.length === 0, verdict, reasons };
+  const demands = breakerDemands(breaker);
+  if (demands) {
+    const why = `the delivery breaker is tripped on ${demands.domains.join(", ") || "this change's domain"}`;
+    for (const m of pack.modules) {
+      const state = (id) => m.checks.find((x) => x.id === id)?.state;
+      if (demands.canary && state("canary") !== "pass" && !(policy.blockingChecks ?? []).includes("canary")) {
+        reasons.push(`${m.name}: canary is ${state("canary") ?? "missing"}, and ${why}: a canary the tests notice is required.`);
+      }
+      if (demands.canary && state("mutation") === "fail") reasons.push(`${m.name}: a mutant on a changed line survived, and ${why}.`);
+    }
+    if (demands.acceptance && !pack.modules.some((m) => m.checks.some((c) => (c.id === "journey" || c.id === "queries") && c.state === "pass"))) {
+      reasons.push(`No acceptance on the running preview is recorded (a journey or a verification query that passed), and ${why}: run the acceptance on the preview environment and compute the pack again.`);
+    }
+  }
+  return { pass: reasons.length === 0, verdict, reasons, breaker: demands };
 }
 
 // ── CLI ────────────────────────────────────────────────────────────────────────────────────────
@@ -1016,7 +1046,7 @@ const HELP = `cs proof-pack — the proof of a delivery, computed from the tools
   cs proof-pack canary  [--base <ref>] --run "<test command>" --results <glob> [--file <path> --line <n>]
   cs proof-pack compute [--base <ref>] [--evidence <dir>] [--out <dir>] [--lang fr|en]
   cs proof-pack render  [--pack <file>] [--lang fr|en]
-  cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>] [--config <proof.json of the base>]
+  cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>] [--config <proof.json of the base>] [--breaker <delivery_breaker_list answer>]
   cs proof-pack push    (--bug|--spec|--brief) <id> [--pack <file>] [--pr <url>]
 
 compute exits 0 PROVEN, 1 PARTLY_PROVEN, 2 NOT_PROVEN, 3 unusable input. gate exits 0 when the
@@ -1069,9 +1099,15 @@ export function runCli(args, { root = process.cwd(), log = console.log, error = 
         }
         if (o.head === true) throw new InputError("--head needs the head commit's hash.");
         const head = typeof o.head === "string" ? o.head : undefined;
-        const r = gatePack({ root, pack, body, head, config });
+        let breaker;
+        if (o.breaker !== undefined) {
+          if (typeof o.breaker !== "string") throw new InputError("--breaker needs the file holding the delivery_breaker_list answer.");
+          breaker = readJson(resolve(root, o.breaker));
+          if (!breaker) throw new InputError(`No readable delivery_breaker_list answer at ${o.breaker}.`);
+        }
+        const r = gatePack({ root, pack, body, head, config, breaker });
         const L = LABELS.en;
-        log(`proof gate: ${r.pass ? "pass" : "blocked"} — the pack is ${r.verdict} (${L[r.verdict]}).`);
+        log(`proof gate: ${r.pass ? "pass" : "blocked"} — the pack is ${r.verdict} (${L[r.verdict]}).${r.breaker ? ` Delivery breaker tripped on ${r.breaker.domains.join(", ")}.` : ""}`);
         for (const reason of r.reasons) log(`  - ${reason}`);
         if (process.env.GITHUB_STEP_SUMMARY) {
           try { writeFileSync(process.env.GITHUB_STEP_SUMMARY, [`### Proof gate: ${r.pass ? "pass" : "blocked"} (${r.verdict})`, "", ...r.reasons.map((x) => `- ${x}`), ""].join("\n"), { flag: "a" }); } catch { /* the summary is a courtesy */ }
