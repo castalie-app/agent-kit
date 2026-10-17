@@ -173,6 +173,35 @@ than on yesterday's spec, and `/clear` empties everything. Closing a session dro
 relaunch on the same conversation cannot lose to the process it replaces — the old one used to empty
 the file while dying, thirty seconds after the new one had written to it.
 
+## The copies your agents leave behind
+
+**An agent that writes code leaves a full copy of your repository behind, and the kit gives it back.**
+Claude Code removes an agent's worktree on its own only when the agent changed nothing; one that
+coded keeps its copy under `.claude/worktrees/`, locked for as long as it can be resumed. On
+17 October 2026 one repository carried about 95 of them: a 500 GB disk had 4.4 GB left, git stopped
+answering and an agent could not resume. Removing the 27 that were clean gave back 82.7 GB. The
+rule to remove them was written down; nothing ran it.
+
+So a hook runs it — `cs worktrees sweep`, at the end of a turn, of an agent and of a session, at
+most once an hour per repository and detached, so no turn waits on it — and so does a daily pass
+the first hook run schedules on its own (Task Scheduler on Windows, launchd on macOS). A pass:
+
+- removes each copy under `.claude/worktrees/` that holds nothing that exists nowhere else — no
+  modified or untracked file, no commit that is on no remote and not already in the default branch
+  (a squash merge counts) — once nobody has touched it for 24 hours;
+- lifts a lock whose agent is no longer alive — its session is gone, or its transcript has not moved
+  for a day in a session still open (a lock names the session's pid, and one session open four days
+  held 30 of them); never the lock of an agent still at work, nor one written by hand;
+- empties the build outputs of any worktree idle three days — what `.castalie/worktrees.json`
+  declares under `regenerable` (`{ "regenerable": ["bin", "obj", "**/node_modules"] }`), else
+  `bin`, `obj`, `dist`, `build`, `target` and their kin — and only folders git reports as ignored;
+- warns when the disk that holds the repository falls under 10 % free, with the figure and what is
+  still recoverable;
+- writes one line of what it freed, shown once at the next end of turn when it freed something.
+
+`cs worktrees status` shows what a pass would do, copy by copy. `cs worktrees uninstall` removes the
+daily pass and keeps it removed; `CS_WORKTREE_SWEEP=off` stops the hook.
+
 ## The pane beside the transcript
 
 The row under the prompt names what this working copy has in hand. It does not say where
@@ -653,6 +682,7 @@ cs prompt gate scheduled-run 412 -- claude --print "/cs:scheduled-run 412"
                                                    # the stored prompt screened first; launched on a pass only
 cs proof-pack compute               # the delivery's proof, computed from the tools' files: proven, partly proven, not proven
 cs proof-pack push --spec 42 --pr <url>           # stores that pack on the spec; no code, only paths, counts and hashes
+cs worktrees status                 # what a sweep would remove, copy by copy, and what each one keeps
 ```
 
 Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first, a Jev
@@ -781,7 +811,7 @@ The output is gitignored. It is a build artifact, not a second copy to maintain.
 .claude-plugin/marketplace.json   # marketplace entry
 cs/
   .claude-plugin/plugin.json      # plugin manifest
-  hooks/hooks.json                # the guard on CLAUDE.md, the work in hand (taken on a write, stamped with its session, sorted by owner at every start), two Stop hooks (work recorded, slot given back), and the pane's module
+  hooks/hooks.json                # the guard on CLAUDE.md, the work in hand (taken on a write, stamped with its session, sorted by owner at every start), three Stop hooks (work recorded, slot given back, worktree sweep — the last also on SubagentStop and SessionEnd), and the pane's module
   hooks/register.ts               # the plugin's one hooks module: it registers both panes
   hooks/where/                    # the pane beside the transcript: its rows are pure functions, its bind is register.ts
   hooks/decisions/                # the decisions panel: cards and sheet are pure functions, panel.test.tsx plays the engine
@@ -800,6 +830,7 @@ cs/
   bin/auth.mjs                    # the workspace sign-in (OAuth, PKCE, loopback) and its renewal
   bin/config.mjs                  # where the endpoint and a hand-written token are read from
   bin/agent-tasks.mjs             # cs agent-tasks: this workstation's agent tasks, reported to Castalie
+  bin/worktree-sweep.mjs          # cs worktrees: agent copies and build outputs given back, the disk watched
   bin/prompt-screen.mjs           # cs prompt screen: Jev screens a text before an unattended agent reads it
   bin/prompt-gate.mjs             # cs prompt gate: a stored scheduled-run or resume prompt screened before it is played
   bin/proof-pack.mjs              # cs proof-pack: canary, compute, render, gate (instructions/proof-pack.md)
