@@ -5006,6 +5006,351 @@
         "success": "bool",
         "proof_packs": "object[]"
       }
+    },
+    {
+      "name": "bug_evaluation_review_case_upsert",
+      "kind": "write",
+      "description": "File or refresh one reviewer-bench case, keyed by repository_key + pr_url: a regression (the pull request that caused it, with the zones its fix or revert touched — a candidate until an expert confirms it) or a clean pull request (confirmed at once). Paths and line numbers only, never code. review-bench seed calls it. Owner or member.",
+      "params": [
+        {
+          "name": "kind",
+          "type": "string",
+          "required": true,
+          "description": "regression or clean.",
+          "enum": [
+            "regression",
+            "clean"
+          ]
+        },
+        {
+          "name": "source",
+          "type": "string",
+          "required": true,
+          "description": "regression_record, revert, sampled or manual.",
+          "enum": [
+            "regression_record",
+            "revert",
+            "sampled",
+            "manual"
+          ]
+        },
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": true,
+          "description": "owner/name as GitHub spells it."
+        },
+        {
+          "name": "pr_url",
+          "type": "string",
+          "required": true,
+          "description": "The pull request the lens reviews again."
+        },
+        {
+          "name": "expected_json",
+          "type": "string",
+          "required": false,
+          "description": "For a regression: [{file, line_start, line_end}], 1 to 50 zones."
+        },
+        {
+          "name": "fix_pr_url",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "base_sha",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "head_sha",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "bug_id",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "lens_hint",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_case_confirm",
+      "kind": "write",
+      "description": "An expert confirms a candidate reviewer-bench case. Owner or member.",
+      "params": [
+        {
+          "name": "case_id",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_case_exclude",
+      "kind": "write",
+      "description": "Take a reviewer-bench case out, with its reason. Owner or member.",
+      "params": [
+        {
+          "name": "case_id",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_cases_list",
+      "kind": "read",
+      "description": "Reviewer-bench cases, newest first, up to 200.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "description": "candidate, confirmed or excluded."
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": false,
+          "description": "regression or clean."
+        },
+        {
+          "name": "take",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "array"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_regressions_pending",
+      "kind": "read",
+      "description": "Tickets whose causing pull request was recorded (bug_record_regression) and that no case names yet: what review-bench seed files.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "data": "array"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_sample",
+      "kind": "read",
+      "description": "The confirmed cases a pass replays, half regressions and half clean: 30 drawn from the lens's reference for a change pass, 100 for the monthly pass.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": true,
+          "description": "owner/name as GitHub spells it."
+        },
+        {
+          "name": "lens",
+          "type": "string",
+          "required": true,
+          "description": "The lens key: lowercase letters, digits, - and _, up to 40 characters."
+        },
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "description": "change or monthly.",
+          "enum": [
+            "change",
+            "monthly"
+          ]
+        },
+        {
+          "name": "base_configuration_hash",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "size",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_run_start",
+      "kind": "write",
+      "description": "Open a pass of one lens configuration. Refused with budget_exhausted at the workspace's monthly ceiling — review-bench reports it and never blocks a pull request on it. Owner or member.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": true,
+          "description": "owner/name as GitHub spells it."
+        },
+        {
+          "name": "lens",
+          "type": "string",
+          "required": true,
+          "description": "The lens key: lowercase letters, digits, - and _, up to 40 characters."
+        },
+        {
+          "name": "scope",
+          "type": "string",
+          "required": true,
+          "description": "change or monthly.",
+          "enum": [
+            "change",
+            "monthly"
+          ]
+        },
+        {
+          "name": "configuration_hash",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "instructions_hash",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "model_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "effort",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "base_configuration_hash",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "trigger_pr_url",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "head_sha",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_run_record",
+      "kind": "write",
+      "description": "Record per-case results (caught, alarms, findings, cost, duration — counts, never code) and, with complete, close the pass: Castalie computes the note and the verdict (pass, blocked, baseline) against the reference on the common cases.",
+      "params": [
+        {
+          "name": "run_id",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "results_json",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "complete",
+          "type": "boolean",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_run_get",
+      "kind": "read",
+      "description": "One reviewer-bench pass, its verdict and its comparison with the reference.",
+      "params": [
+        {
+          "name": "run_id",
+          "type": "integer",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_runs_list",
+      "kind": "read",
+      "description": "Reviewer-bench passes, newest first.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "lens",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "array"
+      }
+    },
+    {
+      "name": "bug_evaluation_review_lenses",
+      "kind": "read",
+      "description": "The reviewer bench at a glance: each lens's reference and latest pass, the month's spending and ceiling, the cases confirmed and waiting.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
     }
   ]
 }

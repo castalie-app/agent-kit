@@ -170,6 +170,14 @@ phase, it is a decision, `decision_create` with one option per way of resolving 
 by `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`. Either way the run carries on with the
 findings that do not depend on it. The residual list after three rounds goes the same way.
 
+## Measuring a lens
+
+A lens a team owns — its instructions, its model, its effort — is scored by the reviewer bench
+(`review-bench`) on the team's own regressions and sound pull requests: in the pull request that
+modifies it, against the same cases its reference scored, and once a month on every lens. Only an
+`important` remark inside the zone a fix touched catches a regression; only an `important` remark on a
+sound pull request is noise. A nit costs the note nothing either way.
+
 ## Recording
 
 After the last round, **one** call to the Castalie MCP verb `review_record`:

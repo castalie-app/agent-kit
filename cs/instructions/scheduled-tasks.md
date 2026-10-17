@@ -177,3 +177,22 @@ Two kit skills, played one after the other in one weekly run:
 Cost: about 8 to 10 $ per pass at API price, about 40 $ a month, more on a week that drains a retro
 backlog. A workspace owner installs it — or brings an existing one up to date, never a second — with
 `/cs:review-rules --install`.
+
+## The monthly reviewer bench every workspace can install
+
+`review-bench --monthly`: files the new regressions (recorded with `bug_record_regression`, or named
+by a revert) and sound pull requests as cases, then replays every review lens on about 100 of them,
+half regressions and half sound. Each lens's pass becomes the reference a modification of that lens
+is compared with, in its own pull request (`cs review-bench check`, 30 cases, that lens alone).
+
+| Field | Value |
+|---|---|
+| title | `Monthly reviewer bench` |
+| cron | `0 5 1 * *` (the 1st, 05:00), time zone `Europe/Paris` |
+| model, effort | `claude-opus-5-5`, `low` (each replay carries its lens's own) |
+| maximum duration | 180 minutes |
+| prompt | `Run /cs:review-bench --monthly in <owner/name>.` |
+
+Cost: about 140 $ a pass for four lenses at API price, and about 10 $ per lens modification in the
+pull requests, under the workspace's monthly ceiling, which Castalie enforces (`budget_exhausted`).
+A workspace owner installs it with `/cs:review-bench --install`.
