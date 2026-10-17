@@ -152,3 +152,28 @@ judge. A workspace owner schedules it once:
 
 The launcher plays it like any other run, through `/cs:scheduled-run <run_id>`. The leads land in
 the leader's decisions inbox; the run closes `passed` with the first lead as its outcome.
+
+## The weekly review pass every workspace can install
+
+Two kit skills, played one after the other in one weekly run:
+
+- `review-rules` — acts on Castalie's ranking of the review panel's rules: at most three pull requests
+  a pass, each turning an undisputed rule into a write hook or an analyzer rule with its test, or
+  removing a rule the team keeps declining. Those pull requests are proposed, never merged by the
+  skill. Then it fixes, in one grouped pull request shipped through the host's path, the
+  pre-existing findings the panel saw outside a diff, and closes the rest with a reason.
+- `retro-review` — the 100 oldest pending retrospective suggestions: each claim verified against the
+  code, the ones that hold written where they belong in one pull request, every one closed with a
+  reason. It reports the count still pending.
+
+| Field | Value |
+|---|---|
+| title | `Weekly review pass` |
+| cron | `0 6 * * 1` (Monday 06:00), time zone `Europe/Paris` |
+| model, effort | `claude-opus-5-5`, `medium` |
+| maximum duration | 90 minutes |
+| prompt | `/cs:review-rules`, then `/cs:retro-review`; more than 100 suggestions left → a follow-up run the next day at 06:00 that runs `/cs:retro-review` alone |
+
+Cost: about 8 to 10 $ per pass at API price, about 40 $ a month, more on a week that drains a retro
+backlog. A workspace owner installs it — or brings an existing one up to date, never a second — with
+`/cs:review-rules --install`.

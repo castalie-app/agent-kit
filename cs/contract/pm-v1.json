@@ -2693,6 +2693,141 @@
       }
     },
     {
+      "name": "scheduled_task_create",
+      "kind": "write",
+      "description": "Create a scheduled task: a prompt a workstation plays unattended at the hours a cron expression names, in a time zone. Workspace OWNER only (forbidden otherwise, nothing written). review-rules --install creates the weekly review pass with it, after looking it up by title with scheduled_task_list so it never makes a second one.",
+      "params": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "At most 200 characters."
+        },
+        {
+          "name": "cron_expression",
+          "type": "string",
+          "required": true,
+          "description": "Five fields, read in time_zone, daylight saving included."
+        },
+        {
+          "name": "prompt_md",
+          "type": "string",
+          "required": true,
+          "description": "The prompt the robot plays: usually a versioned skill and its constraints."
+        },
+        {
+          "name": "description_md",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "time_zone",
+          "type": "string",
+          "required": false,
+          "description": "IANA zone, Europe/Paris by default."
+        },
+        {
+          "name": "max_duration_minutes",
+          "type": "int",
+          "required": false,
+          "description": "5 to 480, 60 by default."
+        },
+        {
+          "name": "recommended_model",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "recommended_effort",
+          "type": "string",
+          "required": false,
+          "description": "low, medium or high."
+        },
+        {
+          "name": "workstation_hostname",
+          "type": "string",
+          "required": false,
+          "description": "The workstation that plays it; omit for any."
+        },
+        {
+          "name": "is_enabled",
+          "type": "bool",
+          "required": false,
+          "description": "Defaults to true."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "task": "object"
+      }
+    },
+    {
+      "name": "scheduled_task_update",
+      "kind": "write",
+      "description": "Change a scheduled task; only the fields given change. Workspace OWNER only (forbidden otherwise, nothing written). Runs already created keep the prompt they were created with.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "cron_expression",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "prompt_md",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "description_md",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "time_zone",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "max_duration_minutes",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "recommended_model",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "recommended_effort",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "workstation_hostname",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "is_enabled",
+          "type": "bool",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "task": "object"
+      }
+    },
+    {
       "name": "scheduled_task_run_now",
       "kind": "write",
       "description": "Create a manual run of a scheduled task, due now or at not_before. Allowed on a disabled task, refused on an archived one (task_archived) and while a run of the task is pending or held (run_already_pending). Any member.",
@@ -3150,6 +3285,123 @@
           "type": "string",
           "required": true,
           "description": "The lesson + the rule to encode."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "id": "int",
+        "status": "string"
+      }
+    },
+    {
+      "name": "retro_suggestion_list",
+      "kind": "read",
+      "description": "List retro suggestions in one status (pending by default), paged, at most 200 a call. order=oldest works a queue from its oldest row; target_kind and origin_workspace narrow it (target_kind=kit: the kit improvements other workspaces sent to the kit's publisher). Carries proposed_diff. retro-review exports it to disk, never into context.",
+      "params": [
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "description": "pending, accepted, rejected or applied."
+        },
+        {
+          "name": "order",
+          "type": "string",
+          "required": false,
+          "description": "newest (default) or oldest."
+        },
+        {
+          "name": "target_kind",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "origin_workspace",
+          "type": "string",
+          "required": false,
+          "description": "The sending workspace's slug."
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "1 to 200, 50 by default."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "suggestions": "object[]"
+      }
+    },
+    {
+      "name": "retro_suggestion_decide",
+      "kind": "write",
+      "description": "Accept or reject a retro suggestion, with the reason a reader needs in three months. Never applied: that is retro_suggestion_mark_applied, once the accepted suggestion shipped.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "decision",
+          "type": "string",
+          "required": true,
+          "description": "accepted or rejected.",
+          "enum": [
+            "accepted",
+            "rejected"
+          ]
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "id": "int",
+        "status": "string"
+      }
+    },
+    {
+      "name": "retro_suggestion_mark_applied",
+      "kind": "write",
+      "description": "Mark an ACCEPTED retro suggestion applied once it shipped, with the pull request that carried it. Refused on a pending or rejected one (retro_suggestion_not_accepted).",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "pr_url",
+          "type": "string",
+          "required": false,
+          "description": "Absolute http or https address."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "id": "int",
+        "status": "string"
+      }
+    },
+    {
+      "name": "retro_suggestion_reset",
+      "kind": "write",
+      "description": "Put a decided retro suggestion back to pending, after the pull request that applied it was reverted.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
         }
       ],
       "returns": {
@@ -4490,6 +4742,164 @@
         "success": "bool",
         "finding": "object",
         "error": "string"
+      }
+    },
+    {
+      "name": "review_rule_ranking",
+      "kind": "read",
+      "description": "The review rules ranked over a window, without any model: per repository and rule_id, findings, rejected, rejection_rate, rounds_cost, pull_requests, last_seen, state, and proposal: automate (>= 10 findings, rejection rate <= 0.2), retire (>= 10, >= 0.8), watch, or none (a state set in the last 28 days). off-catalog is always watch. Ordered automate, retire, then rounds_cost, findings and rule_id. At most 100 rows. Any member reads. review-rules acts on it as it is, never re-ranked.",
+      "params": [
+        {
+          "name": "repository",
+          "type": "string",
+          "required": false,
+          "description": "owner/name as GitHub spells it. Omit for every repository."
+        },
+        {
+          "name": "since_days",
+          "type": "int",
+          "required": false,
+          "description": "7 to 365, 90 by default."
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "1 to 100, 100 by default."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "rules": "object[]"
+      }
+    },
+    {
+      "name": "review_rule_set_state",
+      "kind": "write",
+      "description": "Record what was decided about a ranked rule: proposed (a pull request is open, pr_url), automated (the check is merged), retired (the rule is removed) or kept. A state set in the last 28 days takes the rule out of the proposals. Owner or member, the robot included. Refusals: invalid_repository, invalid_rule_id (off-catalog has no state), invalid_status, invalid_pr_url.",
+      "params": [
+        {
+          "name": "repository",
+          "type": "string",
+          "required": true,
+          "description": "owner/name as GitHub spells it."
+        },
+        {
+          "name": "rule_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": true,
+          "description": "proposed, automated, retired or kept.",
+          "enum": [
+            "proposed",
+            "automated",
+            "retired",
+            "kept"
+          ]
+        },
+        {
+          "name": "pr_url",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "note",
+          "type": "string",
+          "required": false,
+          "description": "One sentence a reader needs in three months."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "state": "object"
+      }
+    },
+    {
+      "name": "review_finding_list",
+      "kind": "read",
+      "description": "Review findings, newest first, over a window, filtered by repository, rule_id, outcome and severity. severity=pre-existing with outcome=accepted_residual is the weekly queue of findings on lines outside a diff. At most 100 a page; total_count says how many match. Never a code excerpt: a path, a line, a one-line title, the reject_reason.",
+      "params": [
+        {
+          "name": "repository",
+          "type": "string",
+          "required": false,
+          "description": "owner/name as GitHub spells it. Omit for every repository."
+        },
+        {
+          "name": "rule_id",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": false,
+          "description": "autofixed, fixed, rejected or accepted_residual."
+        },
+        {
+          "name": "severity",
+          "type": "string",
+          "required": false,
+          "description": "important, nit or pre-existing."
+        },
+        {
+          "name": "since_days",
+          "type": "int",
+          "required": false,
+          "description": "7 to 365, 90 by default."
+        },
+        {
+          "name": "skip",
+          "type": "int",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "1 to 100, 50 by default."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "findings": "object[]",
+        "total_count": "int"
+      }
+    },
+    {
+      "name": "review_finding_resolve",
+      "kind": "write",
+      "description": "Answer a finding left open (accepted_residual), typically from the pre-existing queue: fixed, or rejected with reject_reason. Owner or member, the robot included. Refusals: invalid_outcome, reject_reason_required, finding_not_found, finding_not_open.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "outcome",
+          "type": "string",
+          "required": true,
+          "description": "fixed or rejected.",
+          "enum": [
+            "fixed",
+            "rejected"
+          ]
+        },
+        {
+          "name": "reject_reason",
+          "type": "string",
+          "required": false,
+          "description": "Required when rejected."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "finding": "object"
       }
     }
   ]
