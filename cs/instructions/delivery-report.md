@@ -42,6 +42,7 @@ Reports are **written in the user's language**, in full sentences readable by a 
 <status> — PR <link>. Spec: <Castalie link>.
 Phases (all ✅): <P1 … · P2 … · …>
 Acceptance: <N/M tests passed>.
+Proof: <proven | partly proven | not proven, in the language `cs proof-pack compute` printed it> — <its missing lines, or nothing missing>.
 Tests added: <G gated · O out-of-gate | no out-of-gate location declared by the host>.
 Follow-up: <next check date · title | none>.
 

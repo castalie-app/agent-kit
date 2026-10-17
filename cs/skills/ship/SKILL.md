@@ -51,20 +51,27 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
    - Escalate only `business_impact = true` findings to the user.
    - Each finding cites the host rule it applies (`rule_id` from `cs review-catalog`) and is
      recorded with its outcome after the last round, per `review-lenses.md` § Recording.
-4. **Mark the PR ready.** No blocking finding left open → mark it ready. A risk the panel or you still
+4. **Compute the proof pack** per `${CLAUDE_PLUGIN_ROOT}/instructions/proof-pack.md` § What the
+   delivery skills do with it, on the commit the panel left: evidence manifest, tests with their
+   result files, canary, `cs proof-pack compute`, then `cs proof-pack gate`. A pack the host's
+   pipeline blocks keeps the PR in draft until what it lists as missing is made up. Its `render`
+   block goes into the PR description unchanged, and `cs proof-pack push` stores it on the spec, the
+   ticket or the single deliverable's brief. Every later push to the branch computes it again.
+5. **Mark the PR ready.** No blocking finding left open and a pack the host's pipeline lets through → mark it ready. A risk the panel or you still
    see goes into the body as one sentence with how it is reverted — a flag, never a reason to wait.
-5. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to
+6. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to
    the release — § Delivery below. No question to anyone.
-6. **Sweep the decisions.** Before the merge, read the answers this change's decisions got and apply
+7. **Sweep the decisions.** Before the merge, read the answers this change's decisions got and apply
    them (`decision-sheet.md` § Read your answers at every step): a spec, a phase or a ticket that
    carries an answer nobody applied refuses to close. Once the release is observed, read the decisions still pending on what
    this change shipped (the spec with `decision_list(feature_spec_id=…, status=pending)`, a ticket or
    a brief with `scope=subject`, and the ones this session filed) and cancel, with their reason,
    those the shipped work settled — `shared-conventions.md` § Your decisions, at the start and at
    the end. A question that still stands is kept and named in the report.
-7. **Report.** Read `${CLAUDE_PLUGIN_ROOT}/instructions/delivery-report.md` and `shared-conventions.md` now,
-   not from memory. Print the PR link, the panel outcome (N found / M fixed, rounds), the merge and
-   release state you observed, and the naked verdict.
+8. **Report.** Read `${CLAUDE_PLUGIN_ROOT}/instructions/delivery-report.md` and `shared-conventions.md` now,
+   not from memory. Print the PR link, the panel outcome (N found / M fixed, rounds), the proof pack's
+   verdict and its `missing` lines as `compute` printed them, the merge and release state you
+   observed, and the naked verdict.
 
 ## Delivery — merge and release, without asking
 
