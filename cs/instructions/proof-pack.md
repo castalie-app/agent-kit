@@ -158,6 +158,13 @@ restores the file **byte for byte**, and writes `<evidence>/canary/canary.json`:
 The line's text is never written, only its place and hashes. `--file <path> --line <n>` picks the
 line by hand; the result file still decides.
 
+One canary at a time in a working copy. Before the break, the file's bytes and dates are copied to
+`<evidence>/canary/pending.*`; a run killed from outside leaves that copy, and the next `canary` or
+`compute` puts the file back — only while it still holds the broken bytes, never over an edit made
+since, which it refuses instead. A run longer than 30 minutes, or stopped, records nothing (exit 3).
+A run that passed and wrote no result file matching `--results` is a wrong glob, and is not retried
+on another line.
+
 ## What the script writes: the pack
 
 `<out>/proof-pack.json` (for machines) and `<out>/proof-pack.md` (for people).

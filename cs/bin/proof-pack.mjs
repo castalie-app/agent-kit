@@ -40,9 +40,9 @@ const TEXT_CAP = 200;
 const WALK_CAP = 200000;
 const MIN_IMAGE_BYTES = 100;
 const CANARY_TIMEOUT_MINUTES = 30;
-// What a glob never walks into: the repository's own store, dependencies and build outputs. Result
-// files are written where the evidence directory says, never in a build output.
-const SKIP_DIRS = new Set([".git", "node_modules", "bin", "obj", "packages", "dist"]);
+// What a glob never walks into: the repository's own store and its dependencies. Nothing else is
+// skipped, because a result file skipped without a word is a failure read as a pass.
+const SKIP_DIRS = new Set([".git", "node_modules"]);
 // A full commit hash. Anything else read from a pack — a PR description is anyone's text — never
 // reaches git as an argument.
 const COMMIT = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
@@ -224,7 +224,7 @@ function parseTrx(text) {
   const tests = [];
   for (const m of text.matchAll(/<UnitTestResult\b[^>]*>/g)) {
     const tag = m[0];
-    const name = cut(attr(tag, "testName") ?? "?");
+    const name = attr(tag, "testName") ?? "?";
     const outcome = (attr(tag, "outcome") ?? "").toLowerCase();
     if (outcome === "passed") tests.push({ name, outcome: "passed" });
     else if (["failed", "error", "timeout", "aborted"].includes(outcome)) tests.push({ name, outcome: "failed" });
@@ -248,7 +248,7 @@ function parseJunit(text) {
     const close = chunk.indexOf(">");
     if (close < 0) continue;
     const tag = chunk.slice(0, close + 1);
-    const name = cut([attr(tag, "classname"), attr(tag, "name")].filter(Boolean).join(".") || "?");
+    const name = [attr(tag, "classname"), attr(tag, "name")].filter(Boolean).join(".") || "?";
     const body = tag.endsWith("/>") ? "" : chunk.slice(close + 1).split("</testcase>")[0];
     if (/<(failure|error)\b/.test(body)) tests.push({ name, outcome: "failed" });
     else if (/<skipped\b/.test(body)) tests.push({ name, outcome: "skipped" });
@@ -376,21 +376,31 @@ export function canaryCandidates(root, change, production) {
   return out;
 }
 
-// Before a line is broken, its file's bytes and dates are copied beside the evidence. A run killed
-// from outside — a tool's time limit, a closed console — then leaves the copy, and the next
-// `canary` or `compute` puts the file back before anything else. The copy stays on this machine.
+// Before a line is broken, its file's bytes and dates are copied beside the evidence, with the hash
+// of the broken bytes and the process that broke them. A run killed from outside — a tool's time
+// limit, a closed console — leaves the copy, and the next `canary` or `compute` puts the file back
+// before anything else, but only while the file still holds the broken bytes: an edit made since is
+// never overwritten. The copy stays on this machine.
 function pendingPaths(root, evidence) {
   const dir = join(root, evidence, "canary");
   return { dir, meta: join(dir, "pending.json"), bytes: join(dir, "pending.bin") };
 }
 
+const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === "EPERM"; } };
+
 /** Puts back a file a canary left broken. Returns the file it restored, or null. */
-export function recoverCanary(root, evidence = ".tmp/proof") {
+export function recoverCanary(root, evidence = ".tmp/proof", { owner = null } = {}) {
   const pending = pendingPaths(root, evidence);
   if (!existsSync(pending.meta)) return null;
   const meta = readJson(pending.meta);
-  if (!meta?.file || !insideRoot(meta.file) || !existsSync(pending.bytes)) { rmSync(pending.meta, { force: true }); return null; }
+  if (!meta?.file || !insideRoot(meta.file) || !existsSync(pending.bytes)) { rmSync(pending.meta, { force: true }); rmSync(pending.bytes, { force: true }); return null; }
+  if (meta.pid !== owner && meta.pid !== process.pid && alive(meta.pid)) throw new InputError(`A canary is running on ${meta.file} (process ${meta.pid}): wait for it to end.`);
   const full = join(root, meta.file);
+  const now = existsSync(full) ? sha256(readFileSync(full)) : null;
+  if (now !== meta.mutatedSha256) {
+    if (now === meta.originalSha256) { rmSync(pending.bytes, { force: true }); rmSync(pending.meta, { force: true }); return null; }
+    throw new InputError(`${meta.file} changed since a canary broke it; its copy before the break is ${slash(relative(root, pending.bytes))}. Restore it by hand, then delete ${slash(relative(root, pending.meta))}.`);
+  }
   writeFileSync(full, readFileSync(pending.bytes));
   utimesSync(full, new Date(meta.atimeMs), new Date(meta.mtimeMs));
   rmSync(pending.bytes, { force: true }); rmSync(pending.meta, { force: true });
@@ -406,11 +416,17 @@ function canaryProduction(root, evidence, config) {
   return fromManifest.length ? fromManifest : ["**"];
 }
 
+/** The evidence and output directories as repository paths, so their files are never read as the change. */
+function withoutEvidence(root, change, dirs) {
+  const prefixes = dirs.filter(Boolean).map((d) => `${slash(relative(root, resolve(root, d))).replace(/\/+$/, "")}/`).filter((d) => d !== "/" && !d.startsWith("../"));
+  return { ...change, files: change.files.filter((f) => !prefixes.some((d) => f.startsWith(d))) };
+}
+
 /** Break one line, run the tests, restore the file byte for byte. Writes <evidence>/canary/canary.json. */
 export function runCanary({ root, evidence, base, run, results, file, line, config, log = console.log, attempts = 3, timeoutMinutes = CANARY_TIMEOUT_MINUTES }) {
   const recovered = recoverCanary(root, evidence);
   if (recovered) log(`canary: ${recovered} was left broken by an earlier run; it is restored.`);
-  const change = changeSet(root, base);
+  const change = withoutEvidence(root, changeSet(root, base), [evidence]);
   if (file && (!insideRoot(file) || !existsSync(join(root, file)))) throw new InputError(`--file ${file} is not a file of this repository.`);
   const picked = file ? [{ file: slash(file), line: Number(line), operator: null }] : canaryCandidates(root, change, canaryProduction(root, evidence, config)).slice(0, attempts);
   if (!picked.length) return { code: 3, message: "No changed production line carries an operator the canary can break. Name one with --file <path> --line <n>." };
@@ -427,29 +443,32 @@ export function runCanary({ root, evidence, base, run, results, file, line, conf
     if (!mutated) { if (file) return { code: 3, message: `${candidate.file}:${candidate.line} carries no operator the canary can break.` }; continue; }
     lines[candidate.line - 1] = mutated.line;
     const started = Date.now();
+    const broken = Buffer.from(lines.join(eol), "utf8");
     mkdirSync(pending.dir, { recursive: true });
     writeFileSync(pending.bytes, original);
-    writeFileSync(pending.meta, JSON.stringify({ file: candidate.file, atimeMs: stamp.atimeMs, mtimeMs: stamp.mtimeMs }));
+    // `wx`: one canary at a time in a working copy — a second one would save the first one's broken
+    // bytes as its own copy, and put them back.
+    try {
+      writeFileSync(pending.meta, JSON.stringify({ file: candidate.file, pid: process.pid, atimeMs: stamp.atimeMs, mtimeMs: stamp.mtimeMs,
+        originalSha256: sha256(original), mutatedSha256: sha256(broken) }), { flag: "wx" });
+    } catch { throw new InputError("Another canary holds this working copy: wait for it to end."); }
     // Restored byte for byte AND with its modification time: a restore that looked like an edit
-    // would make every result file written before the canary older than the code.
-    const restore = () => { recoverCanary(root, evidence); };
-    const onSignal = () => { restore(); process.exit(130); };
-    const signals = ["SIGINT", "SIGTERM", "SIGHUP", ...(process.platform === "win32" ? ["SIGBREAK"] : [])];
-    for (const s of signals) process.once(s, onSignal);
+    // would make every result file written before the canary older than the code. A signal is not
+    // delivered while the run is in progress, so the restore is the `finally`, and a run killed
+    // with this process is put back by the next one.
     let run_;
     try {
-      writeFileSync(full, lines.join(eol));
+      writeFileSync(full, broken);
       log(`canary: ${candidate.file}:${candidate.line} (${mutated.operator}), running: ${run}`);
       run_ = spawnSync(run, { cwd: root, shell: true, stdio: "inherit", timeout: timeoutMinutes * 60000 });
     } finally {
-      restore();
-      for (const s of signals) process.removeListener(s, onSignal);
+      recoverCanary(root, evidence, { owner: process.pid });
     }
+    if (run_.signal || run_.error) return { code: 3, message: `canary: the run ${run_.error?.code === "ETIMEDOUT" ? `took more than ${timeoutMinutes} minutes` : `was stopped (${run_.signal ?? run_.error?.code})`}; ${candidate.file} is restored, and nothing is recorded.` };
     const restored = sha256(readFileSync(full));
     const files = results.flatMap((g) => expandGlob(root, g)).filter((p) => mtime(join(root, p)) >= started - 1000);
     record = { schema: CANARY_SCHEMA, file: candidate.file, line: candidate.line, operator: mutated.operator,
-      originalSha256: sha256(original), restoredSha256: restored, ranAt: new Date(started).toISOString(), exitCode: run_.status,
-      ...(run_.error?.code === "ETIMEDOUT" ? { timedOut: true } : {}), results: files };
+      originalSha256: sha256(original), restoredSha256: restored, ranAt: new Date(started).toISOString(), exitCode: run_.status, results: files };
     if (files.length) break;
     // A run that finished green and wrote nothing matched a wrong glob, and the next line would miss
     // it the same way. Only a run that failed — a break that does not compile — tries the next line.
@@ -468,11 +487,15 @@ export function runCanary({ root, evidence, base, run, results, file, line, conf
 }
 
 // ── configuration and manifest ─────────────────────────────────────────────────────────────────
-export function loadConfig(root, path = join(root, ".castalie", "proof.json")) {
-  if (!existsSync(path)) return { modules: [], allowedSkips: [], pipeline: { ...DEFAULT_PIPELINE } };
+export function loadConfig(root, path) {
+  const given = path !== undefined;
+  path ??= join(root, ".castalie", "proof.json");
+  const name = given ? slash(path) : ".castalie/proof.json";
+  // A policy named on the command line and absent is a policy lost, never the defaults.
+  if (!existsSync(path)) { if (given) throw new InputError(`No policy at ${name}.`); return { modules: [], allowedSkips: [], pipeline: { ...DEFAULT_PIPELINE } }; }
   const c = readJson(path);
-  if (!c) throw new InputError(".castalie/proof.json is not valid JSON.");
-  if (c.schema && c.schema !== CONFIG_SCHEMA) throw new InputError(`.castalie/proof.json declares ${c.schema}; this script reads ${CONFIG_SCHEMA}.`);
+  if (!c) throw new InputError(`${name} is not valid JSON.`);
+  if (c.schema && c.schema !== CONFIG_SCHEMA) throw new InputError(`${name} declares ${c.schema}; this script reads ${CONFIG_SCHEMA}.`);
   return { ...c, modules: c.modules ?? [], allowedSkips: c.allowedSkips ?? [], pipeline: { ...DEFAULT_PIPELINE, ...(c.pipeline ?? {}) } };
 }
 
@@ -627,9 +650,9 @@ function judgeModule(ctx, m) {
     tally.files.push({ path: p, adapter: parsed.adapter, sha256: hash(p), modifiedAt: new Date(mtime(join(root, p))).toISOString() });
     for (const test of parsed.tests) {
       if (test.outcome === "passed") { tally.executed++; tally.passed++; }
-      else if (test.outcome === "failed") { tally.executed++; tally.failed++; tally.failedTests.push(test.name); }
+      else if (test.outcome === "failed") { tally.executed++; tally.failed++; tally.failedTests.push(cut(test.name)); }
       else if (skipRules.some((r) => r.re.test(test.name))) tally.allowedSkips++;
-      else { tally.skipped++; tally.skippedTests.push(test.name); }
+      else { tally.skipped++; tally.skippedTests.push(cut(test.name)); }
     }
   }
   const failedCount = tally.failedTests.length; const skippedCount = tally.skippedTests.length;
@@ -753,7 +776,7 @@ function judgeModule(ctx, m) {
 
 // ── the verdict, derived — by this script and by every reader ──────────────────────────────────
 export function verdictOf(checks) {
-  const states = checks.map((c) => c.state);
+  const states = checks.map((c) => c?.state);
   return states.includes("fail") ? "NOT_PROVEN" : states.includes("gap") ? "PARTLY_PROVEN" : "PROVEN";
 }
 
@@ -777,10 +800,10 @@ export function validatePack(pack) {
     for (const c of m.checks) {
       if (!STATES.includes(c?.state)) problems.push(`malformed: module ${cut(m.name, 80)}: check ${cut(c?.id, 40)} has unknown state ${cut(c?.state, 40)}`);
     }
-    if (m.verdict !== verdictOf(m.checks)) problems.push(`verdict_mismatch: module ${m.name} says ${m.verdict}, its checks give ${verdictOf(m.checks)}`);
+    if (m.verdict !== verdictOf(m.checks)) problems.push(`verdict_mismatch: module ${cut(m.name, 80)} says ${cut(m.verdict, 40)}, its checks give ${verdictOf(m.checks)}`);
   }
-  const overall = overallOf(pack.modules.map((m) => ({ verdict: Array.isArray(m.checks) ? verdictOf(m.checks) : "NOT_PROVEN" })));
-  if (pack.verdict !== overall) problems.push(`verdict_mismatch: the pack says ${pack.verdict}, its modules give ${overall}`);
+  const overall = overallOf(pack.modules.map((m) => ({ verdict: Array.isArray(m?.checks) ? verdictOf(m.checks) : "NOT_PROVEN" })));
+  if (pack.verdict !== overall) problems.push(`verdict_mismatch: the pack says ${cut(pack.verdict, 40)}, its modules give ${overall}`);
   for (const p of Array.isArray(pack.needsPerson) ? pack.needsPerson : []) if (p?.status !== "pending") problems.push(`person_item_ticked: "${cut(p?.item, 80)}" is ${cut(p?.status, 40)}; only a person decides it`);
   return problems;
 }
@@ -794,7 +817,7 @@ function subjectOf(subject) {
 }
 
 // ── compute ────────────────────────────────────────────────────────────────────────────────────
-export function computePack({ root, evidence = ".tmp/proof", base = "origin/main", lang, generatorVersion = kitVersion(), now = new Date() }) {
+export function computePack({ root, evidence = ".tmp/proof", out = evidence, base = "origin/main", lang, generatorVersion = kitVersion(), now = new Date() }) {
   const config = loadConfig(root);
   const language = lang ?? config.lang ?? "en";
   const t = T[language] ?? T.en;
@@ -804,14 +827,13 @@ export function computePack({ root, evidence = ".tmp/proof", base = "origin/main
   if (manifest.schema && manifest.schema !== EVIDENCE_SCHEMA) throw new InputError(`evidence.json declares ${manifest.schema}; this script reads ${EVIDENCE_SCHEMA}.`);
   const claimed = [];
   findClaims(manifest, "evidence.json", claimed);
-  recoverCanary(root, evidence);
-  const change = changeSet(root, base);
+  const restoredFile = recoverCanary(root, evidence);
   // The evidence is not the change: a result file or a screenshot written under the evidence
-  // directory would otherwise count as code newer than itself.
-  const evidenceDir = `${slash(evidence).replace(/\/+$/, "")}/`;
-  change.files = change.files.filter((f) => !f.startsWith(evidenceDir));
+  // directory, or the pack written under the output one, would otherwise count as code newer than itself.
+  const change = withoutEvidence(root, changeSet(root, base), [evidence, out]);
   const { judged, notJudged } = modulesToJudge(config, manifest, change);
   const ctx = { root, change, config, t, evidence: slash(evidence), evidenceFiles: new Set(), ignored: [], walks: new Map(), parsed: new Map(), hashes: new Map() };
+  if (restoredFile) ctx.ignored.push({ path: restoredFile, reason: "restored: a canary had left it broken" });
   const modules = judged.map((m) => judgeModule(ctx, m));
   const needsPerson = (Array.isArray(manifest.person) ? manifest.person : []).map((item) => ({ item: cut(item && typeof item === "object" ? item.item : item), status: "pending" }));
   const shots = modules.reduce((n, m) => n + m.journeySteps, 0);
@@ -955,7 +977,7 @@ function options(args) {
     const a = args[i];
     if (a.startsWith("--")) {
       const key = a.slice(2);
-      const value = args[i + 1] && !args[i + 1].startsWith("--") ? args[++i] : true;
+      const value = args[i + 1] !== undefined && !args[i + 1].startsWith("--") ? args[++i] : true;
       if (key === "results") (o.results ??= []).push(value); else o[key] = value;
     } else o._.push(a);
   }
@@ -990,7 +1012,7 @@ export function runCli(args, { root = process.cwd(), log = console.log, error = 
         return r.code;
       }
       case "compute": {
-        const pack = computePack({ root, evidence, base, lang });
+        const pack = computePack({ root, evidence, out, base, lang });
         mkdirSync(join(root, out), { recursive: true });
         writeFileSync(join(root, out, "proof-pack.json"), JSON.stringify(pack, null, 2) + "\n");
         writeFileSync(join(root, out, "proof-pack.md"), renderMarkdown(pack));
@@ -1018,6 +1040,7 @@ export function runCli(args, { root = process.cwd(), log = console.log, error = 
           pack = readJson(resolve(root, packPath)) ?? null;
           if (!pack) throw new InputError(`No readable pack at ${packPath}.`);
         }
+        if (o.head === true) throw new InputError("--head needs the head commit's hash.");
         const head = typeof o.head === "string" ? o.head : undefined;
         const r = gatePack({ root, pack, body, head, config });
         const L = LABELS.en;

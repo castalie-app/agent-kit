@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import { computePack, gatePack, meetsExpectation, mutateLine, packFromBody, parseTestResults, renderBlock, runCanary, loadConfig, validatePack, verdictOf } from "./proof-pack.mjs";
 
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
@@ -40,6 +41,7 @@ const CONFIG = {
   modules: [{ name: "app", code: ["src/**"], production: ["src/**/*.js"], ui: ["src/**/*.cshtml"], tests: [".tmp/proof/tests/*.trx"] }],
 };
 
+const sha = (b) => createHash("sha256").update(b).digest("hex");
 const later = (root, path) => { const t = new Date(Date.now() + 5000); utimesSync(join(root, path), t, t); };
 const check = (pack, id) => pack.modules[0].checks.find((c) => c.id === id);
 
@@ -332,11 +334,35 @@ test("review round 1: the canary works without a host declaration, and a file a 
   assert.equal(r.code, 0, r.message);
   assert.deepEqual(readFileSync(join(root, "src/app.js")), before);
   // A run killed mid-flight: the file is broken and the copy is beside the evidence.
-  write(root, ".tmp/proof/canary/pending.bin", before);
-  write(root, ".tmp/proof/canary/pending.json", JSON.stringify({ file: "src/app.js", atimeMs: Date.now(), mtimeMs: Date.now() }));
+  const pending = () => {
+    write(root, ".tmp/proof/canary/pending.bin", before);
+    write(root, ".tmp/proof/canary/pending.json", JSON.stringify({ file: "src/app.js", pid: 2 ** 22 + 7, atimeMs: Date.now(), mtimeMs: Date.now(),
+      originalSha256: sha(before), mutatedSha256: sha(Buffer.from("broken\n")) }));
+  };
+  pending();
   write(root, "src/app.js", "broken\n");
   computePack({ root, base });
   assert.deepEqual(readFileSync(join(root, "src/app.js")), before);
+  // An edit made since the break is never overwritten by the old copy: the run is refused instead.
+  pending();
+  write(root, "src/app.js", "a person's edit\n");
+  assert.throws(() => computePack({ root, base }), /changed since a canary broke it/);
+  assert.equal(readFileSync(join(root, "src/app.js"), "utf8"), "a person's edit\n");
+});
+
+test("review round 2: no directory is skipped by a glob, and the evidence directory is never the change, however it is spelled", () => {
+  const { root, base } = repo({ config: { ...CONFIG, modules: [{ ...CONFIG.modules[0], tests: ["**/*.trx"] }] } });
+  write(root, ".gitignore", ".tmp/\npackages/\n");
+  write(root, ".tmp/proof/tests/r.trx", trx([["App.Same", "Passed"]]));
+  write(root, "packages/web/bin/r.trx", trx([["Web.Broken", "Failed"]]));
+  later(root, ".tmp/proof/tests/r.trx"); later(root, "packages/web/bin/r.trx");
+  assert.equal(check(computePack({ root, base }), "tests").state, "fail", "a failing result file under bin/ is read");
+  const { root: r2, base: b2 } = repo({ config: CONFIG });
+  write(r2, ".gitignore", "");
+  write(r2, ".tmp/proof/tests/r.trx", trx([["App.Same", "Passed"]]));
+  later(r2, ".tmp/proof/tests/r.trx");
+  write(r2, ".tmp/proof/evidence.json", JSON.stringify({ schema: "castalie-proof-evidence/1", modules: [{ name: "app" }] }));
+  assert.equal(check(computePack({ root: r2, base: b2, evidence: "./.tmp/proof" }), "tests").state, "pass");
 });
 
 test("review round 1: the manifest's free text is cut, its subject kept to the work item", () => {
