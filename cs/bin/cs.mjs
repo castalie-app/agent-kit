@@ -41,6 +41,7 @@
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
 //   cs review-catalog [--markdown]     # the host's rules with the ids review findings cite (review-catalog.mjs)
+//   cs review-bench check|monthly|seed # the review lenses scored on the team's regressions (review-bench.mjs)
 //   cs attach <brief|spec|bug> <id> <file...>   # join local files to a thread (attach.mjs)
 //   cs login [<workspace url>]         # sign this machine in when it has no token (auth.mjs)
 //   cs proof-pack <command>            # compute a delivery's proof from the tools' files (proof-pack.mjs)
@@ -289,6 +290,9 @@ const HELP = `cs — Castalie project-management CLI
   cs review-catalog [--root <dir>] [--markdown]
                                     # the host's instruction files, one rule per heading, with the
                                     #   rule_id a review finding cites
+  cs review-bench check|monthly|seed|lenses
+                                    # the review lenses scored on the team's own regressions: only
+                                    #   the modified lens in a pull request, every lens once a month
   cs bug-evaluation help              # local isolated bug-evaluation runner
 
 Config: env CASTALIE_ENDPOINT / CASTALIE_TOKEN, or .cs/config.json { "endpoint", "token" }.
@@ -333,6 +337,11 @@ async function main() {
   if (cmd === "codex") {
     const projection = await import("./build-codex.mjs");
     return projection.runCli(rest);
+  }
+  // `review-bench` answers with an exit code a pull request's check branches on (1 = a lens is blocked).
+  if (cmd === "review-bench") {
+    const bench = await import("./review-bench.mjs");
+    return bench.runCli(rest);
   }
   if (cmd === "review-catalog") {
     const catalog = await import("./review-catalog.mjs");
