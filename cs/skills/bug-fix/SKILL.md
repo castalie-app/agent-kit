@@ -225,6 +225,11 @@ Two proofs, both required:
 - **The user's own path**, replayed. Same input, same screen, same query — the reproduction from
   step 1, now producing the right answer. This is what "verified" means; a green suite is not it.
 
+Both proofs are recorded as files for the proof pack (`${CLAUDE_PLUGIN_ROOT}/instructions/proof-pack.md`):
+the tests' result file, the replayed path as screenshots under `journey`, a replayed query as a
+result file under `queries`, in `.tmp/proof/evidence.json` with the ticket as its `subject`. `ship`
+computes the pack from them; nobody writes the verdict.
+
 ### 6. Record what it would take to see it earlier
 
 Add a follow-up check with `mcp__castalie__followup_check_add`, or in their system if that is where
@@ -274,7 +279,8 @@ Four lines, business first:
 1. **What was broken**, in the words of someone who suffered it — not the exception name.
 2. **What it turned out to be**: the nature you settled, and for a real defect the cause, the
    layer it lived in, and the change that brought it in.
-3. **What proves it is fixed**: the test that went red then green and where it landed (gate or
+3. **What proves it is fixed**: the proof pack's computed verdict and its `missing` lines, quoted
+   as `compute` printed them; the test that went red then green and where it landed (gate or
    out-of-gate location, or none declared by the host), and the replayed path.
 4. **The pull-request link**, the merge and release state you observed, and the follow-up check
    you left behind.

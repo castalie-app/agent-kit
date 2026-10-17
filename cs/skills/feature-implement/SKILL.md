@@ -71,8 +71,12 @@ watchdog never fires — ideal.
      it `mcp__castalie__feature_spec_set_phase_status(phaseId, status="Done", prUrl=<your PR url>)`.
 6. **Verify against acceptance tests.** Walk the spec's acceptance tests (see
    `${CLAUDE_PLUGIN_ROOT}/instructions/acceptance-criteria.md`); set each status; screenshot visual blocks.
+   Record that evidence as files for the proof pack (`${CLAUDE_PLUGIN_ROOT}/instructions/proof-pack.md`):
+   each visual block's screenshot as a `journey` step, each verification query's result under
+   `queries`, in `.tmp/proof/evidence.json` with the spec as its `subject`.
 7. **Ship.** Invoke `ship` with the spec/phase ids and case evidence: it opens/finishes the PR through
-   the self-review panel, reusing the coverage and checking for gaps, then hands the ready PR to the
+   the self-review panel, reusing the coverage and checking for gaps, computes the proof pack and
+   pushes it on the spec, then hands the ready PR to the
    host's merge and release path and follows it to the release (`ship` § Delivery). Each panel
    finding cites its host rule and is recorded with its outcome (`review-lenses.md` § Recording).
    Resolve `feature-implement`/`merge_mode` (`${CLAUDE_PLUGIN_ROOT}/instructions/workflow-defaults.md`): it

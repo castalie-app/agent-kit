@@ -26,6 +26,7 @@
 //   GET  /api/pm/spec/<id>                 -> { spec, phases, risks, acceptance_tests }
 //   GET  /api/pm/content/<type>/<id>/body  -> text/markdown
 //   PUT  /api/pm/content/<type>/<id>/body  <- { "Body": "<markdown>" }
+//   POST /api/pm/proof-packs/<kind>/<id>   <- { "pack": {…}, "pr_url": "…" }  (kind = bug | spec | brief)
 //
 // Commands:
 //   cs search <query>
@@ -42,6 +43,8 @@
 //   cs review-catalog [--markdown]     # the host's rules with the ids review findings cite (review-catalog.mjs)
 //   cs attach <brief|spec|bug> <id> <file...>   # join local files to a thread (attach.mjs)
 //   cs login [<workspace url>]         # sign this machine in when it has no token (auth.mjs)
+//   cs proof-pack <command>            # compute a delivery's proof from the tools' files (proof-pack.mjs)
+//   cs proof-pack push (--bug|--spec|--brief) <id>   # store the computed pack on that work item
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -216,6 +219,28 @@ async function cmdLogin(args) {
   }
 }
 
+// Stores the pack `proof-pack compute` wrote on the bug, spec or brief it proves. The pack is checked
+// here first by the same rules Castalie applies — schema, and a verdict that follows from its checks —
+// so a refusal is read before a round trip. It carries paths, counts and hashes, never a file's content.
+async function cmdProofPackPush(args) {
+  const kinds = ["bug", "spec", "brief"].filter((k) => args[k] !== undefined);
+  const kind = kinds[0];
+  const id = kind ? args[kind] : undefined;
+  if (kinds.length !== 1 || typeof id !== "string" || !/^\d+$/.test(id)) {
+    die("Usage: cs proof-pack push (--bug|--spec|--brief) <id> [--pack <file>] [--pr <url>]");
+  }
+  const proof = await import("./proof-pack.mjs");
+  const packPath = typeof args.pack === "string" ? args.pack : join(".tmp", "proof", "proof-pack.json");
+  let pack;
+  try { pack = JSON.parse(readFileSync(packPath, "utf8")); }
+  catch (e) { die(`No readable pack at ${packPath} (${e.message}). Run 'cs proof-pack compute' first.`); }
+  const problems = proof.validatePack(pack);
+  if (problems.length) die(`The pack at ${packPath} is refused before it is sent:\n${problems.join("\n")}`);
+  const prUrl = typeof args.pr === "string" ? args.pr : null;
+  const stored = await request("POST", `/api/pm/proof-packs/${kind}/${id}`, { json: { pack, pr_url: prUrl } });
+  console.log(`Stored the pack on ${kind} ${id}: ${pack.verdict}, commit ${String(pack.commit ?? "").slice(0, 7)}${stored.url ? ` — ${stored.url}` : ""}`);
+}
+
 // ── arg parsing / output ────────────────────────────────────────────────────
 function parseArgs(argv) {
   const out = { _: [] };
@@ -247,6 +272,10 @@ const HELP = `cs — Castalie project-management CLI
                                     #   (--no-compress, --max-width <px>, --quality <1-100>,
                                     #    --name <shown name>, --message <id>)
   cs login [<workspace url>]        # sign this machine in when it has no token
+  cs proof-pack help                # the proof of a delivery, computed from the tools' files:
+                                    #   canary, compute, render, gate (instructions/proof-pack.md)
+  cs proof-pack push (--bug|--spec|--brief) <id> [--pack <file>] [--pr <url>]
+                                    # store the computed pack on that work item in Castalie
   cs agent-tasks help               # declare this workstation's agent tasks to Castalie
   cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
                                     # screen a text written elsewhere with Jev before an unattended
@@ -291,6 +320,14 @@ async function main() {
   if (cmd === "prompt") {
     const screen = await import("./prompt-screen.mjs");
     process.exitCode = await screen.runCli(rest);
+    return;
+  }
+  // `proof-pack` answers with its verdict as an exit code, and repeats `--results`, which the shared
+  // parser would collapse. Only `push` talks to Castalie, so only `push` stays here.
+  if (cmd === "proof-pack" && rest[0] === "push") return cmdProofPackPush(parseArgs(rest.slice(1)));
+  if (cmd === "proof-pack") {
+    const proof = await import("./proof-pack.mjs");
+    process.exitCode = proof.runCli(rest);
     return;
   }
   if (cmd === "codex") {

@@ -650,6 +650,8 @@ cs review-catalog --markdown        # the host's rules, one per heading, with th
 cs prompt screen --kind master_red --file msg.md   # Jev screens a text before an unattended agent reads it
 cs prompt gate scheduled-run 412 -- claude --print "/cs:scheduled-run 412"
                                                    # the stored prompt screened first; launched on a pass only
+cs proof-pack compute               # the delivery's proof, computed from the tools' files: proven, partly proven, not proven
+cs proof-pack push --spec 42 --pr <url>           # stores that pack on the spec; no code, only paths, counts and hashes
 ```
 
 Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first, a Jev
@@ -799,6 +801,7 @@ cs/
   bin/agent-tasks.mjs             # cs agent-tasks: this workstation's agent tasks, reported to Castalie
   bin/prompt-screen.mjs           # cs prompt screen: Jev screens a text before an unattended agent reads it
   bin/prompt-gate.mjs             # cs prompt gate: a stored scheduled-run or resume prompt screened before it is played
+  bin/proof-pack.mjs              # cs proof-pack: canary, compute, render, gate (instructions/proof-pack.md)
   bin/image.mjs                   # image compression with sharp, installed on first use
   .mcp.json                       # the plugin's own MCP servers: playwright, playwright-attach, castalie-files
 types/claude-code.d.ts            # the function-hooks API, as the engine wrote it; both panes are typed against this

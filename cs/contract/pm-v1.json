@@ -108,6 +108,12 @@
         "path": "/api/pm/content/{type}/{id}/body",
         "body": "{ \"Body\": \"<markdown>\" }",
         "note": "a field absent from the submitted markdown is left unchanged; type = feature-brief | feature-spec | bug. A bug section is written only when it changes, by the same rule as bug_update_field, and its history keeps the value it replaced"
+      },
+      {
+        "method": "POST",
+        "path": "/api/pm/proof-packs/{kind}/{id}",
+        "body": "{ \"pack\": { …castalie-proof-pack/1… }, \"pr_url\": \"<url>\" }",
+        "note": "kind = bug | spec | brief. The same service and the same right as proof_pack_record; the same refusals. `cs proof-pack push` checks the pack by the same rules before it sends it."
       }
     ]
   },
@@ -4882,6 +4888,116 @@
       "returns": {
         "success": "bool",
         "finding": "object"
+      }
+    },
+    {
+      "name": "proof_pack_record",
+      "kind": "write",
+      "description": "Store the proof pack `cs proof-pack compute` wrote (schema castalie-proof-pack/1, instructions/proof-pack.md) on the bug, spec or brief it proves. Castalie validates the schema and derives the verdict again from the checks: a pack whose stated verdict disagrees is refused with verdict_mismatch and nothing is written. The latest pack of a subject is the one that counts; earlier ones stay readable. A pack carries paths, line numbers, test names, counts and hashes — never code, a diff or a file content. The same right as the sheet: writing on that bug, spec or brief. Refusals: unknown_schema, verdict_mismatch, person_item_ticked, pack_too_large (256 KiB), subject_not_found, forbidden.",
+      "params": [
+        {
+          "name": "subject_type",
+          "type": "string",
+          "required": true,
+          "description": "bug, spec or brief — the work item the pack proves.",
+          "enum": [
+            "bug",
+            "spec",
+            "brief"
+          ]
+        },
+        {
+          "name": "subject_id",
+          "type": "int",
+          "required": true,
+          "description": "The id of that bug, spec or brief."
+        },
+        {
+          "name": "pack",
+          "type": "object",
+          "required": true,
+          "description": "The pack as compute wrote it in proof-pack.json, unchanged."
+        },
+        {
+          "name": "pr_url",
+          "type": "string",
+          "required": false,
+          "description": "The pull request whose description carries the same pack."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "proof_pack": "object",
+        "error": "string"
+      }
+    },
+    {
+      "name": "proof_pack_get",
+      "kind": "read",
+      "description": "The latest proof pack stored on a bug, spec or brief — its verdict, its checks, what is missing and what waits for a person, with the commit, the fingerprint, the pull request and who pushed it — or proof_pack null when none was ever pushed. feature-followup reads it first and replays only missing and needsPerson.",
+      "params": [
+        {
+          "name": "subject_type",
+          "type": "string",
+          "required": true,
+          "description": "bug, spec or brief — the work item the pack proves.",
+          "enum": [
+            "bug",
+            "spec",
+            "brief"
+          ]
+        },
+        {
+          "name": "subject_id",
+          "type": "int",
+          "required": true,
+          "description": "The id of that bug, spec or brief."
+        },
+        {
+          "name": "id",
+          "type": "int",
+          "required": false,
+          "description": "A given pack, from proof_pack_list, instead of the latest."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "proof_pack": "object"
+      }
+    },
+    {
+      "name": "proof_pack_list",
+      "kind": "read",
+      "description": "Every proof pack pushed on a bug, spec or brief, newest first: id, verdict, commit, fingerprint, pull request, author, date. Without the pack itself — proof_pack_get reads one.",
+      "params": [
+        {
+          "name": "subject_type",
+          "type": "string",
+          "required": true,
+          "description": "bug, spec or brief — the work item the pack proves.",
+          "enum": [
+            "bug",
+            "spec",
+            "brief"
+          ]
+        },
+        {
+          "name": "subject_id",
+          "type": "int",
+          "required": true,
+          "description": "The id of that bug, spec or brief."
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false,
+          "description": "1 to 100, 20 by default."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "proof_packs": "object[]",
+        "total_count": "int"
       }
     }
   ]
