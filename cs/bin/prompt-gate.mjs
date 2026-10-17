@@ -26,8 +26,26 @@ import { resolve } from "node:path";
 import { readConfigFrom, resolveToken } from "./agent-tasks.mjs";
 import { resolveConnection } from "./auth.mjs";
 import { bareEndpoint } from "./config.mjs";
-import { callTool } from "./inbox.mjs";
 import { hostKeyEnv, screenPrompt } from "./prompt-screen.mjs";
+
+/** One stateless `tools/call`, as `cs agent-tasks report` makes it; throws instead of exiting. */
+export async function callTool({ endpoint, token, fetch }, name, args) {
+  const response = await fetch(`${endpoint}/mcp`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, accept: "application/json, text/event-stream", "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`${name} → HTTP ${response.status}: ${text.slice(0, 300)}`);
+  const dataLine = text.split(/\r?\n/).find((line) => line.startsWith("data:"));
+  const envelope = JSON.parse(dataLine ? dataLine.slice(5).trim() : text);
+  if (envelope.error) throw new Error(`${name}: ${envelope.error.message || envelope.error.code}`);
+  const payload = envelope.result?.content?.find((c) => c.type === "text")?.text;
+  const result = payload ? JSON.parse(payload) : envelope.result;
+  if (result?.success === false) throw new Error(`${name}: ${result.error || "refused"}`);
+  return result;
+}
 
 /** The text a session would play, exactly as stored, with what the run or the answer adds to it. */
 export function scheduledRunText(run) {

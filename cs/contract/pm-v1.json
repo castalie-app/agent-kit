@@ -3857,24 +3857,6 @@
           "description": "Which agent is asking: used to route the answer and the reader's questions back."
         },
         {
-          "name": "asker_session_id",
-          "type": "string",
-          "required": false,
-          "description": "With resume_mode asker: the asking Claude session's id, a UUID (CLAUDE_CODE_SESSION_ID). When the person answers, Castalie sends this session an agent message carrying the answer and resume_state_md. The kit's hook fills it, with asker_hostname and asker_worktree, when left out."
-        },
-        {
-          "name": "asker_hostname",
-          "type": "string",
-          "required": false,
-          "description": "The workstation the asking session runs on (COMPUTERNAME). Required with asker_session_id."
-        },
-        {
-          "name": "asker_worktree",
-          "type": "string",
-          "required": false,
-          "description": "The working copy the asking session runs in."
-        },
-        {
           "name": "plan_point",
           "type": "string",
           "required": false,

@@ -98,7 +98,7 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
 refusal launches nothing: the prompt reaches an agent that holds the workstation's credentials, with
 nobody watching. For a scheduled run that is step 3, and the first gesture of `scheduled-run` once it knows the run
 is its own. The
-screen and its thresholds are in `${CLAUDE_PLUGIN_ROOT}/instructions/agent-inbox.md`.
+screen and its thresholds are in `${CLAUDE_PLUGIN_ROOT}/instructions/prompt-screen.md`.
 
 ## How to name and describe the task
 

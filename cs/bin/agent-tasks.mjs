@@ -253,7 +253,6 @@ function resolveEndpoint(args, config) {
 /**
  * The token, read only for the endpoint it was issued for: CASTALIE_TOKEN (set by whoever runs the
  * reporter), .cs/config.json's when its own endpoint is this one, else Claude Code's for <endpoint>/mcp.
- * `cs inbox watch` reads it the same way.
  */
 export function resolveToken(endpoint, config = {}) {
   const configToken = config.token && bareEndpoint(config.endpoint) === bareEndpoint(endpoint) ? config.token : null;
@@ -432,8 +431,7 @@ function schtasks(...args) {
 
 /**
  * Registers (or replaces) a current-user task running `<command> <argument>` (conhost.exe unless
- * told otherwise) every `every` minutes, then starts it once. Shared by `cs agent-tasks install`
- * and `cs inbox install`.
+ * told otherwise) every `every` minutes, then starts it once.
  */
 export function registerScheduledTask({ name, every, argument, workingDirectory, description, elevated = false, limit, command = "conhost.exe" }) {
   // Registered from an XML through schtasks, not with Register-ScheduledTask: that cmdlet answers
