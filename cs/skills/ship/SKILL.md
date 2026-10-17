@@ -1,12 +1,12 @@
 ---
 name: ship
-description: Commit your work, open a PR, run a self-review panel (correctness / security / conventions / perf sub-agents over the diff), fix the blockers, then hand the ready PR to the host's own merge and release path and follow it to the release — without asking anyone's authorisation. Stops at "PR ready" only when the person asks it in the current turn, the workspace's administrator denies it, or the host declares no merge path. The diff stays in your repo; Castalie receives only the findings' one-line titles and outcomes.
+description: Commit your work, open a PR, run a self-review panel (correctness / security / conventions / perf sub-agents over the diff, at the effort its risk calls for), fix the important defects, then hand the ready PR to the host's own merge and release path and follow it to the release — without asking anyone's authorisation. Stops at "PR ready" only when the person asks it in the current turn, the workspace's administrator denies it, or the host declares no merge path. The diff stays in your repo; Castalie receives only the findings' one-line titles and outcomes.
 ---
 
 # ship — commit, PR, self-review panel, merge and release
 
 Take a working change from "code written" to released: commit, push, open the PR, run an adversarial
-self-review panel over the diff, auto-fix the blockers, then hand the ready PR to the host's own
+self-review panel over the diff, auto-fix the important defects, then hand the ready PR to the host's own
 merge and release path (§ Delivery below) and follow it through. **Nobody is asked for an
 authorisation to merge or to ship**: the panel and the host's quality gate are the review.
 
@@ -33,7 +33,8 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
 2. **Open the PR** (draft) against the base branch, with a concise body: what changed, why, how it was
    verified. Link the Castalie spec if this ships one.
 3. **Run the review panel** per `${CLAUDE_PLUGIN_ROOT}/instructions/review-lenses.md`:
-   - Detect mode (light for docs-only, panel of 4 lenses otherwise) — and, on a visual diff, the
+   - Choose the effort by the change's risk — quick (one generalist lens), standard (the 4 lenses),
+     deep (the panel plus a second pass on correctness and security) — and, on a visual diff, the
      **design** lens joins the panel: the `design-reviewer` agent, given the repository's design system.
    - Spawn the lenses as fresh sub-agents over the full diff + the changed files read in full + the
      repo's own conventions — **including the host's local rules, quoted into the brief** and not
@@ -41,14 +42,17 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
      context carries the root instruction file and nothing beside it, so a conventions lens given a
      path reviews against half a doctrine and reports a clean diff. Each is adversarial — find
      problems, never validate.
-   - Dedup + confirm each finding by re-reading the cited lines; drop false positives.
-   - Auto-fix every retained blocker (and clear-win warning) with `business_impact = false`; commit;
-     re-run the panel on the new HEAD; max 3 rounds.
+   - Dedup + confirm each finding by re-reading the cited lines; a refuted one never gates and is
+     closed as `rejected`, its refutation as the reason.
+   - Only an `important` correctness or security finding blocks; a `nit` is reported, never fixed; a
+     `pre-existing` one is left for the weekly pass. Auto-fix every blocking finding with
+     `business_impact = false`; commit; re-review the new diff only; max 3 rounds, then re-plan the
+     change before anything else.
    - Escalate only `business_impact = true` findings to the user.
    - Each finding cites the host rule it applies (`rule_id` from `cs review-catalog`) and is
      recorded with its outcome after the last round, per `review-lenses.md` § Recording.
-4. **Mark the PR ready.** 0 blockers → mark it ready. A risk the panel or you still see goes into
-   the body as one sentence with how it is reverted — a flag, never a reason to wait.
+4. **Mark the PR ready.** No blocking finding left open → mark it ready. A risk the panel or you still
+   see goes into the body as one sentence with how it is reverted — a flag, never a reason to wait.
 5. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to
    the release — § Delivery below. No question to anyone.
 6. **Sweep the decisions.** Before the merge, read the answers this change's decisions got and apply

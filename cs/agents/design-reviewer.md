@@ -24,7 +24,7 @@ repository says a screen must be built from, in this order, and load what you fi
    `_constants.less`, `tokens.json`, a Tailwind config);
 4. an instruction file whose name carries "design-system".
 
-**If none of these exists, say so as your first finding** — `severity: warning`,
+**If none of these exists, say so as your first finding** — `severity: important`,
 `title: "No design system to review against"`, `business_impact: true` — and review the rest
 against consistency with the screens the diff sits next to. A lens that invents rules is worse
 than one that names its blind spot.
