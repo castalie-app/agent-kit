@@ -42,6 +42,7 @@
 //   cs codex                           # project this kit into the layouts Codex reads
 //   cs review-catalog [--markdown]     # the host's rules with the ids review findings cite (review-catalog.mjs)
 //   cs review-bench check|monthly|seed # the review lenses scored on the team's regressions (review-bench.mjs)
+//   cs instruction-bench run|status   # each section of the instruction file measured on real situations (instruction-bench.mjs)
 //   cs attach <brief|spec|bug> <id> <file...>   # join local files to a thread (attach.mjs)
 //   cs login [<workspace url>]         # sign this machine in when it has no token (auth.mjs)
 //   cs proof-pack <command>            # compute a delivery's proof from the tools' files (proof-pack.mjs)
@@ -293,6 +294,9 @@ const HELP = `cs — Castalie project-management CLI
   cs review-bench check|monthly|seed|lenses
                                     # the review lenses scored on the team's own regressions: only
                                     #   the modified lens in a pull request, every lens once a month
+  cs instruction-bench run|seed|sections|status
+                                    # each section of the instruction file replayed with and without
+                                    #   it on situations from real sessions, under a monthly ceiling
   cs bug-evaluation help              # local isolated bug-evaluation runner
 
 Config: env CASTALIE_ENDPOINT / CASTALIE_TOKEN, or .cs/config.json { "endpoint", "token" }.
@@ -341,6 +345,10 @@ async function main() {
   // `review-bench` answers with an exit code a pull request's check branches on (1 = a lens is blocked).
   if (cmd === "review-bench") {
     const bench = await import("./review-bench.mjs");
+    return bench.runCli(rest);
+  }
+  if (cmd === "instruction-bench") {
+    const bench = await import("./instruction-bench.mjs");
     return bench.runCli(rest);
   }
   if (cmd === "review-catalog") {
