@@ -658,7 +658,16 @@ export function sweepRepo(repo, {
   const release = dryRun ? () => {} : takePassLock(main, stateDir);
   if (!release) return { repo: main, skipped: "another pass is running", line: `cs worktrees · ${basename(main)}: another pass is running.` };
   try {
-    const before = diskOf(main);
+    // What THIS pass freed: the free space measured right around each removal, summed. Measured once
+    // around the whole pass, it also counted whatever other sessions deleted meanwhile (bug 208).
+    let reclaimed = 0;
+    const measured = (remove) => {
+      const b = diskOf(main);
+      const ok = remove();
+      const a = diskOf(main);
+      if (ok && a && b) reclaimed += Math.max(0, a.free - b.free);
+      return ok;
+    };
     // No `git worktree prune`: it would drop the registration of any worktree whose folder is away
     // for a while — an unplugged drive — with the commits only its HEAD held.
     const list = git(main, ["worktree", "list", "--porcelain"]);
@@ -700,7 +709,7 @@ export function sweepRepo(repo, {
         if (v.unlock) unlocked -= 1;
         continue;
       }
-      if (removeCopy(main, v, trash)) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; if (v.unlock) unlocked -= 1; }
+      if (measured(() => removeCopy(main, v, trash))) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; if (v.unlock) unlocked -= 1; }
     }
 
     // Build outputs: every linked worktree still standing, idle long enough, never the caller's.
@@ -728,14 +737,14 @@ export function sweepRepo(repo, {
         // Never a folder that holds a worktree, the main checkout, or the caller's copy.
         if ([...others, ...protect].some((o) => !samePath(o, w.path) && (samePath(o, folder) || inside(o, folder) || inside(real(o), real(folder))))) continue;
         if (dryRun) { estimate += folderSize(folder, deadline).bytes; buildFolders.push(folder); continue; }
-        if (emptyBuildFolder(folder, trash)) buildFolders.push(folder); else complete = false;
+        if (measured(() => emptyBuildFolder(folder, trash))) buildFolders.push(folder); else complete = false;
       }
       // Marked only once everything it picked is gone: a file held open is tried again next pass.
       if (complete && !dryRun) scanned[w.path] = mark;
     }
 
     const after = diskOf(main);
-    const freed = dryRun ? estimate : Math.max(0, (after?.free ?? 0) - (before?.free ?? 0));
+    const freed = dryRun ? estimate : reclaimed;
     const result = {
       repo: main, at: new Date(now).toISOString(), dryRun, removed, unlocked, failures, freed,
       buildFolders: buildFolders.length, regenerable: { patterns: declared ? patterns : DEFAULT_REGENERABLE, declared },
