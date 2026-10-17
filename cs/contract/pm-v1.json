@@ -5351,6 +5351,251 @@
         "success": "bool",
         "data": "object"
       }
+    },
+    {
+      "name": "instruction_bench_situation_upsert",
+      "kind": "write",
+      "description": "File one situation of the instruction bench: a moment of a real session, paraphrased, with the expected decision and the section keys that bear on it. Keyed by repository_key + source_ref; an excluded situation is returned unchanged. Owner or member.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": true,
+          "description": "owner/name as GitHub spells it."
+        },
+        {
+          "name": "source_ref",
+          "type": "string",
+          "required": true,
+          "description": "<session id>:<message id>, unique per repository."
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "context_md",
+          "type": "string",
+          "required": true,
+          "description": "The moment as the agent faced it, at most 8000 characters."
+        },
+        {
+          "name": "expected_md",
+          "type": "string",
+          "required": true,
+          "description": "The decision that was right, at most 2000 characters."
+        },
+        {
+          "name": "section_keys",
+          "type": "array",
+          "required": true,
+          "description": "1 to 50 keys: <file stem>#<GitHub anchor>."
+        },
+        {
+          "name": "source_date",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "instruction_bench_situation_exclude",
+      "kind": "write",
+      "description": "Take a situation out of the bench, with the reason. Owner or member.",
+      "params": [
+        {
+          "name": "id",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "required": true
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "instruction_bench_situations_list",
+      "kind": "read",
+      "description": "The bench's situations, newest session first; section_key keeps those citing it.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": false,
+          "description": "Only this repository, owner/name."
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "required": false,
+          "enum": [
+            "active",
+            "excluded"
+          ]
+        },
+        {
+          "name": "section_key",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "take",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "instruction_bench_run_start",
+      "kind": "write",
+      "description": "Open a pass over one instruction file. Refused with budget_exhausted at the workspace's monthly ceiling. Owner or member.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": true,
+          "description": "owner/name as GitHub spells it."
+        },
+        {
+          "name": "instructions_path",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "instructions_hash",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "words",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "sections_total",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "model_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "judge_model_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "head_sha",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "instruction_bench_run_record",
+      "kind": "write",
+      "description": "Record measured sections ({section_key, title, section_hash, words, cost_usd, outcomes:[{situation_id, outcome: improved|degraded|unchanged|error, why}]}) and, with complete, close the pass — stop_reason budget_exhausted when the ceiling stopped it. Castalie classifies each section: unchanged, keep, fix, mixed, unmeasured. Returns budget.remaining_usd. Owner or member.",
+      "params": [
+        {
+          "name": "run_id",
+          "type": "integer",
+          "required": true
+        },
+        {
+          "name": "sections",
+          "type": "array",
+          "required": false
+        },
+        {
+          "name": "calls",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "overhead_cost_usd",
+          "type": "number",
+          "required": false
+        },
+        {
+          "name": "duration_seconds",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "complete",
+          "type": "boolean",
+          "required": false
+        },
+        {
+          "name": "stop_reason",
+          "type": "string",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "instruction_bench_runs_list",
+      "kind": "read",
+      "description": "The bench's passes, newest first.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": false,
+          "description": "Only this repository, owner/name."
+        },
+        {
+          "name": "take",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
+    },
+    {
+      "name": "instruction_bench_report",
+      "kind": "read",
+      "description": "The month's budget and, per repository, the latest closed pass with every section's verdict, words, counts and the judge's reasons.",
+      "params": [
+        {
+          "name": "repository_key",
+          "type": "string",
+          "required": false,
+          "description": "Only this repository, owner/name."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "data": "object"
+      }
     }
   ]
 }
