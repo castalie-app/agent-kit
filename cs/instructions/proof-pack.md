@@ -158,10 +158,12 @@ restores the file **byte for byte**, and writes `<evidence>/canary/canary.json`:
 The line's text is never written, only its place and hashes. `--file <path> --line <n>` picks the
 line by hand; the result file still decides.
 
-One canary at a time in a working copy. Before the break, the file's bytes and dates are copied to
+One canary at a time in a working copy, held by `<evidence>/canary/canary.lock` for the whole run;
+`compute` waits for it too. Before the break, the file's bytes and dates are copied to
 `<evidence>/canary/pending.*`; a run killed from outside leaves that copy, and the next `canary` or
 `compute` puts the file back — only while it still holds the broken bytes, never over an edit made
-since, which it refuses instead. A run longer than 30 minutes, or stopped, records nothing (exit 3).
+since, which it refuses instead. A run longer than 30 minutes, or a command that cannot start,
+records nothing (exit 3); a runner that crashes is a failed run, read from its files.
 A run that passed and wrote no result file matching `--results` is a wrong glob, and is not retried
 on another line.
 

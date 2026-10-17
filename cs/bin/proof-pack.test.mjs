@@ -1,7 +1,7 @@
 // `cs proof-pack`: each rule of the verdict, replayed on a throwaway git repository. No network.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -372,4 +372,24 @@ test("review round 1: the manifest's free text is cut, its subject kept to the w
   assert.deepEqual(pack.subject, { kind: "spec", id: 102 });
   assert.ok(pack.needsPerson[0].item.length <= 200);
   assert.ok(pack.claimed.some((c) => c.field === "verdict"), "a verdict typed at the top of the manifest is claimed too");
+});
+
+test("review round 3: a canary held by another live process is refused, before anything is copied", async () => {
+  const { root, base } = repo({ config: CONFIG });
+  const { spawn } = await import("node:child_process");
+  const holder = spawn(process.execPath, ["-e", "setTimeout(() => {}, 20000)"]);
+  try {
+    write(root, ".tmp/proof/canary/canary.lock", JSON.stringify({ pid: holder.pid }));
+    const before = readFileSync(join(root, "src/app.js"));
+    assert.throws(() => runCanary({ root, evidence: ".tmp/proof", base, run: "node -e 0", results: [".tmp/proof/canary/*.trx"], config: loadConfig(root), log: () => {} }), /A canary is running/);
+    assert.equal(existsSync(join(root, ".tmp/proof/canary/pending.bin")), false, "nothing was copied");
+    assert.deepEqual(readFileSync(join(root, "src/app.js")), before);
+    write(root, ".tmp/proof/canary/pending.json", "{}");
+    assert.throws(() => computePack({ root, base }), /A canary is running/);
+  } finally { holder.kill(); }
+  // A lock whose holder is gone is taken over.
+  write(root, ".tmp/proof/canary/canary.lock", JSON.stringify({ pid: 2 ** 22 + 9 }));
+  const r = runCanary({ root, evidence: ".tmp/proof", base, run: testCommand(root, { notices: true }), results: [".tmp/proof/canary/*.trx"], config: loadConfig(root), log: () => {} });
+  assert.equal(r.code, 0, r.message);
+  assert.equal(existsSync(join(root, ".tmp/proof/canary/canary.lock")), false);
 });

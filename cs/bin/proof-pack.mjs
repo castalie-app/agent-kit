@@ -383,18 +383,39 @@ export function canaryCandidates(root, change, production) {
 // never overwritten. The copy stays on this machine.
 function pendingPaths(root, evidence) {
   const dir = join(root, evidence, "canary");
-  return { dir, meta: join(dir, "pending.json"), bytes: join(dir, "pending.bin") };
+  return { dir, meta: join(dir, "pending.json"), bytes: join(dir, "pending.bin"), lock: join(dir, "canary.lock") };
 }
 
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === "EPERM"; } };
 
+// One canary at a time in a working copy, held for the whole run and taken before anything is read:
+// a second canary would otherwise save the first one's broken bytes as its own copy, and put them back.
+function lockHolder(root, evidence) {
+  const lock = readJson(pendingPaths(root, evidence).lock);
+  return lock && Number.isInteger(lock.pid) && lock.pid !== process.pid && alive(lock.pid) ? lock.pid : null;
+}
+
+function takeLock(root, evidence) {
+  const pending = pendingPaths(root, evidence);
+  mkdirSync(pending.dir, { recursive: true });
+  const busy = () => new InputError(`A canary is running in this working copy (process ${lockHolder(root, evidence)}). If none is, delete ${slash(relative(root, pending.lock))}.`);
+  try { writeFileSync(pending.lock, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }), { flag: "wx" }); return; }
+  catch { if (lockHolder(root, evidence)) throw busy(); }
+  // The holder is gone: its lock is stale, and taken over.
+  rmSync(pending.lock, { force: true });
+  try { writeFileSync(pending.lock, JSON.stringify({ pid: process.pid, at: new Date().toISOString() }), { flag: "wx" }); } catch { throw busy(); }
+}
+
 /** Puts back a file a canary left broken. Returns the file it restored, or null. */
-export function recoverCanary(root, evidence = ".tmp/proof", { owner = null } = {}) {
+export function recoverCanary(root, evidence = ".tmp/proof") {
   const pending = pendingPaths(root, evidence);
   if (!existsSync(pending.meta)) return null;
   const meta = readJson(pending.meta);
-  if (!meta?.file || !insideRoot(meta.file) || !existsSync(pending.bytes)) { rmSync(pending.meta, { force: true }); rmSync(pending.bytes, { force: true }); return null; }
-  if (meta.pid !== owner && meta.pid !== process.pid && alive(meta.pid)) throw new InputError(`A canary is running on ${meta.file} (process ${meta.pid}): wait for it to end.`);
+  const holder = lockHolder(root, evidence);
+  if (holder) throw new InputError(`A canary is running on ${meta?.file ?? "a file"} (process ${holder}): wait for it to end. If none is, delete ${slash(relative(root, pending.lock))}.`);
+  if (!meta?.file || !insideRoot(meta.file) || !existsSync(pending.bytes) || sha256(readFileSync(pending.bytes)) !== meta.originalSha256) {
+    rmSync(pending.meta, { force: true }); rmSync(pending.bytes, { force: true }); return null;
+  }
   const full = join(root, meta.file);
   const now = existsSync(full) ? sha256(readFileSync(full)) : null;
   if (now !== meta.mutatedSha256) {
@@ -416,14 +437,22 @@ function canaryProduction(root, evidence, config) {
   return fromManifest.length ? fromManifest : ["**"];
 }
 
-/** The evidence and output directories as repository paths, so their files are never read as the change. */
-function withoutEvidence(root, change, dirs) {
-  const prefixes = dirs.filter(Boolean).map((d) => `${slash(relative(root, resolve(root, d))).replace(/\/+$/, "")}/`).filter((d) => d !== "/" && !d.startsWith("../"));
-  return { ...change, files: change.files.filter((f) => !prefixes.some((d) => f.startsWith(d))) };
+/** The evidence directory, and the pack's own files, as repository paths: never read as the change. */
+function withoutEvidence(root, change, dirs, files = []) {
+  const rel = (d) => slash(relative(root, resolve(root, d))).replace(/\/+$/, "");
+  const prefixes = dirs.filter(Boolean).map((d) => `${rel(d)}/`).filter((d) => d !== "/" && !d.startsWith("../"));
+  const exact = new Set(files.map(rel));
+  return { ...change, files: change.files.filter((f) => !exact.has(f) && !prefixes.some((d) => f.startsWith(d))) };
 }
 
 /** Break one line, run the tests, restore the file byte for byte. Writes <evidence>/canary/canary.json. */
 export function runCanary({ root, evidence, base, run, results, file, line, config, log = console.log, attempts = 3, timeoutMinutes = CANARY_TIMEOUT_MINUTES }) {
+  takeLock(root, evidence);
+  try { return canaryUnderLock({ root, evidence, base, run, results, file, line, config, log, attempts, timeoutMinutes }); }
+  finally { rmSync(pendingPaths(root, evidence).lock, { force: true }); }
+}
+
+function canaryUnderLock({ root, evidence, base, run, results, file, line, config, log, attempts, timeoutMinutes }) {
   const recovered = recoverCanary(root, evidence);
   if (recovered) log(`canary: ${recovered} was left broken by an earlier run; it is restored.`);
   const change = withoutEvidence(root, changeSet(root, base), [evidence]);
@@ -446,12 +475,8 @@ export function runCanary({ root, evidence, base, run, results, file, line, conf
     const broken = Buffer.from(lines.join(eol), "utf8");
     mkdirSync(pending.dir, { recursive: true });
     writeFileSync(pending.bytes, original);
-    // `wx`: one canary at a time in a working copy — a second one would save the first one's broken
-    // bytes as its own copy, and put them back.
-    try {
-      writeFileSync(pending.meta, JSON.stringify({ file: candidate.file, pid: process.pid, atimeMs: stamp.atimeMs, mtimeMs: stamp.mtimeMs,
-        originalSha256: sha256(original), mutatedSha256: sha256(broken) }), { flag: "wx" });
-    } catch { throw new InputError("Another canary holds this working copy: wait for it to end."); }
+    writeFileSync(pending.meta, JSON.stringify({ file: candidate.file, pid: process.pid, atimeMs: stamp.atimeMs, mtimeMs: stamp.mtimeMs,
+      originalSha256: sha256(original), mutatedSha256: sha256(broken) }));
     // Restored byte for byte AND with its modification time: a restore that looked like an edit
     // would make every result file written before the canary older than the code. A signal is not
     // delivered while the run is in progress, so the restore is the `finally`, and a run killed
@@ -462,9 +487,11 @@ export function runCanary({ root, evidence, base, run, results, file, line, conf
       log(`canary: ${candidate.file}:${candidate.line} (${mutated.operator}), running: ${run}`);
       run_ = spawnSync(run, { cwd: root, shell: true, stdio: "inherit", timeout: timeoutMinutes * 60000 });
     } finally {
-      recoverCanary(root, evidence, { owner: process.pid });
+      recoverCanary(root, evidence);
     }
-    if (run_.signal || run_.error) return { code: 3, message: `canary: the run ${run_.error?.code === "ETIMEDOUT" ? `took more than ${timeoutMinutes} minutes` : `was stopped (${run_.signal ?? run_.error?.code})`}; ${candidate.file} is restored, and nothing is recorded.` };
+    // A runner that crashed on a signal is a failed run, read from its files like any other; the time
+    // limit, or a command that could not start, records nothing.
+    if (run_.error) return { code: 3, message: `canary: the run ${run_.error.code === "ETIMEDOUT" ? `took more than ${timeoutMinutes} minutes` : `could not start (${run_.error.code})`}; ${candidate.file} is restored, and nothing is recorded.` };
     const restored = sha256(readFileSync(full));
     const files = results.flatMap((g) => expandGlob(root, g)).filter((p) => mtime(join(root, p)) >= started - 1000);
     record = { schema: CANARY_SCHEMA, file: candidate.file, line: candidate.line, operator: mutated.operator,
@@ -830,7 +857,7 @@ export function computePack({ root, evidence = ".tmp/proof", out = evidence, bas
   const restoredFile = recoverCanary(root, evidence);
   // The evidence is not the change: a result file or a screenshot written under the evidence
   // directory, or the pack written under the output one, would otherwise count as code newer than itself.
-  const change = withoutEvidence(root, changeSet(root, base), [evidence, out]);
+  const change = withoutEvidence(root, changeSet(root, base), [evidence], [join(out, "proof-pack.json"), join(out, "proof-pack.md")]);
   const { judged, notJudged } = modulesToJudge(config, manifest, change);
   const ctx = { root, change, config, t, evidence: slash(evidence), evidenceFiles: new Set(), ignored: [], walks: new Map(), parsed: new Map(), hashes: new Map() };
   if (restoredFile) ctx.ignored.push({ path: restoredFile, reason: "restored: a canary had left it broken" });
