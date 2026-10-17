@@ -75,8 +75,9 @@ synced by the CLI.
    each option saying what it does to the tree, the claim it changes named on the sheet. They land
    in the person's « Décisions » inbox, beside every other decision of the workspace. Then write
    each decision's number into its box on the tree and push the body again. A fork only the code
-   feels is yours: decide it, and write the option you rejected in `solution`. When an answer
-   lands, apply it to the tree and the phases, `decision_mark_applied`, and push again.
+   feels is yours: decide it, and write the option you rejected in `solution`. Before each
+   following step, read the answers they got (`decision-sheet.md` § Read your answers at every
+   step): apply each to the tree and the phases, `decision_mark_applied`, and push again.
 5. **Phases.** One `mcp__castalie__feature_spec_add_phase(specId, title, objectiveMd, actionPlanMd,
    validationCriterionMd, estimateHours)` per phase — cut at natural seams (layers, page sets,
    independent modules), each a coherent unit an implementer can finish and verify. Store its observable

@@ -160,7 +160,7 @@ test("the policy by kind: an unknown kind gets the full policy, and only two haz
     assert.deepEqual(verdictFrom(answers({ outbound: 0.9, off_purpose: 0.8 }), kind),
       { verdict: "refuse", reasons: ["outbound 0.90", "off_purpose 0.80"], warnings: [] }, `kind ${String(kind)}`);
   }
-  assert.deepEqual(Object.keys(WARN_ONLY).sort(), ["decision_resume", "scheduled_task"]);
+  assert.deepEqual(Object.keys(WARN_ONLY).sort(), ["decision_answered", "decision_resume", "scheduled_task"]);
   for (const ids of Object.values(WARN_ONLY)) assert.deepEqual([...ids].sort(), ["off_purpose", "outbound"]);
   for (const kind of Object.keys(WARN_ONLY)) {
     const decided = verdictFrom(answers({ override: 0.5, exfiltration: 0.6, destructive: 0.7, outbound: 0.9, off_purpose: 0.8 }, 1.6), kind);

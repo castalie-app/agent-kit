@@ -64,7 +64,9 @@ it and closes the brief in one call. What the server cannot do is the replay —
    opening a second one), one remark per gap, one commit per remark, one pull request, released by the
    environment's own release step. When it is served, replay the criteria that failed and rewrite their
    verdicts. Repeat until everything conforms or only the decisions of the person in charge remain.
-6. **Apply the answers.** On `--continue`, `decision_list(scope=subject,
+6. **Apply the answers** — before each step, not only on `--continue` (`decision-sheet.md` § Read
+   your answers at every step; a brief carrying an answer nobody applied refuses to close).
+   `decision_list(scope=subject,
    subject_kind="feature_brief", subject_id=<brief>, status=answered)` lists what the person in charge settled,
    and `decision_get` gives each answer with the `resume_state_md` you left. Apply it as below, then
    `decision_mark_applied(id, note_md)`: an answer read and not marked looks, to everyone else, like

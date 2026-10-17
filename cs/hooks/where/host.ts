@@ -101,6 +101,12 @@ export type Companion = {
    */
   called: (tool: string, args: Record<string, unknown>, said?: Said) => void
 
+  /**
+   * `tool.call`, before the call runs, in every session — drawn or headless: arguments to add to
+   * the call, or null to send it as written. `session` is read only when the verb needs it.
+   */
+  filling: (tool: string, args: Record<string, unknown>, session: () => Promise<SessionFacts>) => Promise<Record<string, unknown> | null>
+
   /** `turn.complete`. */
   turnEnded: () => void
 
@@ -108,10 +114,14 @@ export type Companion = {
   cleared: () => Promise<void>
 }
 
+/** What a session knows of where it runs: its id, its workstation, its working directory. */
+export type SessionFacts = { id?: string; hostname?: string; cwd?: string }
+
 /** No other pane: what the strategy pane hands on to when registered alone. */
 export const NO_COMPANION: Companion = {
   started: async () => undefined,
   called: () => undefined,
+  filling: async () => null,
   turnEnded: () => undefined,
   cleared: async () => undefined,
 }

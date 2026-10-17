@@ -49,7 +49,9 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
    the body as one sentence with how it is reverted — a flag, never a reason to wait.
 5. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to
    the release — § Delivery below. No question to anyone.
-6. **Sweep the decisions.** Once the release is observed, read the decisions still pending on what
+6. **Sweep the decisions.** Before the merge, read the answers this change's decisions got and apply
+   them (`decision-sheet.md` § Read your answers at every step): a spec, a phase or a ticket that
+   carries an answer nobody applied refuses to close. Once the release is observed, read the decisions still pending on what
    this change shipped (the spec with `decision_list(feature_spec_id=…, status=pending)`, a ticket or
    a brief with `scope=subject`, and the ones this session filed) and cancel, with their reason,
    those the shipped work settled — `shared-conventions.md` § Your decisions, at the start and at

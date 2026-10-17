@@ -213,6 +213,10 @@ at the end of a later turn once the tab has taken up work whose objective has so
 sheet of every decision the tab files. A close by the person holds for that tab only. Nothing is
 asked; where no panel can be drawn, `/cs:decisions-panel` prints the same cards.
 
+**In between**, before each phase, step or item of its work, a tab that filed decisions reads the
+answers it got and applies them: `decision-sheet.md` § Read your answers at every step. A subject
+carrying an answer nobody applied refuses to close.
+
 **At the end**, before a turn ends on *Finished here for you*, and before a delivery skill reports
 (`ship`, `feature-implement`, `bug-fix`), sweep the decisions still pending on what this tab worked
 on:

@@ -137,7 +137,8 @@ between runs: `scheduled-task:<task id>:<what to decide>`, or the subject's own 
 them — `model-upgrade:<usage>:<candidate>`. The same question asked by the next run produces the
 same key, character for character. `asked_by_agent` is `scheduled-task:<task id>`.
 
-**Look before filing**, every time, on that key:
+**Look before filing**, every time, on that key — and before each step of the prompt, the
+answered ones (step 1; `decision-sheet.md` § Read your answers at every step):
 
 1. `decision_list(asked_by_agent="scheduled-task:<task id>", status=answered)` — the answers not yet
    applied. One filed with `resume_mode="asker"`: apply the answer, inside the prompt's frame, then
