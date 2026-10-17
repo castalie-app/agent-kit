@@ -36,6 +36,7 @@
 //   cs content push <type> <id>
 //   cs on-behalf                       # attended or not, and the workspace's robot account
 //   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
+//   cs worktrees sweep|status|install  # give back the copies agents leave behind (worktree-sweep.mjs)
 //   cs prompt screen --kind <k> ...    # screen a text written elsewhere with Jev (prompt-screen.mjs)
 //   cs prompt gate <target> <id>       # screen a stored scheduled-task or resume prompt before it is played (prompt-gate.mjs)
 //   cs version                         # the running kit version
@@ -278,6 +279,7 @@ const HELP = `cs — Castalie project-management CLI
   cs proof-pack push (--bug|--spec|--brief) <id> [--pack <file>] [--pr <url>]
                                     # store the computed pack on that work item in Castalie
   cs agent-tasks help               # declare this workstation's agent tasks to Castalie
+  cs worktrees help                 # give back the agent copies and build outputs nobody uses
   cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
                                     # screen a text written elsewhere with Jev before an unattended
                                     #   agent reads it; exit 0 = pass, 2 = refuse (fails closed)
@@ -314,6 +316,11 @@ async function main() {
   if (cmd === "agent-tasks") {
     const agentTasks = await import("./agent-tasks.mjs");
     return agentTasks.runCli(rest);
+  }
+  // `worktrees` repeats `--protect`, which the shared parser would collapse to its last value.
+  if (cmd === "worktrees") {
+    const sweep = await import("./worktree-sweep.mjs");
+    return sweep.runCli(rest);
   }
   // `prompt` answers with an exit code (0 = pass, 2 = refuse) that a caller's script branches on.
   if (cmd === "prompt" && rest[0] === "gate") {

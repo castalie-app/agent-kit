@@ -1,5 +1,5 @@
 {
-  "description": "Castalie — hold the door on the one file every session pays for, keep the row under the prompt on the work this session took in hand and hand it back to that session alone when it starts again, ask once when a pull request leaves no trace, and once when a merge leaves the working copy on its branch, draw beside the transcript the strategy tree of what this copy has in hand and the decisions waiting for the person on its objective as cards, one group per agent, answer one from its sheet — an option or the person's own words — and hand that answer to the session's agent at once, open a decision the session files and hand its answer back at the next prompt, and put the convention on how a turn ends in force from the first reply.",
+  "description": "Castalie — hold the door on the one file every session pays for, keep the row under the prompt on the work this session took in hand and hand it back to that session alone when it starts again, ask once when a pull request leaves no trace, and once when a merge leaves the working copy on its branch, draw beside the transcript the strategy tree of what this copy has in hand and the decisions waiting for the person on its objective as cards, one group per agent, answer one from its sheet — an option or the person's own words — and hand that answer to the session's agent at once, open a decision the session files and hand its answer back at the next prompt, give back — detached, once an hour, and once a day by a pass it schedules itself — the agent copies whose work is merged or pushed and idle a day, empty the build outputs of copies idle three days, warn when the disk falls under 10 % free, and put the convention on how a turn ends in force from the first reply.",
   "modules": ["./register.ts"],
   "hooks": {
     "PreToolUse": [
@@ -38,6 +38,11 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/slot-given-back.mjs\"",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-sweep.mjs\"",
+            "timeout": 10
           }
         ]
       }
@@ -54,6 +59,28 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/shared-conventions.mjs\"",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-sweep.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/worktree-sweep.mjs\"",
+            "timeout": 10
           }
         ]
       }

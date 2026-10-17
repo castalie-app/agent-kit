@@ -201,6 +201,11 @@ sub-agent never waits on a background task or a monitor of its own — nothing r
 runs its commands in the foreground. A tab or a window the person has to watch hands the follow-up
 to them: open one only when they ask for it.
 
+**A sub-agent's copy is given back by the kit**, not by you: the `worktree-sweep` hook removes a copy
+under `.claude/worktrees/` once nothing in it exists nowhere else and nobody touched it for a day. So
+an agent that writes pushes what it keeps — a commit pushed nowhere, or an uncommitted file, holds the
+whole copy on the disk until a person deals with it.
+
 ## Your decisions, at the start and at the end
 
 **A tab owns the decisions of its work: it opens them at its start and sweeps them at its end.**
