@@ -32,7 +32,12 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
    you are on the default branch.
 2. **Open the PR** (draft) against the base branch, with a concise body: what changed, why, how it was
    verified. Link the Castalie spec if this ships one.
-3. **Run the review panel** per `${CLAUDE_PLUGIN_ROOT}/instructions/review-lenses.md`:
+3. **Read the delivery breaker** per `${CLAUDE_PLUGIN_ROOT}/instructions/delivery-breaker.md`:
+   `mcp__castalie__delivery_breaker_list` with the ticket or the spec this change delivers, the answer
+   kept in `.tmp/proof/breaker.json`. An armed breaker changes nothing and is not mentioned; a tripped
+   one makes the canary blocking, requires the acceptance on the host's preview environment, and hands
+   its `correctness_focus` to the correctness lens — never an extra lens, round or effort level.
+4. **Run the review panel** per `${CLAUDE_PLUGIN_ROOT}/instructions/review-lenses.md`:
    - Choose the effort by the change's risk — quick (one generalist lens), standard (the 4 lenses),
      deep (the panel plus a second pass on correctness and security) — and, on a visual diff, the
      **design** lens joins the panel: the `design-reviewer` agent, given the repository's design system.
@@ -51,24 +56,25 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
    - Escalate only `business_impact = true` findings to the user.
    - Each finding cites the host rule it applies (`rule_id` from `cs review-catalog`) and is
      recorded with its outcome after the last round, per `review-lenses.md` § Recording.
-4. **Compute the proof pack** per `${CLAUDE_PLUGIN_ROOT}/instructions/proof-pack.md` § What the
+5. **Compute the proof pack** per `${CLAUDE_PLUGIN_ROOT}/instructions/proof-pack.md` § What the
    delivery skills do with it, on the commit the panel left: evidence manifest, tests with their
-   result files, canary, `cs proof-pack compute`, then `cs proof-pack gate`. A pack the host's
+   result files, canary, `cs proof-pack compute`, then `cs proof-pack gate` — with
+   `--breaker .tmp/proof/breaker.json` when the breaker was read. A pack the host's
    pipeline blocks keeps the PR in draft until what it lists as missing is made up. Its `render`
    block goes into the PR description unchanged, and `cs proof-pack push` stores it on the spec, the
    ticket or the single deliverable's brief. Every later push to the branch computes it again.
-5. **Mark the PR ready.** No blocking finding left open and a pack the host's pipeline lets through → mark it ready. A risk the panel or you still
+6. **Mark the PR ready.** No blocking finding left open and a pack the host's pipeline lets through → mark it ready. A risk the panel or you still
    see goes into the body as one sentence with how it is reverted — a flag, never a reason to wait.
-6. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to
+7. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to
    the release — § Delivery below. No question to anyone.
-7. **Sweep the decisions.** Before the merge, read the answers this change's decisions got and apply
+8. **Sweep the decisions.** Before the merge, read the answers this change's decisions got and apply
    them (`decision-sheet.md` § Read your answers at every step): a spec, a phase or a ticket that
    carries an answer nobody applied refuses to close. Once the release is observed, read the decisions still pending on what
    this change shipped (the spec with `decision_list(feature_spec_id=…, status=pending)`, a ticket or
    a brief with `scope=subject`, and the ones this session filed) and cancel, with their reason,
    those the shipped work settled — `shared-conventions.md` § Your decisions, at the start and at
    the end. A question that still stands is kept and named in the report.
-8. **Report.** Read `${CLAUDE_PLUGIN_ROOT}/instructions/delivery-report.md` and `shared-conventions.md` now,
+9. **Report.** Read `${CLAUDE_PLUGIN_ROOT}/instructions/delivery-report.md` and `shared-conventions.md` now,
    not from memory. Print the PR link, the panel outcome (N found / M fixed, rounds), the proof pack's
    verdict and its `missing` lines as `compute` printed them, the merge and release state you
    observed, and the naked verdict.

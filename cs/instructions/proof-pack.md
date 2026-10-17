@@ -19,7 +19,7 @@ the merge.
 cs proof-pack canary  [--base <ref>] --run "<test command>" --results <glob>
 cs proof-pack compute [--base <ref>] [--evidence <dir>] [--out <dir>] [--lang fr|en]
 cs proof-pack render  [--pack <file>] [--lang fr|en]     # the block for the PR description
-cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>] [--config <file>]
+cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>] [--config <file>] [--breaker <file>]
 ```
 
 The script is `bin/proof-pack.mjs`, and a pipeline with no kit installed runs it as
