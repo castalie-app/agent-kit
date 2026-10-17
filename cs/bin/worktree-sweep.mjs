@@ -44,7 +44,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
-  appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync,
+  appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync,
   statSync, writeFileSync,
 } from "node:fs";
 import * as nodeFs from "node:fs";
@@ -136,35 +136,33 @@ export function claudeConfigDir() {
 
 /**
  * When each agent last wrote to its transcript — `projects/<project>/<session>/subagents/agent-<id>.jsonl`
- * — keyed by `agent-<id>`. A lock names the SESSION's pid, alive for as long as the session stays
- * open; an agent that finished days ago in a session still open is not alive, and only its
- * transcript says so. On 17 October 2026, one session open for four days held 30 such locks.
+ * — keyed by `agent-<id>`, with the files themselves under `.files` so a removal can stat them again.
+ * A lock names the SESSION's pid, alive for as long as the session stays open; an agent that
+ * finished days ago in a session still open is not alive, and only its transcript says so. On
+ * 17 October 2026, one session open for four days held 30 such locks.
  */
-export function agentActivity(configDir = claudeConfigDir()) {
+export function agentActivity(...configDirs) {
   const index = new Map();
-  const projects = join(configDir, "projects");
+  index.files = new Map();
   const dirs = (path) => { try { return readdirSync(path, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name); } catch { return []; } };
-  for (const project of dirs(projects)) {
-    for (const session of dirs(join(projects, project))) {
-      const folder = join(projects, project, session, "subagents");
-      let files;
-      try { files = readdirSync(folder); } catch { continue; }
-      for (const file of files) {
-        if (!file.endsWith(".jsonl")) continue;
-        const name = file.slice(0, -".jsonl".length);
-        const at = mtime(join(folder, file));
-        if (at > (index.get(name) || 0)) index.set(name, at);
+  for (const configDir of configDirs.length ? configDirs : [claudeConfigDir()]) {
+    const projects = join(configDir, "projects");
+    for (const project of dirs(projects)) {
+      for (const session of dirs(join(projects, project))) {
+        const folder = join(projects, project, session, "subagents");
+        let files;
+        try { files = readdirSync(folder); } catch { continue; }
+        for (const file of files) {
+          if (!file.endsWith(".jsonl")) continue;
+          const name = file.slice(0, -".jsonl".length);
+          const path = join(folder, file);
+          index.set(name, Math.max(index.get(name) || 0, mtime(path)));
+          index.files.set(name, [...(index.files.get(name) || []), path]);
+        }
       }
     }
   }
   return index;
-}
-
-/** Both indexes, built once per process and per configuration folder: `--all` sweeps many repositories. */
-const activityMemo = new Map();
-export function claudeActivity(configDir = claudeConfigDir()) {
-  if (!activityMemo.has(configDir)) activityMemo.set(configDir, { agents: agentActivity(configDir), sessions: sessionActivity(configDir) });
-  return activityMemo.get(configDir);
 }
 
 /** The folder name Claude Code gives the project of a working directory: every other character a dash. */
@@ -174,28 +172,57 @@ export function projectDirName(path) {
 
 /**
  * When a session last wrote a transcript in each project folder — `projects/<project>/<session>.jsonl`
- * — keyed by the folder name. A session opened IN a copy (`claude --worktree`, EnterWorktree) holds no
- * lock at all; its transcript, under the project folder named after the copy's path, says it is there.
+ * — keyed by the folder name, with the folders under `.dirs`. A session opened IN a copy
+ * (`claude --worktree`, EnterWorktree, a headless run in one of its subfolders) holds no lock at all;
+ * its transcript, under the project folder named after its working directory, says it is there.
  */
-export function sessionActivity(configDir = claudeConfigDir()) {
+export function sessionActivity(...configDirs) {
   const index = new Map();
-  const projects = join(configDir, "projects");
-  let names;
-  try { names = readdirSync(projects, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name); } catch { return index; }
-  for (const project of names) {
-    let files;
-    try { files = readdirSync(join(projects, project)); } catch { continue; }
-    let at = 0;
-    for (const file of files) if (file.endsWith(".jsonl")) at = Math.max(at, mtime(join(projects, project, file)));
-    if (at) index.set(caseless ? project.toLowerCase() : project, at);
+  index.dirs = new Map();
+  for (const configDir of configDirs.length ? configDirs : [claudeConfigDir()]) {
+    const projects = join(configDir, "projects");
+    let names;
+    try { names = readdirSync(projects, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name); } catch { continue; }
+    for (const project of names) {
+      const key = caseless ? project.toLowerCase() : project;
+      const at = newestTranscript(join(projects, project));
+      if (at) index.set(key, Math.max(index.get(key) || 0, at));
+      index.dirs.set(key, [...(index.dirs.get(key) || []), join(projects, project)]);
+    }
   }
   return index;
 }
 
-/** The last time a session wrote a transcript with this copy as its working directory, or 0. */
-export function sessionIn(path, sessions) {
+function newestTranscript(dir) {
+  let files;
+  try { files = readdirSync(dir); } catch { return 0; }
+  let at = 0;
+  for (const file of files) if (file.endsWith(".jsonl")) at = Math.max(at, mtime(join(dir, file)));
+  return at;
+}
+
+/** The project folder keys of a copy: its own path and its subfolders', under both spellings of the path. */
+function sessionKeys(path, sessions) {
   const key = (p) => (caseless ? projectDirName(p).toLowerCase() : projectDirName(p));
-  return Math.max(sessions.get(key(path)) || 0, sessions.get(key(real(path))) || 0);
+  const roots = [key(path), key(real(path))];
+  // A neighbour whose name only looks like a subfolder makes the copy look busy: the safe side.
+  return [...sessions.keys()].filter((k) => roots.some((r) => k === r || k.startsWith(`${r}-`)));
+}
+
+/** The last time a session wrote a transcript with this copy, or a folder under it, as its working directory. */
+export function sessionIn(path, sessions) {
+  return Math.max(0, ...sessionKeys(path, sessions).map((k) => sessions.get(k) || 0));
+}
+
+/**
+ * The same two questions asked again of the disk, right before a removal: an index built at the
+ * start of a long pass can be hours old, and an agent resumed since must not lose its copy.
+ */
+export function activityNow(entry, agents, sessions) {
+  const name = lockAgent(entry.lockReason) || basename(entry.path);
+  const files = agents.files?.get(name) || [];
+  const dirs = sessionKeys(entry.path, sessions).flatMap((k) => sessions.dirs?.get(k) || []);
+  return Math.max(0, ...files.map(mtime), ...dirs.map(newestTranscript));
 }
 
 /** The administrative folder git keeps for a linked worktree (`.git/worktrees/<name>`). */
@@ -233,24 +260,26 @@ export function defaultRemoteBranch(repo) {
 }
 
 /**
- * The remote-tracking refs whose branch still exists on the server — one `ls-remote`, no fetch. A
- * branch deleted on the server lingers locally until a `fetch --prune`, and a commit only it holds
- * is pushed nowhere. Null when the server cannot be asked: then only the default branch counts.
+ * The commits the server's branches point at TODAY, those this repository has — one `ls-remote`, no
+ * fetch. Never the local remote-tracking refs: a branch deleted, force-pushed or recreated on the
+ * server lingers locally until a `fetch --prune`, still naming a commit the server has dropped.
+ * Null when the server cannot be asked: then only the default branch counts.
  */
 export function liveRemoteRefs(repo, defaultBranch) {
   if (!defaultBranch) return null;
   const remote = defaultBranch.split("/")[0];
-  const prefix = `refs/remotes/${remote}/`;
   const heads = git(repo, ["ls-remote", "--heads", remote], 60_000);
   if (!heads.ok) return null;
-  const onServer = new Set(heads.out.split(/\r?\n/).map((line) => line.split("\t")[1]).filter(Boolean).map((ref) => ref.replace(/^refs\/heads\//, "")));
-  return git(repo, ["for-each-ref", "--format=%(refname)", prefix]).out.split(/\r?\n/)
-    .filter((ref) => ref.startsWith(prefix) && onServer.has(ref.slice(prefix.length)));
+  const shas = [...new Set(heads.out.split(/\r?\n/).map((line) => line.split("\t")[0]).filter((sha) => /^[0-9a-f]{40,64}$/.test(sha)))];
+  if (!shas.length) return [];
+  const known = git(repo, ["cat-file", "--batch-check=%(objectname) %(objecttype)"], 60_000, shas.join("\n") + "\n");
+  if (!known.ok) return null;
+  return known.out.split(/\r?\n/).filter((line) => / commit$/.test(line)).map((line) => line.split(" ")[0]);
 }
 
-/** Whether HEAD carries a commit none of `refs` holds. Unknown → true. */
-export function hasCommitsBeyond(cwd, refs) {
-  const r = git(cwd, ["rev-list", "-n", "1", "--stdin", "HEAD"], 120_000, refs.map((ref) => `^${ref}\n`).join(""));
+/** Whether HEAD carries a commit none of `commits` holds. Unknown → true. */
+export function hasCommitsBeyond(cwd, commits) {
+  const r = git(cwd, ["rev-list", "-n", "1", "--stdin", "HEAD"], 120_000, commits.map((sha) => `^${sha}\n`).join(""));
   return !r.ok || r.out !== "";
 }
 
@@ -388,10 +417,10 @@ export function regenerablePatterns(...roots) {
   return { patterns: DEFAULT_REGENERABLE, declared: false };
 }
 
-/** The folders of a worktree that git reports ignored and untracked and that a pattern names, outermost only. */
+/** The folders of a worktree that git reports ignored and untracked and that a pattern names, outermost only; null when git cannot say. */
 export function regenerableFolders(worktreePath, patterns) {
   const listed = git(worktreePath, ["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"], 300_000);
-  if (!listed.ok) return [];
+  if (!listed.ok) return null;
   const regexps = patterns.filter(acceptablePattern).map(patternToRegExp);
   const picked = [];
   const entries = listed.out.split("\0").filter((e) => e.endsWith("/")).map((e) => e.slice(0, -1)).sort();
@@ -497,6 +526,42 @@ export function knownRepos(stateDir = STATE_DIR) {
 }
 
 /**
+ * The Claude Code configuration folders the hook has run under. The daily pass starts from the
+ * scheduler, which carries no CLAUDE_CONFIG_DIR a launcher set: without this list it would read no
+ * session of those folders, and judge a copy a session works in by git alone.
+ */
+export function rememberConfigDir(configDir = claudeConfigDir(), stateDir = STATE_DIR) {
+  const file = join(stateDir, "config-dirs.json");
+  const known = readJson(file, []);
+  if (!known.some((d) => samePath(d, configDir))) writeJson(file, [...known, configDir]);
+}
+
+export function knownConfigDirs(configDir = claudeConfigDir(), stateDir = STATE_DIR) {
+  const all = [configDir, ...readJson(join(stateDir, "config-dirs.json"), [])].filter((d) => existsSync(d));
+  return all.filter((d, i) => all.findIndex((o) => samePath(o, d)) === i);
+}
+
+/** The newest mtime of a folder and of what sits directly in it: a build rewrites files, not its folder. */
+function newestUnder(folder) {
+  let at = mtime(folder);
+  try { for (const name of readdirSync(folder)) at = Math.max(at, mtime(join(folder, name))); } catch { /* gone */ }
+  return at;
+}
+
+/**
+ * Empties one build folder. Renamed aside first: on Windows a rename fails while any file inside is
+ * open, so a running build or server keeps its folder whole instead of losing half of it. What the
+ * delete then leaves is recorded and retried by the next pass.
+ */
+function emptyBuildFolder(folder, tombstones) {
+  const aside = `${folder}.cs-sweep-${process.pid}-${Date.now()}`;
+  try { renameSync(folder, aside); } catch { return false; }
+  try { rmSync(aside, { recursive: true, force: true, maxRetries: 2 }); } catch { /* recorded below */ }
+  if (existsSync(aside)) tombstones.push(aside);
+  return true;
+}
+
+/**
  * One pass per repository at a time: a pid file created exclusively, taken over only when its
  * holder is dead, and removed only by the pass that holds it.
  */
@@ -514,7 +579,11 @@ function takePassLock(repo, stateDir) {
       // another process must not hold every later pass off for ever.
       const { pid, at } = readJson(file, {});
       if (pid && isAlive(Number(pid)) && Date.now() - Date.parse(at || 0) < 3 * HOUR) return null;
-      rmSync(file, { force: true });   // a dead pass's file: take it over once
+      // A dead pass's file, taken over once: renamed aside, so of two passes taking it over at the
+      // same instant only one moves it, and the other never deletes the first one's fresh file.
+      const aside = `${file}.${process.pid}`;
+      try { renameSync(file, aside); } catch { return null; }
+      rmSync(aside, { force: true });
     }
   }
   return null;
@@ -528,13 +597,14 @@ function takePassLock(repo, stateDir) {
  * copy's registration — it checked and started deleting, then failed on a long path or a file held
  * open — is the remainder deleted by hand.
  */
-function removeCopy(repo, verdict) {
+function removeCopy(repo, verdict, remainders = []) {
   if (verdict.unlock) git(repo, ["worktree", "unlock", verdict.path]);
   const gitDir = gitDirOf(verdict.path);
   const removed = git(repo, ["worktree", "remove", verdict.path], 600_000);
   if (removed.ok && !existsSync(verdict.path)) return true;
   if (gitDir && !existsSync(gitDir) && existsSync(verdict.path)) {
     try { rmSync(verdict.path, { recursive: true, force: true, maxRetries: 3 }); } catch { /* reported as failed */ }
+    if (existsSync(verdict.path)) remainders.push(verdict.path);   // git no longer lists it: the next pass retries it
     return !existsSync(verdict.path);
   }
   // Refused: put back the lock of a session still open, so its agent can still be resumed.
@@ -565,7 +635,9 @@ export function sweepRepo(repo, {
     const agentRoot = join(main, AGENT_ROOT);
     const defaultBranch = defaultRemoteBranch(main);
     const liveRefs = liveRemoteRefs(main, defaultBranch);
-    const { agents, sessions } = claudeActivity(configDir);
+    const configDirs = knownConfigDirs(configDir, stateDir);
+    const agents = agentActivity(...configDirs);
+    const sessions = sessionActivity(...configDirs);
     const others = [main, ...linked.map((w) => w.path)];
     const key = repoKey(main);
     const heldFile = join(stateDir, `held-${key}.json`);
@@ -574,6 +646,7 @@ export function sweepRepo(repo, {
     const context = { defaultBranch, liveRefs, now, idleHours, protect, alive, agents, sessions, others, heldCache, heldSalt };
 
     let removed = 0, unlocked = 0, failures = 0, estimate = 0;
+    const remainders = [];
     const deadline = Date.now() + sizeBudgetMs;
     const verdicts = [];
     // Each copy is judged and removed in one step, so nothing can change between the two but what
@@ -589,7 +662,13 @@ export function sweepRepo(repo, {
       }
       if (v.unlock) unlocked += 1;
       if (dryRun) { removed += 1; estimate += folderSize(v.path, deadline).bytes; continue; }
-      if (removeCopy(main, v)) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; if (v.unlock) unlocked -= 1; }
+      // The index is as old as the pass: an agent resumed since, or a session that came back, keeps it.
+      if ((now - activityNow(w, agents, sessions)) / HOUR < Math.max(1, idleHours)) {
+        Object.assign(v, { keep: true, reason: "touched recently", waiting: true });
+        if (v.unlock) unlocked -= 1;
+        continue;
+      }
+      if (removeCopy(main, v, remainders)) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; if (v.unlock) unlocked -= 1; }
     }
 
     // Build outputs: every linked worktree still standing, idle long enough, never the caller's.
@@ -598,6 +677,16 @@ export function sweepRepo(repo, {
     const buildFolders = [];
     const scannedFile = join(stateDir, `builds-${key}.json`);
     const scanned = readJson(scannedFile, {});
+    // What a previous pass renamed aside or left behind and could not delete yet: tried again first.
+    const tombstoneFile = join(stateDir, `remainders-${key}.json`);
+    const tombstones = readJson(tombstoneFile, []).filter((p) => existsSync(p));
+    if (!dryRun) {
+      for (const p of [...tombstones]) {
+        try { rmSync(p, { recursive: true, force: true, maxRetries: 2 }); } catch { /* next pass */ }
+        if (!existsSync(p)) tombstones.splice(tombstones.indexOf(p), 1);
+      }
+      for (const p of remainders) if (!tombstones.includes(p)) tombstones.push(p);
+    }
     for (const w of linked) {
       if (w.bare || removedPaths.has(w.path) || !existsSync(w.path)) continue;
       if (protect.some((p) => samePath(real(p), real(w.path)) || inside(real(p), real(w.path)))) continue;
@@ -608,16 +697,19 @@ export function sweepRepo(repo, {
       if ((now - mark) / HOUR < buildIdleDays * 24) continue;
       // Emptied already, and nobody has been in it since: no second walk of every ignored file.
       if (scanned[w.path] === mark) continue;
-      if (!dryRun) scanned[w.path] = mark;
       const own = regenerablePatterns(w.path, main);
-      for (const folder of regenerableFolders(w.path, own.declared ? own.patterns : patterns)) {
-        if ((now - mtime(folder)) / HOUR < buildIdleDays * 24) continue;   // built in the meantime
+      const folders = regenerableFolders(w.path, own.declared ? own.patterns : patterns);
+      let complete = folders !== null;
+      for (const folder of folders || []) {
+        // Built in the meantime: the folder, or anything one level under it, written within the window.
+        if ((now - newestUnder(folder)) / HOUR < buildIdleDays * 24) { complete = false; continue; }
         // Never a folder that holds a worktree, the main checkout, or the caller's copy.
         if ([...others, ...protect].some((o) => !samePath(o, w.path) && (samePath(o, folder) || inside(o, folder) || inside(real(o), real(folder))))) continue;
         if (dryRun) { estimate += folderSize(folder, deadline).bytes; buildFolders.push(folder); continue; }
-        try { rmSync(folder, { recursive: true, force: true, maxRetries: 2 }); } catch { /* a file held open: next pass */ }
-        if (!existsSync(folder)) buildFolders.push(folder);
+        if (emptyBuildFolder(folder, tombstones)) buildFolders.push(folder); else complete = false;
       }
+      // Marked only once everything it picked is gone: a file held open is tried again next pass.
+      if (complete && !dryRun) scanned[w.path] = mark;
     }
 
     const after = diskOf(main);
@@ -644,6 +736,7 @@ export function sweepRepo(repo, {
       const standing = new Set(linked.map((w) => w.path));
       writeJson(heldFile, Object.fromEntries([...heldCache].filter(([path]) => standing.has(path))));
       writeJson(scannedFile, Object.fromEntries(Object.entries(scanned).filter(([path]) => standing.has(path))));
+      writeJson(tombstoneFile, tombstones.filter((p) => existsSync(p)));
       writeJson(join(stateDir, `last-${key}.json`), { at: result.at, repo: main, line: result.line, alert: result.alert || null, freed, removed, shown: false });
       try { mkdirSync(stateDir, { recursive: true }); appendFileSync(join(stateDir, "log.txt"), `${result.at} ${result.line}\n`); } catch { /* the line was printed */ }
     }

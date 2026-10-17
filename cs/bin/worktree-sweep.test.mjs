@@ -296,6 +296,18 @@ test("a session working in an unlocked copy keeps it", () => {
   assert.equal(sweep.copies.find((c) => c.path === path).reason, "touched recently");
 });
 
+test("a session working in a subfolder of a copy keeps it too", () => {
+  const f = fixture();
+  const path = f.add("agent-bench");
+  const claude = join(f.base, "claude");
+  const projectsDir = join(claude, "projects", join(path, ".tmp", "runs", "smoke-3").replace(/[^a-zA-Z0-9]/g, "-"));
+  write(projectsDir, "session.jsonl", "{}");
+  utimesSync(join(projectsDir, "session.jsonl"), new Date(LATER), new Date(LATER));
+  const sweep = sweepRepo(f.main, { now: LATER, stateDir: f.state, alive, configDir: claude, sizeBudgetMs: 5000 });
+  assert.equal(existsSync(path), true);
+  assert.equal(sweep.copies.find((c) => c.path === path).reason, "touched recently");
+});
+
 test("a declared pattern names folders, never everything", () => {
   for (const ok of ["bin", "src/**/obj", "**/node_modules", "packages/*/dist"]) assert.equal(acceptablePattern(ok), true, ok);
   for (const bad of ["*", "**", "**/*", "src/*", "../x", "/abs", "C:/x", "a/../b", ".", ".git", "bi?"]) assert.equal(acceptablePattern(bad), false, bad);

@@ -24,8 +24,8 @@ import { existsSync, readFileSync, statSync, writeFileSync, mkdirSync } from "no
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 // Imported inside a try: a module that fails to load on an older Node must cost a turn nothing.
-let STATE_DIR, mainCheckoutOf, rememberRepo, repoKey;
-try { ({ STATE_DIR, mainCheckoutOf, rememberRepo, repoKey } = await import("../bin/worktree-sweep.mjs")); }
+let STATE_DIR, mainCheckoutOf, rememberRepo, rememberConfigDir, repoKey;
+try { ({ STATE_DIR, mainCheckoutOf, rememberRepo, rememberConfigDir, repoKey } = await import("../bin/worktree-sweep.mjs")); }
 catch { process.exit(0); }
 
 const EVERY_MS = 3_600_000;
@@ -44,7 +44,7 @@ const cwd = payload.cwd || process.cwd();
 const repo = mainCheckoutOf(cwd);
 if (!repo) quit();
 
-try { rememberRepo(repo); } catch { /* the daily pass misses this repository; the hook still sweeps it */ }
+try { rememberRepo(repo); rememberConfigDir(); } catch { /* the daily pass misses this repository; the hook still sweeps it */ }
 
 // 1. The last pass's line, once, when it is worth a reader's attention — and consumed only where it
 //    is printed: a session's end shows nothing, so it leaves the line for the next session.
