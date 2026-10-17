@@ -241,7 +241,8 @@ It commits in the house style, opens the pull request, runs the self-review pane
 finds, then hands the ready pull request to the host's own merge and release path and follows it
 to the release (`cs:ship` § Delivery). **Nobody is asked whether to merge or to ship a fix** — not
 the reporter, not the developer, not by a decision filed on the ticket. The panel and the host's
-quality gate are the review.
+quality gate are the review. Each panel finding cites its host rule and is recorded with its
+outcome (`${CLAUDE_PLUGIN_ROOT}/instructions/review-lenses.md` § Recording).
 
 Resolve `bug-fix`/`merge_mode` and, on an unattended run, `bug-fix`/`auto_ship` following
 `${CLAUDE_PLUGIN_ROOT}/instructions/workflow-defaults.md`: their only value ships, and an absent

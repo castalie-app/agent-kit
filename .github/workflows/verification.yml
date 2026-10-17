@@ -71,6 +71,11 @@ jobs:
       - name: The agents' inbox screens, then relays, resumes or opens a session
         run: node --test cs/bin/prompt-screen.test.mjs cs/bin/inbox.test.mjs cs/bin/prompt-gate.test.mjs
 
+      # The rule ids a review finding cites: GitHub's anchor slug, repeats, fences, accents, two files
+      # sharing a base name. The same contract is computed by Castalie and Green Acres' back office.
+      - name: The review catalog computes the shared rule ids
+        run: node --test cs/bin/review-catalog.test.mjs
+
       # French typography as a script: the no-break spaces inside « » and before : ; ! ?, put in
       # place on a decision's text before it is sent, with code, links and URLs left alone.
       - name: plain-french puts the no-break spaces in place
