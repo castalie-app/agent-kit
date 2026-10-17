@@ -55,8 +55,8 @@ displays; visual evidence goes where `${CLAUDE_PLUGIN_ROOT}/instructions/rich-co
    delivery skills do with it, on the commit the panel left: evidence manifest, tests with their
    result files, canary, `cs proof-pack compute`, then `cs proof-pack gate`. A pack the host's
    pipeline blocks keeps the PR in draft until what it lists as missing is made up. Its `render`
-   block goes into the PR description unchanged, and `cs proof-pack push` stores it on the spec or
-   the ticket. Every later push to the branch computes it again.
+   block goes into the PR description unchanged, and `cs proof-pack push` stores it on the spec, the
+   ticket or the single deliverable's brief. Every later push to the branch computes it again.
 5. **Mark the PR ready.** No blocking finding left open and a pack the host's pipeline lets through → mark it ready. A risk the panel or you still
    see goes into the body as one sentence with how it is reverted — a flag, never a reason to wait.
 6. **Deliver.** Hand the ready PR to the host's merge path, then its release path, and follow it to

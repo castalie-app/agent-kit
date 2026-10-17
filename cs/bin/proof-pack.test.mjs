@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { computePack, gatePack, mutateLine, packFromBody, parseTestResults, renderBlock, runCanary, loadConfig, validatePack, verdictOf } from "./proof-pack.mjs";
+import { computePack, gatePack, meetsExpectation, mutateLine, packFromBody, parseTestResults, renderBlock, runCanary, loadConfig, validatePack, verdictOf } from "./proof-pack.mjs";
 
 const git = (root, ...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 
@@ -235,8 +235,9 @@ test("the gate: NOT_PROVEN blocks, PARTLY_PROVEN passes only while the descripti
   const pack = computePack({ root, base });
   assert.equal(pack.verdict, "PARTLY_PROVEN");
   const body = `Fix.\n\n${renderBlock(pack)}\n`;
-  const { rules: _rules, ...withoutRules } = pack;
-  assert.deepEqual(packFromBody(body), withoutRules);
+  const read = packFromBody(body);
+  assert.deepEqual([read.verdict, read.commit, read.fingerprint, read.modules[0].checks], [pack.verdict, pack.commit, pack.fingerprint, pack.modules[0].checks]);
+  assert.equal(read.rules, undefined, "the rules stay in proof-pack.json, the block is for the verdict");
   assert.equal(gatePack({ root, pack: packFromBody(body), body, head }).pass, true);
   const stripped = body.replace(/\*\*Dossier de preuve[^*]*\*\*/, "");
   assert.equal(gatePack({ root, pack: packFromBody(stripped), body: stripped, head }).pass, false);
@@ -277,12 +278,72 @@ test("cs proof-pack: the CLI answers with the verdict, and push refuses a pack i
     try { return { code: 0, out: execFileSync(process.execPath, [cli, ...args], { cwd, encoding: "utf8", stdio: "pipe", env: { ...process.env, CASTALIE_ENDPOINT: "http://127.0.0.1:9", CASTALIE_TOKEN: "unused" } }) }; }
     catch (e) { return { code: e.status, out: `${e.stdout}${e.stderr}` }; }
   };
-  const { root } = repo({ config: CONFIG });
-  assert.equal(run(root, "proof-pack", "compute").code, 2);
+  const { root, base } = repo({ config: CONFIG });
+  assert.equal(run(root, "proof-pack", "compute", "--base", base).code, 2);
+  assert.equal(run(root, "proof-pack", "compute", "--base", "no-such-ref").code, 3, "no merge base is unusable input, never an empty change");
   write(root, ".tmp/forged.json", JSON.stringify({ schema: "castalie-proof-pack/1", verdict: "PROVEN", modules: [{ name: "app", verdict: "PROVEN", checks: [{ id: "tests", state: "fail" }] }] }));
   const forged = run(root, "proof-pack", "push", "--spec", "102", "--pack", ".tmp/forged.json");
   assert.equal(forged.code, 1);
   assert.match(forged.out, /verdict_mismatch/);
   assert.doesNotMatch(forged.out, /HTTP|fetch failed/);
   assert.equal(run(root, "proof-pack", "push", "--spec", "x").code, 1);
+});
+
+test("review round 1: a pack a reader cannot trust is refused, whatever its verdict says", () => {
+  const { root, base } = repo({ config: CONFIG });
+  write(root, ".tmp/proof/tests/r.trx", trx([["App.Same", "Passed"]]));
+  later(root, ".tmp/proof/tests/r.trx");
+  git(root, "add", "-A"); git(root, "commit", "-qm", "change");
+  const head = git(root, "rev-parse", "HEAD");
+  const pack = computePack({ root, base });
+  // A module that dropped its checks would derive PROVEN from nothing.
+  assert.ok(validatePack({ ...pack, verdict: "PROVEN", modules: [{ name: "x", verdict: "PROVEN", checks: [] }] }).some((p) => p.startsWith("malformed")));
+  // A commit that is not a hash never reaches git: `--output=…` would be read as an option.
+  const forged = { ...pack, commit: "--output=../x" };
+  const r = gatePack({ root, pack: forged, head });
+  assert.equal(r.pass, false); assert.equal(r.unusable, true);
+  // And a pack with no commit no longer skips the head check.
+  assert.equal(gatePack({ root, pack: { ...pack, commit: undefined }, head }).pass, false);
+  // The policy is the one given: a branch's own proof.json relaxing NOT_PROVEN is not read when --config names main's.
+  write(root, ".castalie/proof.json", JSON.stringify({ ...CONFIG, pipeline: { NOT_PROVEN: "merge", PARTLY_PROVEN: "merge" } }));
+  const main = join(root, ".tmp", "main-policy.json");
+  write(root, ".tmp/main-policy.json", JSON.stringify({ ...CONFIG, pipeline: { PARTLY_PROVEN: "block" } }));
+  assert.equal(gatePack({ root, pack, head, config: loadConfig(root, main) }).pass, false);
+});
+
+test("review round 1: a run cut short, an expectation it cannot read and a value read are never a pass", () => {
+  const { root } = repo();
+  write(root, "aborted.trx", `<TestRun><ResultSummary outcome="Aborted"><Counters total="9" executed="2" passed="2" /></ResultSummary><Results><UnitTestResult testName="A.a" outcome="Passed" /><UnitTestResult testName="A.b" outcome="Passed" /></Results></TestRun>`);
+  assert.ok(parseTestResults(join(root, "aborted.trx")).tests.some((t) => t.outcome === "failed"));
+  for (const expect of [{}, { rows: 1 }, { row: ">=1" }, { equals: [] }]) assert.equal(meetsExpectation({ rows: 0, first: null }, expect).met, false, JSON.stringify(expect));
+  const miss = meetsExpectation({ rows: 1, first: { body: "a customer's secret text" } }, { equals: { body: "x" } });
+  assert.equal(miss.met, false);
+  assert.doesNotMatch(miss.why, /secret/);
+  // An unclosed test case does not swallow the next one.
+  write(root, "j.xml", `<testsuite><testcase name="a"><testcase name="b"/><testcase name="c"><failure/></testcase></testsuite>`);
+  assert.deepEqual(parseTestResults(join(root, "j.xml")).tests.map((t) => t.outcome), ["passed", "passed", "failed"]);
+});
+
+test("review round 1: the canary works without a host declaration, and a file a killed run left broken is put back", () => {
+  const { root, base } = repo();
+  write(root, ".tmp/proof/evidence.json", JSON.stringify({ schema: "castalie-proof-evidence/1", modules: [{ name: "app", code: ["src/**"], tests: [".tmp/proof/tests/*.trx"] }] }));
+  const before = readFileSync(join(root, "src/app.js"));
+  const r = runCanary({ root, evidence: ".tmp/proof", base, run: testCommand(root, { notices: true }), results: [".tmp/proof/canary/*.trx"], config: loadConfig(root), log: () => {} });
+  assert.equal(r.code, 0, r.message);
+  assert.deepEqual(readFileSync(join(root, "src/app.js")), before);
+  // A run killed mid-flight: the file is broken and the copy is beside the evidence.
+  write(root, ".tmp/proof/canary/pending.bin", before);
+  write(root, ".tmp/proof/canary/pending.json", JSON.stringify({ file: "src/app.js", atimeMs: Date.now(), mtimeMs: Date.now() }));
+  write(root, "src/app.js", "broken\n");
+  computePack({ root, base });
+  assert.deepEqual(readFileSync(join(root, "src/app.js")), before);
+});
+
+test("review round 1: the manifest's free text is cut, its subject kept to the work item", () => {
+  const { root, base } = repo({ config: CONFIG });
+  write(root, ".tmp/proof/evidence.json", JSON.stringify({ schema: "castalie-proof-evidence/1", subject: { kind: "spec", id: "102", diff: "--- a/x" }, person: ["x".repeat(5000)], verdict: "PROVEN" }));
+  const pack = computePack({ root, base });
+  assert.deepEqual(pack.subject, { kind: "spec", id: 102 });
+  assert.ok(pack.needsPerson[0].item.length <= 200);
+  assert.ok(pack.claimed.some((c) => c.field === "verdict"), "a verdict typed at the top of the manifest is claimed too");
 });

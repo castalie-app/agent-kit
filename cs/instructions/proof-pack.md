@@ -17,9 +17,9 @@ the merge.
 
 ```bash
 cs proof-pack canary  [--base <ref>] --run "<test command>" --results <glob>
-cs proof-pack compute [--base <ref>] [--evidence <dir>] [--out <dir>]
-cs proof-pack render  [--pack <file>]     # the block for the PR description
-cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>]
+cs proof-pack compute [--base <ref>] [--evidence <dir>] [--out <dir>] [--lang fr|en]
+cs proof-pack render  [--pack <file>] [--lang fr|en]     # the block for the PR description
+cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>] [--config <file>]
 ```
 
 The script is `bin/proof-pack.mjs`, and a pipeline with no kit installed runs it as
@@ -28,14 +28,19 @@ The script is `bin/proof-pack.mjs`, and a pipeline with no kit installed runs it
 stores the pack in Castalie on that work item (`proof_pack_record` on the MCP surface).
 
 Defaults: `--evidence .tmp/proof`, `--out .tmp/proof`, `--base origin/main`. The host's declaration
-is read from `.castalie/proof.json` at the repository root.
+is read from `.castalie/proof.json` at the repository root; `gate --config` reads it from another
+file, which is how a pipeline applies the base branch's policy rather than the one the pull request
+carries. The labels are in the declaration's `lang`, or `--lang`, English by default.
+
+A merge base with `--base` is required: a shallow clone, or a ref that does not exist, is unusable
+input, never an empty change.
 
 | Exit code | `compute` | `gate` |
 |---|---|---|
 | 0 | PROVEN | the host's pipeline lets it merge |
 | 1 | PARTLY_PROVEN | the host's pipeline blocks it |
 | 2 | NOT_PROVEN | — |
-| 3 | unusable input (a malformed file, an unknown schema) | unusable input, which blocks |
+| 3 | unusable input (a malformed file, an unknown schema, no merge base) | unusable input, which blocks: a malformed pack, an unreadable file, a `--head` that is not a commit hash |
 
 ## What the agent writes: the evidence manifest
 
@@ -46,22 +51,22 @@ not count.
 ```json
 {
   "schema": "castalie-proof-evidence/1",
-  "subject": { "kind": "bug", "id": 190, "url": "https://pythie.castalie.app/tickets/190" },
+  "subject": { "kind": "bug", "id": 190, "url": "https://<your-workspace>.castalie.app/tickets/190" },
   "modules": [
     {
-      "name": "Castalie.Web",
-      "code": ["src/Castalie.Web/**"],
+      "name": "Web",
+      "code": ["src/Web/**"],
       "tests": [".tmp/proof/tests/*.trx"],
       "mutation": [".tmp/proof/stryker/**/mutation-report.json"],
       "journey": [
-        { "step": "La fiche du ticket montre le verdict", "screenshot": ".tmp/proof/journey/01-sheet.png", "url": "https://pythie.castalie.app/tickets/190" }
+        { "step": "The ticket sheet shows the verdict", "screenshot": ".tmp/proof/journey/01-sheet.png", "url": "https://<your-workspace>.castalie.app/tickets/190" }
       ],
       "queries": [
-        { "name": "Le dossier est en base", "result": ".tmp/proof/queries/stored.json", "expect": { "rows": ">=1" } }
+        { "name": "The pack is stored", "result": ".tmp/proof/queries/stored.json", "expect": { "rows": ">=1" } }
       ]
     }
   ],
-  "person": ["Benoît relit la fiche sur son iPhone"]
+  "person": ["A person reads the sheet on a phone"]
 }
 ```
 
@@ -75,14 +80,15 @@ leaves out are taken from the host's declaration too.
   "schema": "castalie-proof-config/1",
   "modules": [
     {
-      "name": "Castalie.Web",
+      "name": "Web",
       "code": ["src/**"],
       "production": ["src/**/*.cs", "src/**/*.ts"],
       "ui": ["src/**/*.cshtml", "src/**/*.less", "src/**/wwwroot/js/**/*.ts"],
       "tests": [".tmp/proof/tests/*.trx"]
     }
   ],
-  "allowedSkips": [ { "test": "^Castalie\\.Tests\\.Sql\\.", "reason": "needs a MySQL server the CI does not start" } ],
+  "lang": "en",
+  "allowedSkips": [ { "test": "^MyApp\\.Tests\\.Sql\\.", "reason": "needs a MySQL server the CI does not start" } ],
   "pipeline": { "NOT_PROVEN": "block", "PARTLY_PROVEN": "merge_with_note", "PROVEN": "merge", "blockingChecks": [] }
 }
 ```
@@ -144,7 +150,7 @@ a boolean, a `return` of a literal, an arithmetic operator), breaks it, runs the
 restores the file **byte for byte**, and writes `<evidence>/canary/canary.json`:
 
 ```json
-{ "schema": "castalie-proof-canary/1", "file": "src/Castalie.Web/Proof/ProofPackService.cs", "line": 42,
+{ "schema": "castalie-proof-canary/1", "file": "src/Web/Proof/ProofPackService.cs", "line": 42,
   "operator": "==→!=", "originalSha256": "…", "restoredSha256": "…", "ranAt": "2026-10-17T10:20:00Z",
   "results": [".tmp/proof/canary/canary.trx"] }
 ```
@@ -161,14 +167,14 @@ line by hand; the result file still decides.
   "schema": "castalie-proof-pack/1",
   "generator": { "name": "castalie-proof-pack", "version": "1.62.0" },
   "generatedAt": "2026-10-17T10:22:31Z",
-  "repository": "green-acres/castalie",
+  "repository": "<owner>/<repo>",
   "commit": "f6203a92a…", "base": "c4ed2cc98…", "dirty": false,
-  "subject": { "kind": "bug", "id": 190, "url": "https://pythie.castalie.app/tickets/190" },
+  "subject": { "kind": "bug", "id": 190, "url": "https://<your-workspace>.castalie.app/tickets/190" },
   "verdict": "PARTLY_PROVEN",
   "counts": { "PROVEN": 0, "PARTLY_PROVEN": 1, "NOT_PROVEN": 0 },
   "modules": [
     {
-      "name": "Castalie.Web",
+      "name": "Web",
       "verdict": "PARTLY_PROVEN",
       "checks": [
         { "id": "tests",    "label": "Tests ran",            "state": "pass", "detail": "412 tests executed, 0 failed, 0 skipped, from 1 result file." },
@@ -181,15 +187,15 @@ line by hand; the result file still decides.
         "tests":  { "executed": 412, "passed": 412, "failed": 0, "skipped": 0, "allowedSkips": 0,
                     "files": [ { "path": ".tmp/proof/tests/web.trx", "adapter": "trx", "sha256": "…", "modifiedAt": "…" } ],
                     "failedTests": [] },
-        "canary": { "file": "src/Castalie.Web/Proof/ProofPackService.cs", "line": 42, "operator": "==→!=", "failed": 3, "restored": true },
+        "canary": { "file": "src/Web/Proof/ProofPackService.cs", "line": 42, "operator": "==→!=", "failed": 3, "restored": true },
         "mutation": null, "journey": [], "queries": []
       },
       "missing": ["Record the user's path: the change touches screens and no screenshot exists."]
     }
   ],
-  "missing": ["Castalie.Web: record the user's path: the change touches screens and no screenshot exists."],
-  "needsPerson": [ { "item": "Benoît relit la fiche sur son iPhone", "status": "pending" } ],
-  "ignored": [ { "path": ".tmp/proof/tests/old.trx", "reason": "older than src/Castalie.Web/Proof/ProofPackService.cs" } ],
+  "missing": ["Web: record the user's path: the change touches screens and no screenshot exists."],
+  "needsPerson": [ { "item": "A person reads the sheet on a phone", "status": "pending" } ],
+  "ignored": [ { "path": ".tmp/proof/tests/old.trx", "reason": "older than src/Web/Proof/ProofPackService.cs" } ],
   "claimed": [ { "where": "evidence.json modules[0]", "field": "passed", "value": "412" } ],
   "pipeline": { "NOT_PROVEN": "block", "PARTLY_PROVEN": "merge_with_note", "PROVEN": "merge", "blockingChecks": [] },
   "rules": ["PROVEN needs every applicable check to pass…", "…"],
@@ -204,7 +210,13 @@ line by hand; the result file still decides.
 - `rules` carries the rules above in full, so a pack read in a year still says how it was judged.
 - **No code, no diff, no file content** goes into a pack: paths, line numbers, test names, counts
   and hashes only. Failure messages and stack traces stay in the result files.
-- At most 200 failed test names and 40 entries per list; the rest is counted.
+- At most 200 failed test names and 40 skipped ones, the rest counted (`failedTestsMore`,
+  `skippedTestsMore`); at most 40 entries in `missing`, `needsPerson`, `ignored` and `claimed`.
+  Every free text — a test name, a step, a query's name, a person item — is cut at 200 characters,
+  and `subject` keeps `kind`, `id` and `url` only.
+- A reader refuses a pack whose `commit` is not a full commit hash, or one of whose modules does not
+  carry the five checks, each once (`malformed`).
+- A query that misses its expectation says which column, never the value it read.
 
 ### The labels
 
@@ -217,7 +229,9 @@ line by hand; the result file still decides.
 
 ## In the pull request
 
-`render` writes the block that goes, unchanged, into the PR description:
+`render` writes the block that goes, unchanged, into the PR description. Its JSON carries the checks,
+the commit and the fingerprint; the lists of test names and files stay in `proof-pack.json`, which
+`push` stores whole — a description holds 65 536 characters. Here in French (`"lang": "fr"`):
 
 ```markdown
 <!-- castalie-proof-pack:begin -->
@@ -225,9 +239,9 @@ line by hand; the result file still decides.
 
 | Module | Verdict | Ce qui manque |
 |---|---|---|
-| Castalie.Web | partiellement prouvé | le parcours utilisateur n'a pas de capture |
+| Web | partiellement prouvé | le parcours utilisateur n'a pas de capture |
 
-En attente d'une personne : Benoît relit la fiche sur son iPhone.
+En attente d'une personne : A person reads the sheet on a phone.
 
 <details><summary>Le dossier calculé</summary>
 
@@ -239,10 +253,11 @@ En attente d'une personne : Benoît relit la fiche sur son iPhone.
 ```
 
 `gate` reads that block (or a pack file), derives the verdict again from the checks, and applies
-the host's `pipeline`:
+the host's `pipeline` — read from the base branch when the pipeline passes `--config`, never from the
+pack:
 
 - the block is missing or unreadable → blocks (`NOT_PROVEN`);
-- the pack's commit is not the PR's head, and the files changed between the two touch a module's
+- the pack names no commit, or its commit is not the PR's head and the files changed between the two touch a module's
   `code` or `tests` → blocks: the evidence is for another state of the code;
 - `block` → fails; `merge_with_note` → passes, and fails if the description lost the block's verdict
   line; `merge` → passes;
@@ -274,7 +289,9 @@ which hand it their evidence. The steps, in this order:
    report names it — a legitimate stop, never a pack written by hand.
 6. **Publish**: put `cs proof-pack render` unchanged in the PR description, then
    `cs proof-pack push (--bug|--spec|--brief) <id> --pr <url>`. A refusal from Castalie
-   (`verdict_mismatch`, `pack_too_large`) is read and corrected, never retried as is.
+   (`verdict_mismatch`, `pack_too_large`) is read and corrected, never retried as is. A Castalie
+   that does not serve the route yet answers HTTP 404: the pack stays in the description, and the
+   report says in one line that it is not stored on the work item.
 7. **Report the computed verdict**: the report quotes the verdict and its `missing` lines as
    `compute` printed them, and no count of its own.
 
@@ -282,6 +299,10 @@ which hand it their evidence. The steps, in this order:
 description always names the PR's head; the gate refuses a pack computed on another state of the
 code.
 
-`feature-followup` and the next-day check read the stored pack first (`proof_pack_get`). What it
+A pack that was computed but could not be made good — a canary no test notices, a screen no
+session can reach — keeps its verdict: it is never rewritten by hand, and the description says it.
+
+`feature-followup` and the next-day check read the stored pack first (`proof_pack_get`; a Castalie
+that does not know the verb has none). What it
 proves is not proved again; what it lists under `missing` and `needsPerson` is replayed on the
 running product, alongside the scheduled checks, and named in the follow-up's verdict.

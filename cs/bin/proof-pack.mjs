@@ -19,7 +19,7 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,9 +36,16 @@ export const DEFAULT_PIPELINE = { NOT_PROVEN: "block", PARTLY_PROVEN: "merge_wit
 
 const LIST_CAP = 40;
 const FAILED_CAP = 200;
-const WALK_CAP = 50000;
+const TEXT_CAP = 200;
+const WALK_CAP = 200000;
 const MIN_IMAGE_BYTES = 100;
-const SKIP_DIRS = new Set([".git", "node_modules"]);
+const CANARY_TIMEOUT_MINUTES = 30;
+// What a glob never walks into: the repository's own store, dependencies and build outputs. Result
+// files are written where the evidence directory says, never in a build output.
+const SKIP_DIRS = new Set([".git", "node_modules", "bin", "obj", "packages", "dist"]);
+// A full commit hash. Anything else read from a pack — a PR description is anyone's text — never
+// reaches git as an argument.
+const COMMIT = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
 // The fields a count would be typed into. Found in the agent's manifest, each is listed as claimed
 // and never read: the manifest says where the evidence is, never what it says.
 const CLAIM_FIELDS = new Set(["executed", "passed", "failed", "skipped", "total", "count", "counts", "score",
@@ -76,6 +83,10 @@ export const RULES = [
 const slash = (p) => p.replace(/\\/g, "/");
 const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
 const clip = (list, cap = LIST_CAP) => list.slice(0, cap);
+// Every free text that reaches a pack is cut: a pack names things, it never carries their content.
+const cut = (value, cap = TEXT_CAP) => String(value ?? "").slice(0, cap);
+// A path the evidence names stays inside the repository: no absolute path, no `..` segment.
+const insideRoot = (p) => !!p && !isAbsolute(p) && !slash(p).split("/").includes("..");
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 function decodeXml(text) {
@@ -92,8 +103,10 @@ function attr(tag, name) {
   return m ? decodeXml(m[2] ?? m[3] ?? "") : undefined;
 }
 
+const REGEXES = new Map();
 export function globToRegex(glob) {
-  const g = slash(glob).replace(/^\.\//, "");
+  if (REGEXES.has(glob)) return REGEXES.get(glob);
+  const g = slash(glob).replace(/^\.\//, "").replace(/(\*\*\/)+/g, "**/");
   let re = "";
   for (let i = 0; i < g.length; i++) {
     const c = g[i];
@@ -106,15 +119,25 @@ export function globToRegex(glob) {
     else if ("\\^$+.()|{}[]".includes(c)) re += `\\${c}`;
     else re += c;
   }
-  return new RegExp(`^${re}$`);
+  const compiled = new RegExp(`^${re}$`);
+  REGEXES.set(glob, compiled);
+  return compiled;
 }
 
 export const matchesAny = (path, globs) => (globs ?? []).some((g) => globToRegex(g).test(slash(path)));
 
-/** Files under `root` matching `glob`, as paths relative to `root`, sorted. */
-export function expandGlob(root, glob) {
+/** Files under `root` matching `glob`, as paths relative to `root`, sorted. `cache` shares the walks of one run. */
+export function expandGlob(root, glob, cache) {
+  const key = `${root}\n${glob}`;
+  if (cache?.has(key)) return cache.get(key);
+  const found = walkGlob(root, glob);
+  cache?.set(key, found);
+  return found;
+}
+
+function walkGlob(root, glob) {
   const g = slash(glob).replace(/^\.\//, "");
-  if (isAbsolute(glob)) return [];
+  if (!insideRoot(glob)) return [];
   const parts = g.split("/");
   const fixed = [];
   for (const part of parts) { if (/[*?]/.test(part)) break; fixed.push(part); }
@@ -127,7 +150,8 @@ export function expandGlob(root, glob) {
     let entries;
     try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const e of entries) {
-      if (++seen > WALK_CAP) return;
+      // A walk cut short would miss files without a word, and a missed result file is a verdict.
+      if (++seen > WALK_CAP) throw new InputError(`The glob ${glob} walks more than ${WALK_CAP} entries: give it a fixed directory to start from.`);
       const full = join(dir, e.name);
       if (e.isSymbolicLink()) continue;
       if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(full); continue; }
@@ -140,7 +164,8 @@ export function expandGlob(root, glob) {
 }
 
 function git(root, args) {
-  const r = spawnSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: 64 << 20 });
+  // quotePath off: a path with an accent would otherwise come back C-quoted, and match no glob.
+  const r = spawnSync("git", ["-c", "core.quotePath=false", ...args], { cwd: root, encoding: "utf8", maxBuffer: 256 << 20 });
   return r.status === 0 ? r.stdout : null;
 }
 
@@ -157,6 +182,8 @@ function mtime(path) {
 export function changeSet(root, base = "origin/main") {
   const head = (git(root, ["rev-parse", "HEAD"]) ?? "").trim() || null;
   const mergeBase = (git(root, ["merge-base", "HEAD", base]) ?? "").trim() || null;
+  // No merge base is no change set: judged against nothing, a stale result file would read as current.
+  if (!mergeBase) throw new InputError(`No merge base between HEAD and ${base}: fetch it (a shallow clone has none), or name another with --base.`);
   const dirty = (git(root, ["status", "--porcelain", "--untracked-files=normal"]) ?? "").trim().length > 0;
   const files = new Set();
   const lines = new Map();
@@ -197,22 +224,32 @@ function parseTrx(text) {
   const tests = [];
   for (const m of text.matchAll(/<UnitTestResult\b[^>]*>/g)) {
     const tag = m[0];
-    const name = attr(tag, "testName") ?? "?";
+    const name = cut(attr(tag, "testName") ?? "?");
     const outcome = (attr(tag, "outcome") ?? "").toLowerCase();
     if (outcome === "passed") tests.push({ name, outcome: "passed" });
     else if (["failed", "error", "timeout", "aborted"].includes(outcome)) tests.push({ name, outcome: "failed" });
     else tests.push({ name, outcome: "skipped" });
   }
+  // A run the test host left halfway lists only the tests that finished, all of them green. Its
+  // summary says so, and the run counts as a failure, never as the tests it got through.
+  const summary = text.match(/<ResultSummary\b[^>]*>/)?.[0];
+  const runOutcome = (summary && attr(summary, "outcome") || "").toLowerCase();
+  if (["aborted", "error", "timeout"].includes(runOutcome)) tests.push({ name: `(the run itself: ${runOutcome})`, outcome: "failed" });
   return { adapter: "trx", tests };
 }
 
+// One pass from each `<testcase` to the next: a body never extends past the next test case, so an
+// unclosed tag cannot make the scan quadratic.
 function parseJunit(text) {
   const tests = [];
-  const re = /<testcase\b([^>]*?)(\/>|>([\s\S]*?)<\/testcase>)/g;
-  for (const m of text.matchAll(re)) {
-    const tag = `<testcase${m[1]}>`;
-    const name = [attr(tag, "classname"), attr(tag, "name")].filter(Boolean).join(".") || "?";
-    const body = m[3] ?? "";
+  const starts = [...text.matchAll(/<testcase\b/g)].map((m) => m.index);
+  for (let i = 0; i < starts.length; i++) {
+    const chunk = text.slice(starts[i], starts[i + 1] ?? text.length);
+    const close = chunk.indexOf(">");
+    if (close < 0) continue;
+    const tag = chunk.slice(0, close + 1);
+    const name = cut([attr(tag, "classname"), attr(tag, "name")].filter(Boolean).join(".") || "?");
+    const body = tag.endsWith("/>") ? "" : chunk.slice(close + 1).split("</testcase>")[0];
     if (/<(failure|error)\b/.test(body)) tests.push({ name, outcome: "failed" });
     else if (/<skipped\b/.test(body)) tests.push({ name, outcome: "skipped" });
     else tests.push({ name, outcome: "passed" });
@@ -266,8 +303,14 @@ export function readQueryResult(path) {
   return { problem: "neither an array of rows, { rows: [...] } nor { count: n }" };
 }
 
+// Only what it recognises is met: an expectation it cannot read is a missed one, never a pass.
 export function meetsExpectation(result, expect) {
-  if (!expect || typeof expect !== "object") return { met: false, why: "no expectation declared" };
+  if (!expect || typeof expect !== "object" || Array.isArray(expect)) return { met: false, why: "no expectation declared" };
+  const unknown = Object.keys(expect).filter((k) => k !== "rows" && k !== "equals");
+  if (unknown.length) return { met: false, why: `unknown expectation ${unknown.map((k) => cut(k, 40)).join(", ")}` };
+  if (expect.rows === undefined && expect.equals === undefined) return { met: false, why: "no expectation declared" };
+  if (expect.rows !== undefined && typeof expect.rows !== "string") return { met: false, why: "rows must read like \">=1\"" };
+  if (expect.equals !== undefined && (!expect.equals || typeof expect.equals !== "object" || Array.isArray(expect.equals))) return { met: false, why: "equals must name columns" };
   if (typeof expect.rows === "string") {
     const m = expect.rows.replace(/\s/g, "").match(/^(>=|<=|==|>|<)(\d+)$/);
     if (!m) return { met: false, why: `unknown expectation rows ${expect.rows}` };
@@ -278,7 +321,8 @@ export function meetsExpectation(result, expect) {
   if (expect.equals && typeof expect.equals === "object") {
     for (const [k, v] of Object.entries(expect.equals)) {
       const actual = result.first?.[k];
-      if (String(actual) !== String(v)) return { met: false, why: `first row ${k} = ${actual === undefined ? "absent" : JSON.stringify(actual)}, expected ${JSON.stringify(v)}` };
+      // The value read is never repeated: a result file holds data, and a pack names, it never copies.
+      if (String(actual) !== String(v)) return { met: false, why: `first row ${cut(k, 40)} ${actual === undefined ? "is absent" : "differs from the expectation"}` };
     }
   }
   return { met: true };
@@ -332,12 +376,45 @@ export function canaryCandidates(root, change, production) {
   return out;
 }
 
+// Before a line is broken, its file's bytes and dates are copied beside the evidence. A run killed
+// from outside — a tool's time limit, a closed console — then leaves the copy, and the next
+// `canary` or `compute` puts the file back before anything else. The copy stays on this machine.
+function pendingPaths(root, evidence) {
+  const dir = join(root, evidence, "canary");
+  return { dir, meta: join(dir, "pending.json"), bytes: join(dir, "pending.bin") };
+}
+
+/** Puts back a file a canary left broken. Returns the file it restored, or null. */
+export function recoverCanary(root, evidence = ".tmp/proof") {
+  const pending = pendingPaths(root, evidence);
+  if (!existsSync(pending.meta)) return null;
+  const meta = readJson(pending.meta);
+  if (!meta?.file || !insideRoot(meta.file) || !existsSync(pending.bytes)) { rmSync(pending.meta, { force: true }); return null; }
+  const full = join(root, meta.file);
+  writeFileSync(full, readFileSync(pending.bytes));
+  utimesSync(full, new Date(meta.atimeMs), new Date(meta.mtimeMs));
+  rmSync(pending.bytes, { force: true }); rmSync(pending.meta, { force: true });
+  return meta.file;
+}
+
+function canaryProduction(root, evidence, config) {
+  const fromHost = productionGlobs(config);
+  if (fromHost.length) return fromHost;
+  // A host with no declaration: the modules the agent's manifest names, then the whole repository.
+  const manifest = readJson(join(root, evidence, "evidence.json")) ?? {};
+  const fromManifest = (manifest.modules ?? []).flatMap((m) => m.production ?? m.code ?? []);
+  return fromManifest.length ? fromManifest : ["**"];
+}
+
 /** Break one line, run the tests, restore the file byte for byte. Writes <evidence>/canary/canary.json. */
-export function runCanary({ root, evidence, base, run, results, file, line, config, log = console.log, attempts = 3 }) {
+export function runCanary({ root, evidence, base, run, results, file, line, config, log = console.log, attempts = 3, timeoutMinutes = CANARY_TIMEOUT_MINUTES }) {
+  const recovered = recoverCanary(root, evidence);
+  if (recovered) log(`canary: ${recovered} was left broken by an earlier run; it is restored.`);
   const change = changeSet(root, base);
-  const production = productionGlobs(config);
-  const picked = file ? [{ file: slash(file), line: Number(line), operator: null }] : canaryCandidates(root, change, production).slice(0, attempts);
+  if (file && (!insideRoot(file) || !existsSync(join(root, file)))) throw new InputError(`--file ${file} is not a file of this repository.`);
+  const picked = file ? [{ file: slash(file), line: Number(line), operator: null }] : canaryCandidates(root, change, canaryProduction(root, evidence, config)).slice(0, attempts);
   if (!picked.length) return { code: 3, message: "No changed production line carries an operator the canary can break. Name one with --file <path> --line <n>." };
+  const pending = pendingPaths(root, evidence);
   let record = null;
   for (const candidate of picked) {
     const full = join(root, candidate.file);
@@ -350,25 +427,33 @@ export function runCanary({ root, evidence, base, run, results, file, line, conf
     if (!mutated) { if (file) return { code: 3, message: `${candidate.file}:${candidate.line} carries no operator the canary can break.` }; continue; }
     lines[candidate.line - 1] = mutated.line;
     const started = Date.now();
+    mkdirSync(pending.dir, { recursive: true });
+    writeFileSync(pending.bytes, original);
+    writeFileSync(pending.meta, JSON.stringify({ file: candidate.file, atimeMs: stamp.atimeMs, mtimeMs: stamp.mtimeMs }));
     // Restored byte for byte AND with its modification time: a restore that looked like an edit
     // would make every result file written before the canary older than the code.
-    const restore = () => { writeFileSync(full, original); utimesSync(full, stamp.atime, stamp.mtime); };
+    const restore = () => { recoverCanary(root, evidence); };
     const onSignal = () => { restore(); process.exit(130); };
-    process.once("SIGINT", onSignal);
-    let status;
+    const signals = ["SIGINT", "SIGTERM", "SIGHUP", ...(process.platform === "win32" ? ["SIGBREAK"] : [])];
+    for (const s of signals) process.once(s, onSignal);
+    let run_;
     try {
       writeFileSync(full, lines.join(eol));
       log(`canary: ${candidate.file}:${candidate.line} (${mutated.operator}), running: ${run}`);
-      status = spawnSync(run, { cwd: root, shell: true, stdio: "inherit" }).status;
+      run_ = spawnSync(run, { cwd: root, shell: true, stdio: "inherit", timeout: timeoutMinutes * 60000 });
     } finally {
       restore();
-      process.removeListener("SIGINT", onSignal);
+      for (const s of signals) process.removeListener(s, onSignal);
     }
     const restored = sha256(readFileSync(full));
     const files = results.flatMap((g) => expandGlob(root, g)).filter((p) => mtime(join(root, p)) >= started - 1000);
     record = { schema: CANARY_SCHEMA, file: candidate.file, line: candidate.line, operator: mutated.operator,
-      originalSha256: sha256(original), restoredSha256: restored, ranAt: new Date(started).toISOString(), exitCode: status, results: files };
+      originalSha256: sha256(original), restoredSha256: restored, ranAt: new Date(started).toISOString(), exitCode: run_.status,
+      ...(run_.error?.code === "ETIMEDOUT" ? { timedOut: true } : {}), results: files };
     if (files.length) break;
+    // A run that finished green and wrote nothing matched a wrong glob, and the next line would miss
+    // it the same way. Only a run that failed — a break that does not compile — tries the next line.
+    if (run_.status === 0) { log(`canary: the run passed and wrote no result file matching ${results.join(", ")}: check the glob.`); break; }
     log(`canary: the run wrote no result file matching ${results.join(", ")}; trying the next line.`);
   }
   if (!record) return { code: 3, message: "No candidate line could be broken." };
@@ -383,8 +468,7 @@ export function runCanary({ root, evidence, base, run, results, file, line, conf
 }
 
 // ── configuration and manifest ─────────────────────────────────────────────────────────────────
-export function loadConfig(root) {
-  const path = join(root, ".castalie", "proof.json");
+export function loadConfig(root, path = join(root, ".castalie", "proof.json")) {
   if (!existsSync(path)) return { modules: [], allowedSkips: [], pipeline: { ...DEFAULT_PIPELINE } };
   const c = readJson(path);
   if (!c) throw new InputError(".castalie/proof.json is not valid JSON.");
@@ -403,7 +487,9 @@ function findClaims(value, where, out) {
   if (Array.isArray(value)) value.forEach((v, i) => findClaims(v, `${where}[${i}]`, out));
   else if (value && typeof value === "object") {
     for (const [k, v] of Object.entries(value)) {
-      if (k === "expect" || k === "subject") continue;
+      if (k === "expect" || k === "subject" || k === "schema") continue;
+      // A query's `result` is where its file is, not what it says.
+      if (k === "result" && typeof v === "string" && /\.queries\[\d+\]$/.test(where)) continue;
       if (CLAIM_FIELDS.has(k)) out.push({ where, field: k, value: String(typeof v === "object" ? JSON.stringify(v) : v).slice(0, 80) });
       else findClaims(v, `${where}.${k}`, out);
     }
@@ -516,7 +602,9 @@ function check(id, state, detail, extra = {}) {
 }
 
 function judgeModule(ctx, m) {
-  const { root, change, config, t, evidenceFiles, ignored } = ctx;
+  const { root, change, config, t, evidenceFiles, ignored, walks } = ctx;
+  const parsed_ = (p) => { if (!ctx.parsed.has(p)) ctx.parsed.set(p, parseTestResults(join(root, p))); return ctx.parsed.get(p); };
+  const hash = (p) => { if (!ctx.hashes.has(p)) ctx.hashes.set(p, sha256(readFileSync(join(root, p)))); return ctx.hashes.get(p); };
   const newest = Math.max(0, ...m.changed.map((f) => mtime(join(root, f))));
   const isCurrent = (p) => mtime(join(root, p)) > newest;
   const counted = (p) => { evidenceFiles.add(p); return p; };
@@ -528,15 +616,15 @@ function judgeModule(ctx, m) {
   const canaryResults = new Set(record?.results ?? []);
 
   // 1. tests — the canary's own run is never counted here: its failures are the point of it.
-  const testFiles = (m.tests ?? []).flatMap((g) => expandGlob(root, g)).filter((p) => !canaryResults.has(p));
+  const testFiles = (m.tests ?? []).flatMap((g) => expandGlob(root, g, walks)).filter((p) => !canaryResults.has(p));
   const tally = { executed: 0, passed: 0, failed: 0, skipped: 0, allowedSkips: 0, files: [], failedTests: [], skippedTests: [] };
   const skipRules = (config.allowedSkips ?? []).map((s) => ({ re: new RegExp(s.test), reason: s.reason }));
   for (const p of [...new Set(testFiles)]) {
     if (!isCurrent(p)) { ignored.push({ path: p, reason: `older than ${m.changed[0] ?? "the code"}` }); continue; }
-    const parsed = parseTestResults(join(root, p));
+    const parsed = parsed_(p);
     if (parsed.problem) { ignored.push({ path: p, reason: parsed.problem }); continue; }
     counted(p);
-    tally.files.push({ path: p, adapter: parsed.adapter, sha256: sha256(readFileSync(join(root, p))), modifiedAt: new Date(mtime(join(root, p))).toISOString() });
+    tally.files.push({ path: p, adapter: parsed.adapter, sha256: hash(p), modifiedAt: new Date(mtime(join(root, p))).toISOString() });
     for (const test of parsed.tests) {
       if (test.outcome === "passed") { tally.executed++; tally.passed++; }
       else if (test.outcome === "failed") { tally.executed++; tally.failed++; tally.failedTests.push(test.name); }
@@ -559,7 +647,7 @@ function judgeModule(ctx, m) {
 
   // 3. mutation (read before the canary: a killed mutant on a changed line is a canary too)
   const production = m.production ?? m.code ?? ["**"];
-  const reports = (m.mutation ?? []).flatMap((g) => expandGlob(root, g));
+  const reports = (m.mutation ?? []).flatMap((g) => expandGlob(root, g, walks));
   const onChanged = { killed: 0, timeout: 0, survived: 0, noCoverage: 0, unconcluded: 0, ignored: 0 };
   const survivors = []; let incomplete = false; const reportFiles = [];
   for (const p of [...new Set(reports)]) {
@@ -568,7 +656,7 @@ function judgeModule(ctx, m) {
     if (r.problem) { ignored.push({ path: p, reason: r.problem }); continue; }
     counted(p); reportFiles.push(p); incomplete ||= r.incomplete;
     for (const mu of r.mutants) {
-      if (!matchesAny(mu.file, production) || !change.lines.get(mu.file)?.has(mu.line)) continue;
+      if (!change.lines.get(mu.file)?.has(mu.line) || !matchesAny(mu.file, production)) continue;
       const s = mu.status.toLowerCase();
       if (s === "killed") onChanged.killed++;
       else if (s === "timeout") onChanged.timeout++;
@@ -594,10 +682,10 @@ function judgeModule(ctx, m) {
     counted(canaryPath);
     const current = existsSync(join(root, record.file)) ? sha256(readFileSync(join(root, record.file))) : null;
     const ranAt = Date.parse(record.ranAt) || 0;
-    const resultFiles = (record.results ?? []).filter((p) => existsSync(join(root, p)) && mtime(join(root, p)) >= ranAt - 1000);
+    const resultFiles = (record.results ?? []).filter((p) => insideRoot(p) && existsSync(join(root, p)) && mtime(join(root, p)) >= ranAt - 1000);
     let failed = 0; let readable = 0;
     for (const p of resultFiles) {
-      const parsed = parseTestResults(join(root, p));
+      const parsed = parsed_(p);
       if (parsed.problem) continue;
       readable++; counted(p);
       failed += parsed.tests.filter((x) => x.outcome === "failed").length;
@@ -620,14 +708,14 @@ function judgeModule(ctx, m) {
   evidence.journey = [];
   let journey; const bad = [];
   for (const s of steps) {
-    const p = slash(s.screenshot ?? "");
+    const p = slash(String(s.screenshot ?? ""));
     const full = join(root, p);
     let why = null;
-    if (!p || !existsSync(full)) why = t.missing;
+    if (!insideRoot(p) || !existsSync(full)) why = t.missing;
     else if (!imageKind(full)) why = t.notImage;
     else if (!isCurrent(p)) why = t.older;
-    if (why) bad.push(t.journeyBad(String(s.step ?? p), why));
-    else { counted(p); evidence.journey.push({ step: String(s.step ?? ""), screenshot: p, url: s.url, sha256: sha256(readFileSync(full)), modifiedAt: new Date(mtime(full)).toISOString() }); }
+    if (why) bad.push(t.journeyBad(cut(s.step ?? p), why));
+    else { counted(p); evidence.journey.push({ step: cut(s.step), screenshot: p, url: typeof s.url === "string" ? cut(s.url, 500) : undefined, sha256: hash(p), modifiedAt: new Date(mtime(full)).toISOString() }); }
   }
   if (bad.length) { journey = check("journey", "fail", bad.slice(0, 5).join(" ")); missing.push(t.missJourneyBad); }
   else if (steps.length) journey = check("journey", "pass", t.journeyPass(steps.length));
@@ -639,19 +727,20 @@ function judgeModule(ctx, m) {
   evidence.queries = [];
   const failedQueries = [];
   for (const q of queries) {
-    const p = slash(q.result ?? "");
+    const p = slash(String(q.result ?? ""));
     const full = join(root, p);
     let why = null; let result = null;
-    if (!p || !existsSync(full)) why = t.missing;
+    if (!insideRoot(p) || !existsSync(full)) why = t.missing;
     else if (!isCurrent(p)) why = t.older;
     else {
       result = readQueryResult(full);
       if (result.problem) why = result.problem;
       else { const e = meetsExpectation(result, q.expect); if (!e.met) why = e.why; }
     }
-    if (p && existsSync(full)) counted(p);
-    evidence.queries.push({ name: String(q.name ?? p), result: p, expect: q.expect ?? null, actual: result && !result.problem ? { rows: result.rows } : null, met: !why });
-    if (why) failedQueries.push(t.queryBad(String(q.name ?? p), why));
+    if (insideRoot(p) && existsSync(full)) counted(p);
+    const expect = q.expect === undefined ? null : JSON.stringify(q.expect);
+    evidence.queries.push({ name: cut(q.name ?? p), result: p, expect: expect && expect.length <= 500 ? q.expect : null, actual: result && !result.problem ? { rows: result.rows } : null, met: !why });
+    if (why) failedQueries.push(t.queryBad(cut(q.name ?? p), why));
   }
   let queriesCheck;
   if (!queries.length) queriesCheck = check("queries", "na", t.noQuery);
@@ -659,7 +748,7 @@ function judgeModule(ctx, m) {
   else queriesCheck = check("queries", "pass", t.queryPass(queries.length));
 
   const checks = [tests, canary, mutation, journey, queriesCheck];
-  return { name: m.name, verdict: verdictOf(checks), changedFiles: m.changed.length, checks, evidence, missing: [...new Set(missing)], journeySteps: evidence.journey.length };
+  return { name: cut(m.name), verdict: verdictOf(checks), changedFiles: m.changed.length, checks, evidence, missing: [...new Set(missing)], journeySteps: evidence.journey.length };
 }
 
 // ── the verdict, derived — by this script and by every reader ──────────────────────────────────
@@ -678,19 +767,30 @@ export function overallOf(modules) {
 export function validatePack(pack) {
   const problems = [];
   if (!pack || pack.schema !== PACK_SCHEMA) return [`unknown_schema: expected ${PACK_SCHEMA}`];
-  if (!Array.isArray(pack.modules)) return ["modules is not a list"];
+  if (!Array.isArray(pack.modules)) return ["malformed: modules is not a list"];
+  if (!COMMIT.test(String(pack.commit ?? ""))) problems.push("malformed: commit is not a full commit hash");
   for (const m of pack.modules) {
-    if (!Array.isArray(m.checks)) { problems.push(`module ${m.name}: checks is not a list`); continue; }
+    if (!m || !Array.isArray(m.checks)) { problems.push(`malformed: module ${cut(m?.name, 80)}: checks is not a list`); continue; }
+    // Every check, each once: a module that dropped one would be judged on the ones it kept.
+    const ids = m.checks.map((c) => c?.id);
+    if (ids.length !== CHECK_IDS.length || CHECK_IDS.some((id) => !ids.includes(id))) problems.push(`malformed: module ${cut(m.name, 80)} must carry the checks ${CHECK_IDS.join(", ")}, each once`);
     for (const c of m.checks) {
-      if (!CHECK_IDS.includes(c.id)) problems.push(`module ${m.name}: unknown check ${c.id}`);
-      if (!STATES.includes(c.state)) problems.push(`module ${m.name}: check ${c.id} has unknown state ${c.state}`);
+      if (!STATES.includes(c?.state)) problems.push(`malformed: module ${cut(m.name, 80)}: check ${cut(c?.id, 40)} has unknown state ${cut(c?.state, 40)}`);
     }
     if (m.verdict !== verdictOf(m.checks)) problems.push(`verdict_mismatch: module ${m.name} says ${m.verdict}, its checks give ${verdictOf(m.checks)}`);
   }
   const overall = overallOf(pack.modules.map((m) => ({ verdict: Array.isArray(m.checks) ? verdictOf(m.checks) : "NOT_PROVEN" })));
   if (pack.verdict !== overall) problems.push(`verdict_mismatch: the pack says ${pack.verdict}, its modules give ${overall}`);
-  for (const p of pack.needsPerson ?? []) if (p.status !== "pending") problems.push(`person_item_ticked: "${p.item}" is ${p.status}; only a person decides it`);
+  for (const p of Array.isArray(pack.needsPerson) ? pack.needsPerson : []) if (p?.status !== "pending") problems.push(`person_item_ticked: "${cut(p?.item, 80)}" is ${cut(p?.status, 40)}; only a person decides it`);
   return problems;
+}
+
+// The work item the pack proves, and nothing else the manifest put beside it.
+function subjectOf(subject) {
+  if (!subject || typeof subject !== "object") return null;
+  const kind = ["bug", "spec", "brief"].includes(subject.kind) ? subject.kind : null;
+  const id = /^\d+$/.test(String(subject.id ?? "")) ? Number(subject.id) : null;
+  return kind && id ? { kind, id, ...(typeof subject.url === "string" ? { url: cut(subject.url, 500) } : {}) } : null;
 }
 
 // ── compute ────────────────────────────────────────────────────────────────────────────────────
@@ -703,19 +803,24 @@ export function computePack({ root, evidence = ".tmp/proof", base = "origin/main
   if (manifest === undefined) throw new InputError(`${slash(join(evidence, "evidence.json"))} is not valid JSON.`);
   if (manifest.schema && manifest.schema !== EVIDENCE_SCHEMA) throw new InputError(`evidence.json declares ${manifest.schema}; this script reads ${EVIDENCE_SCHEMA}.`);
   const claimed = [];
-  findClaims(manifest.modules ?? [], "evidence.json modules", claimed);
+  findClaims(manifest, "evidence.json", claimed);
+  recoverCanary(root, evidence);
   const change = changeSet(root, base);
+  // The evidence is not the change: a result file or a screenshot written under the evidence
+  // directory would otherwise count as code newer than itself.
+  const evidenceDir = `${slash(evidence).replace(/\/+$/, "")}/`;
+  change.files = change.files.filter((f) => !f.startsWith(evidenceDir));
   const { judged, notJudged } = modulesToJudge(config, manifest, change);
-  const ctx = { root, change, config, t, evidence: slash(evidence), evidenceFiles: new Set(), ignored: [] };
+  const ctx = { root, change, config, t, evidence: slash(evidence), evidenceFiles: new Set(), ignored: [], walks: new Map(), parsed: new Map(), hashes: new Map() };
   const modules = judged.map((m) => judgeModule(ctx, m));
-  const needsPerson = (manifest.person ?? []).map((item) => ({ item: String(typeof item === "object" ? item.item ?? "" : item), status: "pending" }));
+  const needsPerson = (Array.isArray(manifest.person) ? manifest.person : []).map((item) => ({ item: cut(item && typeof item === "object" ? item.item : item), status: "pending" }));
   const shots = modules.reduce((n, m) => n + m.journeySteps, 0);
   if (shots) needsPerson.push({ item: t.looks(shots), status: "pending", kind: "journey-review" });
   for (const m of modules) delete m.journeySteps;
   const missing = modules.flatMap((m) => m.missing.map((x) => `${m.name}: ${x}`));
   if (!modules.length) missing.push(t.noModule);
   const counts = Object.fromEntries(VERDICTS.map((v) => [v, modules.filter((m) => m.verdict === v).length]));
-  const hashed = [...ctx.evidenceFiles].sort().map((p) => `${p}:${sha256(readFileSync(join(root, p)))}`);
+  const hashed = [...ctx.evidenceFiles].sort().map((p) => `${p}:${ctx.hashes.get(p) ?? sha256(readFileSync(join(root, p)))}`);
   const remote = (git(root, ["config", "--get", "remote.origin.url"]) ?? "").trim();
   return {
     schema: PACK_SCHEMA,
@@ -724,7 +829,7 @@ export function computePack({ root, evidence = ".tmp/proof", base = "origin/main
     lang: language,
     repository: remote.replace(/^.*github\.com[:/]/, "").replace(/\.git$/, "") || null,
     commit: change.head, base: change.base, dirty: change.dirty,
-    subject: manifest.subject ?? null,
+    subject: subjectOf(manifest.subject),
     verdict: overallOf(modules),
     counts,
     modules,
@@ -747,6 +852,22 @@ export function verdictLine(pack, lang = pack.lang ?? "en") {
   return `**${L.title} : ${L[pack.verdict]}**`.replace(" : ", lang === "fr" ? " : " : ": ");
 }
 
+// A description holds 65 536 characters, and two failing modules' test names would fill it. The
+// block keeps what a reader derives the verdict from — the checks, the commit, the fingerprint —
+// and the lists stay in proof-pack.json, which `push` stores whole.
+const BLOCK_BUDGET = 40000;
+function blockPack(pack) {
+  const { rules: _rules, ...compact } = pack;
+  const trimmed = { ...compact, modules: compact.modules.map((m) => {
+    const tests = m.evidence?.tests;
+    if (!tests) return m;
+    const { failedTests: _f, skippedTests: _s, files, ...counts } = tests;
+    return { ...m, evidence: { ...m.evidence, tests: { ...counts, files: (files ?? []).length } } };
+  }) };
+  if (JSON.stringify(trimmed).length <= BLOCK_BUDGET) return trimmed;
+  return { ...trimmed, ignored: [], claimed: [], modules: trimmed.modules.map(({ evidence: _e, ...m }) => m), evidenceIn: "proof-pack.json" };
+}
+
 /** The block that goes, unchanged, into the PR description. */
 export function renderBlock(pack, lang = pack.lang ?? "en") {
   const L = LABELS[lang] ?? LABELS.en;
@@ -756,8 +877,7 @@ export function renderBlock(pack, lang = pack.lang ?? "en") {
     for (const m of pack.modules) out.push(`| ${cell(m.name)} | ${L[m.verdict]} | ${cell(m.missing.join(" ") || L.nothing)} |`);
   } else out.push(...pack.missing);
   if (pack.needsPerson?.length) out.push("", `${L.person}${lang === "fr" ? " :" : ":"} ${pack.needsPerson.map((p) => p.item).join(" ; ")}`);
-  const { rules: _rules, ...compact } = pack;
-  out.push("", `<details><summary>${L.details}</summary>`, "", "```json", JSON.stringify(compact), "```", "</details>", END);
+  out.push("", `<details><summary>${L.details}</summary>`, "", "```json", JSON.stringify(blockPack(pack)), "```", "</details>", END);
   return out.join("\n");
 }
 
@@ -791,11 +911,12 @@ export function packFromBody(body) {
 /** Whether the host's pipeline lets this pack merge: { pass, reasons, verdict }. The policy is the host's, never the pack's. */
 export function gatePack({ root, pack, body, head, config = loadConfig(root) }) {
   const reasons = [];
-  if (!pack) return { pass: false, verdict: "NOT_PROVEN", reasons: ["No proof pack: the description carries no readable castalie-proof-pack block."] };
+  if (!pack) return { pass: false, verdict: "NOT_PROVEN", reasons: ["No proof pack: the description carries no readable castalie-proof-pack block. Compute it (cs proof-pack compute, kit 1.62.0 or later) and put cs proof-pack render in the description."] };
   const problems = validatePack(pack);
-  if (problems.length) return { pass: false, verdict: "NOT_PROVEN", reasons: problems };
+  if (problems.length) return { pass: false, unusable: problems.some((p) => /^(unknown_schema|malformed)/.test(p)), verdict: "NOT_PROVEN", reasons: problems };
+  if (head !== undefined && !COMMIT.test(head)) throw new InputError(`--head ${cut(head, 80)} is not a full commit hash.`);
   const verdict = pack.verdict;
-  if (head && pack.commit && pack.commit !== head) {
+  if (head && pack.commit !== head) {
     const changed = git(root, ["diff", "--name-only", pack.commit, head]);
     if (changed === null) reasons.push(`The pack was computed on ${pack.commit.slice(0, 7)}, a commit this repository does not know: compute it again on the head.`);
     else {
@@ -846,7 +967,7 @@ const HELP = `cs proof-pack — the proof of a delivery, computed from the tools
   cs proof-pack canary  [--base <ref>] --run "<test command>" --results <glob> [--file <path> --line <n>]
   cs proof-pack compute [--base <ref>] [--evidence <dir>] [--out <dir>] [--lang fr|en]
   cs proof-pack render  [--pack <file>] [--lang fr|en]
-  cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>]
+  cs proof-pack gate    (--pack <file> | --pr-body <file>) [--head <sha>] [--config <proof.json of the base>]
   cs proof-pack push    (--bug|--spec|--brief) <id> [--pack <file>] [--pr <url>]
 
 compute exits 0 PROVEN, 1 PARTLY_PROVEN, 2 NOT_PROVEN, 3 unusable input. gate exits 0 when the
@@ -887,10 +1008,16 @@ export function runCli(args, { root = process.cwd(), log = console.log, error = 
         return 0;
       }
       case "gate": {
-        const config = loadConfig(root);
+        // --config: the policy of the base branch, which a pipeline reads apart from the branch it judges.
+        const config = typeof o.config === "string" ? loadConfig(root, resolve(root, o.config)) : loadConfig(root);
         let body; let pack;
-        if (typeof o["pr-body"] === "string") { body = readFileSync(resolve(root, o["pr-body"]), "utf8"); pack = packFromBody(body); }
-        else pack = readJson(resolve(root, packPath)) ?? null;
+        if (typeof o["pr-body"] === "string") {
+          try { body = readFileSync(resolve(root, o["pr-body"]), "utf8"); } catch { throw new InputError(`No readable description at ${o["pr-body"]}.`); }
+          pack = packFromBody(body);
+        } else {
+          pack = readJson(resolve(root, packPath)) ?? null;
+          if (!pack) throw new InputError(`No readable pack at ${packPath}.`);
+        }
         const head = typeof o.head === "string" ? o.head : undefined;
         const r = gatePack({ root, pack, body, head, config });
         const L = LABELS.en;
@@ -899,7 +1026,7 @@ export function runCli(args, { root = process.cwd(), log = console.log, error = 
         if (process.env.GITHUB_STEP_SUMMARY) {
           try { writeFileSync(process.env.GITHUB_STEP_SUMMARY, [`### Proof gate: ${r.pass ? "pass" : "blocked"} (${r.verdict})`, "", ...r.reasons.map((x) => `- ${x}`), ""].join("\n"), { flag: "a" }); } catch { /* the summary is a courtesy */ }
         }
-        return r.pass ? 0 : 1;
+        return r.pass ? 0 : r.unusable ? 3 : 1;
       }
       case "push": error("push stores the pack in Castalie, so it goes through the CLI: cs proof-pack push (--bug|--spec|--brief) <id>."); return 3;
       case undefined: case "help": case "--help": case "-h": log(HELP); return 0;
