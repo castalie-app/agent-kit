@@ -79,6 +79,15 @@ jobs:
       - name: The proof pack is computed from the tools' files, never declared
         run: node --test cs/bin/proof-pack.test.mjs
 
+      # The worktree sweep: a modified or untracked file, a commit pushed nowhere, a live agent's lock,
+      # a lock written by hand, the caller's own copy — none is ever removed; a squash-merged branch
+      # is. Temporary git repositories and a temporary home, no network, no scheduler.
+      - name: The worktree sweep never removes work that exists nowhere else
+        run: |
+          git config --global user.email ci@example.test
+          git config --global user.name ci
+          node --test cs/bin/worktree-sweep.test.mjs
+
       # The reviewer bench's local decisions: which lens a pull request modified, whether a remark
       # lands in the zone a fix touched, where a diff touched the code, what a revert names.
       - name: The reviewer bench replays only the modified lens and matches the expected zone
