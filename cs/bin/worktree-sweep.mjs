@@ -25,7 +25,11 @@
 // (merge, rebase, cherry-pick), with a commit that exists nowhere else; a copy whose agent wrote to
 // its transcript within the window, or locked by hand (a lock that names no pid); the copy the caller stands in; the main
 // checkout; any worktree outside `.claude/worktrees/` for removal (a pool of slots has its own
-// launcher). When git cannot answer a question about a copy, the copy is kept.
+// launcher); a copy that holds another worktree; a commit only a branch deleted on the server still
+// names (one `ls-remote` per pass says which branches the server has). It removes without `--force`,
+// right after the verdict, so git itself refuses a copy that changed in between. Files git ignores go
+// with the copy they sit in: the repository declared them not worth keeping. When git cannot answer
+// a question about a copy, the copy is kept.
 //
 // WHO RUNS IT. The `worktree-sweep` hook, at the end of a turn, of an agent and of a session — at most
 // once an hour per repository, detached, so no turn ever waits on it — and a daily pass that the
@@ -41,8 +45,9 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync,
-  statSync, statfsSync, writeFileSync,
+  statSync, writeFileSync,
 } from "node:fs";
+import * as nodeFs from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import { quote, stableCliPath } from "./agent-tasks.mjs";
@@ -62,10 +67,16 @@ const caseless = process.platform === "win32" || process.platform === "darwin";
 
 // ── git ─────────────────────────────────────────────────────────────────────
 
-/** `{ ok, out }`, never a throw: a question git cannot answer keeps the copy. */
-export function git(cwd, args, timeout = 60_000) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", timeout, windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
-  return { ok: result.status === 0, out: (result.stdout || "").trim() };
+// No optional lock a live session would trip on, no prompt nobody can answer, and no fsmonitor a
+// repository's own config would start: a pass runs unattended, in repositories nobody has open.
+const GIT_ENV = { ...process.env, GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "never" };
+
+/** `{ ok, out, err }`, never a throw: a question git cannot answer keeps the copy. */
+export function git(cwd, args, timeout = 60_000, input) {
+  const result = spawnSync("git", ["-c", "core.fsmonitor=false", ...args], {
+    cwd, encoding: "utf8", timeout, windowsHide: true, maxBuffer: 64 * 1024 * 1024, env: GIT_ENV, input,
+  });
+  return { ok: result.status === 0, out: (result.stdout || "").trim(), err: (result.stderr || "").trim() };
 }
 
 /** The main checkout of the repository `dir` belongs to, or null outside one. */
@@ -95,10 +106,14 @@ export function parseWorktrees(porcelain) {
   });
 }
 
-/** The pid a lock names — Claude Code writes `claude agent agent-<id> (pid N)` — or null. */
+// The lock Claude Code writes on an agent's copy, in that exact form. Any other reason is a lock a
+// person or another tool wrote, and it is never lifted.
+const AGENT_LOCK = /^claude agent (agent-[\w-]+) \(pid (\d+)\)$/i;
+
+/** The pid of a lock Claude Code wrote — `claude agent agent-<id> (pid N)` — or null. */
 export function lockPid(reason) {
-  const match = /\bpid[\s:=]*(\d+)/i.exec(String(reason || ""));
-  return match ? Number(match[1]) : null;
+  const match = AGENT_LOCK.exec(String(reason || "").trim());
+  return match ? Number(match[2]) : null;
 }
 
 /** Whether a process is alive. A pid we may not signal is alive; only "no such process" is dead. */
@@ -110,7 +125,7 @@ export function isAlive(pid) {
 
 /** The agent a lock names — `claude agent agent-<id> (pid N)` — or null. */
 export function lockAgent(reason) {
-  const match = /claude agent (agent-[\w-]+)/i.exec(String(reason || ""));
+  const match = AGENT_LOCK.exec(String(reason || "").trim());
   return match ? match[1] : null;
 }
 
@@ -143,6 +158,44 @@ export function agentActivity(configDir = claudeConfigDir()) {
     }
   }
   return index;
+}
+
+/** Both indexes, built once per process and per configuration folder: `--all` sweeps many repositories. */
+const activityMemo = new Map();
+export function claudeActivity(configDir = claudeConfigDir()) {
+  if (!activityMemo.has(configDir)) activityMemo.set(configDir, { agents: agentActivity(configDir), sessions: sessionActivity(configDir) });
+  return activityMemo.get(configDir);
+}
+
+/** The folder name Claude Code gives the project of a working directory: every other character a dash. */
+export function projectDirName(path) {
+  return String(path).replace(/[^a-zA-Z0-9]/g, "-");
+}
+
+/**
+ * When a session last wrote a transcript in each project folder — `projects/<project>/<session>.jsonl`
+ * — keyed by the folder name. A session opened IN a copy (`claude --worktree`, EnterWorktree) holds no
+ * lock at all; its transcript, under the project folder named after the copy's path, says it is there.
+ */
+export function sessionActivity(configDir = claudeConfigDir()) {
+  const index = new Map();
+  const projects = join(configDir, "projects");
+  let names;
+  try { names = readdirSync(projects, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name); } catch { return index; }
+  for (const project of names) {
+    let files;
+    try { files = readdirSync(join(projects, project)); } catch { continue; }
+    let at = 0;
+    for (const file of files) if (file.endsWith(".jsonl")) at = Math.max(at, mtime(join(projects, project, file)));
+    if (at) index.set(caseless ? project.toLowerCase() : project, at);
+  }
+  return index;
+}
+
+/** The last time a session wrote a transcript with this copy as its working directory, or 0. */
+export function sessionIn(path, sessions) {
+  const key = (p) => (caseless ? projectDirName(p).toLowerCase() : projectDirName(p));
+  return Math.max(sessions.get(key(path)) || 0, sessions.get(key(real(path))) || 0);
 }
 
 /** The administrative folder git keeps for a linked worktree (`.git/worktrees/<name>`). */
@@ -180,6 +233,28 @@ export function defaultRemoteBranch(repo) {
 }
 
 /**
+ * The remote-tracking refs whose branch still exists on the server — one `ls-remote`, no fetch. A
+ * branch deleted on the server lingers locally until a `fetch --prune`, and a commit only it holds
+ * is pushed nowhere. Null when the server cannot be asked: then only the default branch counts.
+ */
+export function liveRemoteRefs(repo, defaultBranch) {
+  if (!defaultBranch) return null;
+  const remote = defaultBranch.split("/")[0];
+  const prefix = `refs/remotes/${remote}/`;
+  const heads = git(repo, ["ls-remote", "--heads", remote], 60_000);
+  if (!heads.ok) return null;
+  const onServer = new Set(heads.out.split(/\r?\n/).map((line) => line.split("\t")[1]).filter(Boolean).map((ref) => ref.replace(/^refs\/heads\//, "")));
+  return git(repo, ["for-each-ref", "--format=%(refname)", prefix]).out.split(/\r?\n/)
+    .filter((ref) => ref.startsWith(prefix) && onServer.has(ref.slice(prefix.length)));
+}
+
+/** Whether HEAD carries a commit none of `refs` holds. Unknown → true. */
+export function hasCommitsBeyond(cwd, refs) {
+  const r = git(cwd, ["rev-list", "-n", "1", "--stdin", "HEAD"], 120_000, refs.map((ref) => `^${ref}\n`).join(""));
+  return !r.ok || r.out !== "";
+}
+
+/**
  * Whether every change HEAD carries is already in `target`: HEAD is an ancestor of it, or merging
  * HEAD into it changes nothing (a squash merge, a rebase that landed). Unknown → false.
  */
@@ -213,21 +288,27 @@ function real(path) {
  * What a pass may do with one agent copy. `remove` is the only verdict that deletes anything; every
  * other one names why the copy stays. `unlock` says the lock it carries is an orphan to lift first.
  */
-export function classify(entry, { repo, defaultBranch, now = Date.now(), idleHours = DEFAULTS.idleHours, protect = [], alive = isAlive, agents = new Map() } = {}) {
+export function classify(entry, {
+  defaultBranch, liveRefs = null, now = Date.now(), idleHours = DEFAULTS.idleHours, protect = [], alive = isAlive,
+  agents = new Map(), sessions = new Map(), others = [], heldCache = new Map(), heldSalt = "",
+} = {}) {
   const verdict = (keep, reason, extra = {}) => ({ path: entry.path, keep, reason, ...extra });
+  const window = Math.max(1, idleHours);
   if (protect.some((p) => samePath(real(p), real(entry.path)) || inside(real(p), real(entry.path)))) return verdict(true, "in use by the caller");
-  if (!existsSync(entry.path)) return verdict(true, "missing");   // `git worktree prune` settles it
+  if (!existsSync(entry.path)) return verdict(true, "missing");
+  // Removing a copy deletes everything under it, another agent's copy nested in it included.
+  if (others.some((o) => !samePath(o, entry.path) && (inside(o, entry.path) || inside(real(o), real(entry.path))))) return verdict(true, "holds another worktree");
 
   // `unlock`: "dead" — the session that held the lock is gone, the lock is lifted whatever follows;
   // "finished" — the session is alive but its agent has not written for the whole window, so the
   // lock is lifted only to remove a copy proven to hold nothing of its own.
   let unlock = false;
-  const transcript = agents.get(lockAgent(entry.lockReason) || basename(entry.path)) || 0;
+  const transcript = Math.max(agents.get(lockAgent(entry.lockReason) || basename(entry.path)) || 0, sessionIn(entry.path, sessions));
   if (entry.locked) {
     const pid = lockPid(entry.lockReason);
     if (pid === null) return verdict(true, "locked by hand");
     if (!alive(pid)) unlock = "dead";
-    else if (transcript && (now - transcript) / HOUR >= idleHours) unlock = "finished";
+    else if (transcript && (now - transcript) / HOUR >= window) unlock = "finished";
     else return verdict(true, "its agent is alive");
   }
 
@@ -240,16 +321,24 @@ export function classify(entry, { repo, defaultBranch, now = Date.now(), idleHou
   // Before any git question, which costs seconds on a large checkout: a copy touched within the
   // window stays whatever it holds.
   const idle = (now - Math.max(lastActivity(entry.path, gitDir), transcript)) / HOUR;
-  if (idle < idleHours) return verdict(true, "touched recently", { unlock, idleHours: idle, waiting: true });
+  if (idle < window) return verdict(true, "touched recently", { unlock, idleHours: idle, waiting: true });
+
+  // A copy already found held, with nothing moved since — its HEAD, its index, the default branch,
+  // the branches on the server — is held still: no second scan of a multi-GB checkout every hour.
+  const heldKey = [entry.head, mtime(join(gitDir, "index")), heldSalt].join("|");
+  const before = heldCache.get(entry.path);
+  if (before && before.key === heldKey) return verdict(true, before.reason, { unlock, held: true });
+  const held = (reason) => { heldCache.set(entry.path, { key: heldKey, reason }); return verdict(true, reason, { unlock, held: true }); };
+
+  // Pushed means held by a branch the server still has; the default branch counts either way. The
+  // history question first: it is cheaper than a status that walks every file.
+  const merged = containedIn(entry.path, defaultBranch);
+  const pushed = merged || (liveRefs !== null && !hasCommitsBeyond(entry.path, liveRefs));
+  if (!pushed) return held("commits pushed nowhere");
 
   const status = git(entry.path, ["status", "--porcelain", "--untracked-files=normal", "--ignore-submodules=none"], 120_000);
   if (!status.ok) return verdict(true, "git cannot read it", { unlock });
-  if (status.out) return verdict(true, "uncommitted changes", { unlock, held: true });
-
-  const unpushed = git(entry.path, ["rev-list", "-n", "1", "HEAD", "--not", "--remotes"]);
-  if (!unpushed.ok) return verdict(true, "git cannot read it", { unlock });
-  const merged = containedIn(entry.path, defaultBranch);
-  if (unpushed.out && !merged) return verdict(true, "commits pushed nowhere", { unlock, held: true });
+  if (status.out) return held("uncommitted changes");
 
   const kind = merged ? "merged" : "pushed";
   return verdict(false, kind, { unlock, kind, idleHours: idle });
@@ -273,12 +362,27 @@ export function patternToRegExp(pattern) {
   return new RegExp(`^${out}$`, caseless ? "i" : "");
 }
 
+/**
+ * Whether a declared pattern names folders, not everything: relative, no `.` or `..` segment, and a
+ * last segment that is a plain name. `*` or `**\/*` would empty every ignored folder — a `.env`
+ * folder, a `.tmp/` of working notes — and the file declaring it comes with whatever branch is out.
+ */
+export function acceptablePattern(pattern) {
+  const p = String(pattern).trim().replace(/\\/g, "/").replace(/\/+$/, "");
+  if (!p || p.startsWith("/") || /^[A-Za-z]:/.test(p)) return false;
+  const segments = p.replace(/^\.\//, "").split("/");
+  if (segments.some((s) => s === "." || s === ".." || s === "")) return false;
+  return /^[\w.-]+$/.test(segments[segments.length - 1]) && segments[segments.length - 1] !== ".git";
+}
+
 /** What the repository declares regenerable in `.castalie/worktrees.json`, else the default build folders. */
 export function regenerablePatterns(...roots) {
   for (const root of roots) {
     try {
       const declared = JSON.parse(readFileSync(join(root, ".castalie", "worktrees.json"), "utf8"));
-      if (Array.isArray(declared.regenerable)) return { patterns: declared.regenerable.map(String).filter(Boolean), declared: true };
+      if (Array.isArray(declared.regenerable)) {
+        return { patterns: declared.regenerable.map(String).filter(acceptablePattern), declared: true };
+      }
     } catch { /* not declared here */ }
   }
   return { patterns: DEFAULT_REGENERABLE, declared: false };
@@ -288,7 +392,7 @@ export function regenerablePatterns(...roots) {
 export function regenerableFolders(worktreePath, patterns) {
   const listed = git(worktreePath, ["ls-files", "--others", "--ignored", "--exclude-standard", "--directory", "-z"], 300_000);
   if (!listed.ok) return [];
-  const regexps = patterns.map(patternToRegExp);
+  const regexps = patterns.filter(acceptablePattern).map(patternToRegExp);
   const picked = [];
   const entries = listed.out.split("\0").filter((e) => e.endsWith("/")).map((e) => e.slice(0, -1)).sort();
   for (const rel of entries) {
@@ -324,7 +428,8 @@ export function folderSize(path, deadline = Infinity) {
 export function diskOf(path) {
   try {
     const target = real(path);
-    const fs = statfsSync(target);
+    if (typeof nodeFs.statfsSync !== "function") return null;   // Node before 18.15: no disk figure, the sweep still runs
+    const fs = nodeFs.statfsSync(target);
     const label = process.platform === "win32" ? parse(target).root.replace(/\\$/, "") : parse(target).root;
     return { label, free: fs.bavail * fs.bsize, total: fs.blocks * fs.bsize };
   } catch { return null; }
@@ -391,78 +496,124 @@ export function knownRepos(stateDir = STATE_DIR) {
   return readJson(join(stateDir, "repos.json"), []).filter((r) => existsSync(join(r, ".git")));
 }
 
-/** One pass per repository at a time: a pid file, taken over when its holder is dead. */
+/**
+ * One pass per repository at a time: a pid file created exclusively, taken over only when its
+ * holder is dead, and removed only by the pass that holds it.
+ */
 function takePassLock(repo, stateDir) {
   const file = join(stateDir, `pass-${repoKey(repo)}.pid`);
-  const holder = Number(readJson(file, {}).pid);
-  if (holder && holder !== process.pid && isAlive(holder)) return null;
-  writeJson(file, { pid: process.pid, at: new Date().toISOString() });
-  return () => rmSync(file, { force: true });
+  mkdirSync(stateDir, { recursive: true });
+  const body = JSON.stringify({ pid: process.pid, at: new Date().toISOString() });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      writeFileSync(file, body, { encoding: "utf8", flag: "wx" });
+      return () => { if (Number(readJson(file, {}).pid) === process.pid) rmSync(file, { force: true }); };
+    } catch (error) {
+      if (error.code !== "EEXIST") return null;
+      // Stale when its pass is dead — or older than any pass runs: a killed pass's pid reused by
+      // another process must not hold every later pass off for ever.
+      const { pid, at } = readJson(file, {});
+      if (pid && isAlive(Number(pid)) && Date.now() - Date.parse(at || 0) < 3 * HOUR) return null;
+      rmSync(file, { force: true });   // a dead pass's file: take it over once
+    }
+  }
+  return null;
 }
 
 // ── The pass ────────────────────────────────────────────────────────────────
 
+/**
+ * Removes one copy, right after its verdict. No `--force`: git itself refuses a copy that has become
+ * dirty or untracked since, a lock taken again, a submodule. Only when git has already dropped the
+ * copy's registration — it checked and started deleting, then failed on a long path or a file held
+ * open — is the remainder deleted by hand.
+ */
 function removeCopy(repo, verdict) {
   if (verdict.unlock) git(repo, ["worktree", "unlock", verdict.path]);
-  if (git(repo, ["worktree", "remove", "--force", verdict.path], 600_000).ok && !existsSync(verdict.path)) return true;
-  // git gives up on a path too long or a file held open; the copy was proven clean and pushed, so
-  // whatever git left is a remainder, not work.
-  try { rmSync(verdict.path, { recursive: true, force: true, maxRetries: 3 }); } catch { /* reported below */ }
-  git(repo, ["worktree", "prune"]);
-  return !existsSync(verdict.path);
+  const gitDir = gitDirOf(verdict.path);
+  const removed = git(repo, ["worktree", "remove", verdict.path], 600_000);
+  if (removed.ok && !existsSync(verdict.path)) return true;
+  if (gitDir && !existsSync(gitDir) && existsSync(verdict.path)) {
+    try { rmSync(verdict.path, { recursive: true, force: true, maxRetries: 3 }); } catch { /* reported as failed */ }
+    return !existsSync(verdict.path);
+  }
+  // Refused: put back the lock of a session still open, so its agent can still be resumed.
+  if (verdict.unlock === "finished" && verdict.lockReason) git(repo, ["worktree", "lock", "--reason", verdict.lockReason, verdict.path]);
+  verdict.error = removed.err.split(/\r?\n/)[0] || "git refused";
+  return false;
 }
 
 /**
  * One pass over one repository. Returns the result, with `line` (always) and `alert` (under 10 %).
  * `dryRun` decides nothing on disk and reports what a pass would do.
  */
-export function sweepRepo(repo, { dryRun = false, idleHours = DEFAULTS.idleHours, buildIdleDays = DEFAULTS.buildIdleDays, protect = [], now = Date.now(), stateDir = STATE_DIR, alive = isAlive, sizeBudgetMs = 90_000, configDir = claudeConfigDir() } = {}) {
+export function sweepRepo(repo, {
+  dryRun = false, idleHours = DEFAULTS.idleHours, buildIdleDays = DEFAULTS.buildIdleDays, protect = [], now = Date.now(),
+  stateDir = STATE_DIR, alive = isAlive, sizeBudgetMs = 90_000, configDir = claudeConfigDir(),
+} = {}) {
   const main = mainCheckoutOf(repo);
   if (!main) return { repo, skipped: "not a git repository with a working tree", line: `cs worktrees · ${repo}: not a git checkout — nothing swept.` };
   const release = dryRun ? () => {} : takePassLock(main, stateDir);
   if (!release) return { repo: main, skipped: "another pass is running", line: `cs worktrees · ${basename(main)}: another pass is running.` };
   try {
     const before = diskOf(main);
-    if (!dryRun) git(main, ["worktree", "prune"]);
+    // No `git worktree prune`: it would drop the registration of any worktree whose folder is away
+    // for a while — an unplugged drive — with the commits only its HEAD held.
     const list = git(main, ["worktree", "list", "--porcelain"]);
     if (!list.ok) return { repo: main, skipped: "git worktree list failed", line: `cs worktrees · ${basename(main)}: git did not answer — nothing swept.` };
     const [, ...linked] = parseWorktrees(list.out);
     const agentRoot = join(main, AGENT_ROOT);
     const defaultBranch = defaultRemoteBranch(main);
-    const agents = agentActivity(configDir);
-
-    const verdicts = linked
-      .filter((w) => !w.bare && (inside(w.path, agentRoot) || inside(real(w.path), real(agentRoot))))
-      .map((w) => classify(w, { repo: main, defaultBranch, now, idleHours, protect, alive, agents }));
+    const liveRefs = liveRemoteRefs(main, defaultBranch);
+    const { agents, sessions } = claudeActivity(configDir);
+    const others = [main, ...linked.map((w) => w.path)];
+    const key = repoKey(main);
+    const heldFile = join(stateDir, `held-${key}.json`);
+    const heldCache = new Map(Object.entries(readJson(heldFile, {})));
+    const heldSalt = createHash("sha1").update([git(main, ["rev-parse", defaultBranch || "HEAD"]).out, ...(liveRefs || ["offline"])].join("\n")).digest("hex");
+    const context = { defaultBranch, liveRefs, now, idleHours, protect, alive, agents, sessions, others, heldCache, heldSalt };
 
     let removed = 0, unlocked = 0, failures = 0, estimate = 0;
     const deadline = Date.now() + sizeBudgetMs;
-    for (const v of verdicts) {
+    const verdicts = [];
+    // Each copy is judged and removed in one step, so nothing can change between the two but what
+    // git itself re-checks at removal.
+    for (const w of linked) {
+      if (w.bare || !(inside(w.path, agentRoot) || inside(real(w.path), real(agentRoot)))) continue;
+      const v = { ...classify(w, context), lockReason: w.lockReason };
+      verdicts.push(v);
       // A dead session's lock is lifted even on a copy that stays; a live session's only to remove.
-      if (v.unlock === "dead" || (v.unlock && !v.keep)) unlocked += 1;
       if (v.keep) {
-        if (v.unlock === "dead" && !dryRun) git(main, ["worktree", "unlock", v.path]);
+        if (v.unlock === "dead") { unlocked += 1; if (!dryRun) git(main, ["worktree", "unlock", v.path]); }
         continue;
       }
+      if (v.unlock) unlocked += 1;
       if (dryRun) { removed += 1; estimate += folderSize(v.path, deadline).bytes; continue; }
-      if (removeCopy(main, v)) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; }
+      if (removeCopy(main, v)) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; if (v.unlock) unlocked -= 1; }
     }
 
     // Build outputs: every linked worktree still standing, idle long enough, never the caller's.
     const removedPaths = new Set(verdicts.filter((v) => v.removed || (dryRun && !v.keep)).map((v) => v.path));
     const { patterns, declared } = regenerablePatterns(main);
     const buildFolders = [];
+    const scannedFile = join(stateDir, `builds-${key}.json`);
+    const scanned = readJson(scannedFile, {});
     for (const w of linked) {
       if (w.bare || removedPaths.has(w.path) || !existsSync(w.path)) continue;
       if (protect.some((p) => samePath(real(p), real(w.path)) || inside(real(p), real(w.path)))) continue;
       const held = w.locked && lockPid(w.lockReason) && alive(lockPid(w.lockReason));
-      const ran = agents.get(lockAgent(w.lockReason) || basename(w.path)) || 0;
-      if (held && (!ran || (now - ran) / HOUR < buildIdleDays * 24)) continue;   // an agent still at work in it
-      if ((now - ran) / HOUR < buildIdleDays * 24) continue;
-      if ((now - lastActivity(w.path)) / HOUR < buildIdleDays * 24) continue;
+      const ran = Math.max(agents.get(lockAgent(w.lockReason) || basename(w.path)) || 0, sessionIn(w.path, sessions));
+      if (held && !ran) continue;   // a live session holds it and nothing says its agent stopped
+      const mark = Math.max(ran, lastActivity(w.path));
+      if ((now - mark) / HOUR < buildIdleDays * 24) continue;
+      // Emptied already, and nobody has been in it since: no second walk of every ignored file.
+      if (scanned[w.path] === mark) continue;
+      if (!dryRun) scanned[w.path] = mark;
       const own = regenerablePatterns(w.path, main);
       for (const folder of regenerableFolders(w.path, own.declared ? own.patterns : patterns)) {
         if ((now - mtime(folder)) / HOUR < buildIdleDays * 24) continue;   // built in the meantime
+        // Never a folder that holds a worktree, the main checkout, or the caller's copy.
+        if ([...others, ...protect].some((o) => !samePath(o, w.path) && (samePath(o, folder) || inside(o, folder) || inside(real(o), real(folder))))) continue;
         if (dryRun) { estimate += folderSize(folder, deadline).bytes; buildFolders.push(folder); continue; }
         try { rmSync(folder, { recursive: true, force: true, maxRetries: 2 }); } catch { /* a file held open: next pass */ }
         if (!existsSync(folder)) buildFolders.push(folder);
@@ -490,7 +641,10 @@ export function sweepRepo(repo, { dryRun = false, idleHours = DEFAULTS.idleHours
     }
 
     if (!dryRun) {
-      writeJson(join(stateDir, `last-${repoKey(main)}.json`), { at: result.at, repo: main, line: result.line, alert: result.alert || null, freed, removed, shown: false });
+      const standing = new Set(linked.map((w) => w.path));
+      writeJson(heldFile, Object.fromEntries([...heldCache].filter(([path]) => standing.has(path))));
+      writeJson(scannedFile, Object.fromEntries(Object.entries(scanned).filter(([path]) => standing.has(path))));
+      writeJson(join(stateDir, `last-${key}.json`), { at: result.at, repo: main, line: result.line, alert: result.alert || null, freed, removed, shown: false });
       try { mkdirSync(stateDir, { recursive: true }); appendFileSync(join(stateDir, "log.txt"), `${result.at} ${result.line}\n`); } catch { /* the line was printed */ }
     }
     return result;
@@ -672,8 +826,8 @@ export async function runCli(argv) {
   const options = {
     dryRun,
     protect: args.protect,
-    idleHours: Number.isFinite(args.idleHours) ? args.idleHours : DEFAULTS.idleHours,
-    buildIdleDays: Number.isFinite(args.buildIdleDays) ? args.buildIdleDays : DEFAULTS.buildIdleDays,
+    idleHours: Number.isFinite(args.idleHours) ? Math.max(1, args.idleHours) : DEFAULTS.idleHours,
+    buildIdleDays: Number.isFinite(args.buildIdleDays) ? Math.max(1, args.buildIdleDays) : DEFAULTS.buildIdleDays,
   };
   const results = [];
   for (const repo of repos) {
@@ -691,5 +845,15 @@ export async function runCli(argv) {
     }
   }
   if (args.json) console.log(JSON.stringify(results, null, 2));
-  if (args.fromHook) ensureDaily();
+  if (args.fromHook) {
+    // The person learns the daily pass exists the first time it is scheduled, at the next end of turn.
+    const scheduled = ensureDaily();
+    if (scheduled) {
+      for (const result of results.filter((r) => !r.skipped)) {
+        const file = join(STATE_DIR, `last-${repoKey(result.repo)}.json`);
+        const last = readJson(file, null);
+        if (last) writeJson(file, { ...last, notice: `${scheduled} \`cs worktrees uninstall\` removes it.`, shown: false });
+      }
+    }
+  }
 }

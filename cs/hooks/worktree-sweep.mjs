@@ -23,7 +23,10 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { STATE_DIR, mainCheckoutOf, rememberRepo, repoKey } from "../bin/worktree-sweep.mjs";
+// Imported inside a try: a module that fails to load on an older Node must cost a turn nothing.
+let STATE_DIR, mainCheckoutOf, rememberRepo, repoKey;
+try { ({ STATE_DIR, mainCheckoutOf, rememberRepo, repoKey } = await import("../bin/worktree-sweep.mjs")); }
+catch { process.exit(0); }
 
 const EVERY_MS = 3_600_000;
 
@@ -43,16 +46,21 @@ if (!repo) quit();
 
 try { rememberRepo(repo); } catch { /* the daily pass misses this repository; the hook still sweeps it */ }
 
-// 1. The last pass's line, once, when it is worth a reader's attention.
+// 1. The last pass's line, once, when it is worth a reader's attention — and consumed only where it
+//    is printed: a session's end shows nothing, so it leaves the line for the next session.
 const lastFile = join(STATE_DIR, `last-${repoKey(repo)}.json`);
 let message = "";
-try {
-  const last = JSON.parse(readFileSync(lastFile, "utf8"));
-  if (!last.shown && (last.alert || last.removed > 0 || last.freed > 512 * 1024 ** 2)) {
-    message = [last.line, last.alert].filter(Boolean).join("\n");
-  }
-  if (!last.shown) writeFileSync(lastFile, JSON.stringify({ ...last, shown: true }, null, 2), "utf8");
-} catch { /* no pass yet */ }
+if (payload.hook_event_name !== "SessionEnd") {
+  try {
+    const last = JSON.parse(readFileSync(lastFile, "utf8"));
+    if (!last.shown) {
+      if (last.alert || last.notice || last.removed > 0 || last.freed > 512 * 1024 ** 2) {
+        message = [last.line, last.alert, last.notice].filter(Boolean).join("\n");
+      }
+      writeFileSync(lastFile, JSON.stringify({ ...last, shown: true }, null, 2), "utf8");
+    }
+  } catch { /* no pass yet */ }
+}
 
 // 2. A new pass, detached, at most once an hour for this repository.
 const stamp = join(STATE_DIR, `hook-${repoKey(repo)}.stamp`);
@@ -61,7 +69,7 @@ try { due = Date.now() - statSync(stamp).mtimeMs >= EVERY_MS; } catch { /* never
 if (due) {
   try {
     mkdirSync(dirname(stamp), { recursive: true });
-    writeFileSync(stamp, new Date().toISOString(), "utf8");   // down before the spawn: two hooks never start two passes
+    writeFileSync(stamp, new Date().toISOString(), "utf8");   // down before the spawn; two hooks racing past it meet the pass's own exclusive lock
     const cli = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "cs.mjs");
     if (existsSync(cli)) {
       const child = spawn(process.execPath, [cli, "worktrees", "sweep", "--repo", repo, "--protect", cwd, "--from-hook"], {
@@ -72,7 +80,5 @@ if (due) {
   } catch { /* the next hook tries again in an hour */ }
 }
 
-if (message && payload.hook_event_name !== "SessionEnd") {
-  process.stdout.write(JSON.stringify({ systemMessage: message }));
-}
+if (message) process.stdout.write(JSON.stringify({ systemMessage: message }));
 quit();

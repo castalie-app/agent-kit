@@ -36,7 +36,7 @@
 //   cs content push <type> <id>
 //   cs on-behalf                       # attended or not, and the workspace's robot account
 //   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
-//   cs worktrees sweep|status|install  # give back the copies agents leave behind (worktree-sweep.mjs)
+//   cs worktrees sweep|status|install|uninstall  # give back the copies agents leave behind (worktree-sweep.mjs)
 //   cs prompt screen --kind <k> ...    # screen a text written elsewhere with Jev (prompt-screen.mjs)
 //   cs prompt gate <target> <id>       # screen a stored scheduled-task or resume prompt before it is played (prompt-gate.mjs)
 //   cs version                         # the running kit version

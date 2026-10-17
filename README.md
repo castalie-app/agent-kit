@@ -811,7 +811,7 @@ The output is gitignored. It is a build artifact, not a second copy to maintain.
 .claude-plugin/marketplace.json   # marketplace entry
 cs/
   .claude-plugin/plugin.json      # plugin manifest
-  hooks/hooks.json                # the guard on CLAUDE.md, the work in hand (taken on a write, stamped with its session, sorted by owner at every start), two Stop hooks (work recorded, slot given back), the worktree sweep (end of turn, of agent, of session), and the pane's module
+  hooks/hooks.json                # the guard on CLAUDE.md, the work in hand (taken on a write, stamped with its session, sorted by owner at every start), three Stop hooks (work recorded, slot given back, worktree sweep — the last also on SubagentStop and SessionEnd), and the pane's module
   hooks/register.ts               # the plugin's one hooks module: it registers both panes
   hooks/where/                    # the pane beside the transcript: its rows are pure functions, its bind is register.ts
   hooks/decisions/                # the decisions panel: cards and sheet are pure functions, panel.test.tsx plays the engine

@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  agentActivity, alertLine, classify, containedIn, lockPid, parseWorktrees, patternToRegExp, regenerableFolders, repoKey,
+  acceptablePattern, agentActivity, alertLine, classify, containedIn, liveRemoteRefs, lockPid, parseWorktrees, patternToRegExp, regenerableFolders, repoKey,
   summaryLine, sweepRepo,
 } from "./worktree-sweep.mjs";
 
@@ -57,7 +57,7 @@ function touchFuture(path) {
 
 const same = (a, b) => (process.platform === "linux" ? a === b : a.toLowerCase() === b.toLowerCase());
 const entryOf = (main, path) => parseWorktrees(git(main, "worktree", "list", "--porcelain")).find((w) => same(w.path, path));
-const verdictOf = (f, path, extra = {}) => classify(entryOf(f.main, path), { repo: f.main, defaultBranch: "origin/main", now: LATER, alive, ...extra });
+const verdictOf = (f, path, extra = {}) => classify(entryOf(f.main, path), { defaultBranch: "origin/main", liveRefs: liveRemoteRefs(f.main, "origin/main"), now: LATER, alive, ...extra });
 
 test("a clean copy at the default branch, idle a day, is removed as merged", () => {
   const f = fixture();
@@ -199,6 +199,7 @@ test("the caller's own copy is never removed", () => {
 test("a pass removes what it may, keeps the rest, empties idle build outputs, and writes one line", () => {
   const f = fixture();
   const clean = f.add("agent-a");
+  write(clean, "bin/app.dll", "ignored output does not hold a copy");
   const orphan = f.add("agent-b");
   git(f.main, "worktree", "lock", "--reason", `claude agent agent-b (pid ${DEAD_PID})`, orphan);
   const dirty = f.add("agent-c");
@@ -255,6 +256,51 @@ test("what the repository declares regenerable replaces the defaults, ignored fo
   assert.deepEqual(picked, ["node_modules", "src/Web/obj"], "src is tracked, bin is not declared");
 });
 
+test("a commit only a branch deleted on the server holds is pushed nowhere", () => {
+  const f = fixture();
+  const path = f.add("agent-closed", { branch: "closed" });
+  write(path, "src/closed.js", "export const c = 1;\n");
+  git(path, "add", "-A");
+  git(path, "commit", "-qm", "closed");
+  git(path, "push", "-q", "origin", "closed");
+  git(path, "checkout", "-q", "--detach");
+  // The pull request is closed unmerged and the forge deletes the branch; the local ref lingers.
+  git(f.remote, "branch", "-D", "closed");
+  assert.match(git(f.main, "branch", "-r"), /origin\/closed/);
+  const v = verdictOf(f, path);
+  assert.deepEqual([v.keep, v.reason], [true, "commits pushed nowhere"]);
+  // And when the server cannot be asked, only the default branch counts.
+  assert.equal(verdictOf(f, path, { liveRefs: null }).keep, true);
+});
+
+test("a copy that holds another worktree is kept", () => {
+  const f = fixture();
+  const outer = f.add("agent-outer");
+  const inner = join(outer, ".claude", "worktrees", "agent-inner");
+  git(f.main, "worktree", "add", "-q", "--detach", inner, "origin/main");
+  write(inner, "draft.md", "uncommitted\n");
+  const others = parseWorktrees(git(f.main, "worktree", "list", "--porcelain")).map((w) => w.path);
+  const v = verdictOf(f, outer, { others });
+  assert.deepEqual([v.keep, v.reason], [true, "holds another worktree"]);
+});
+
+test("a session working in an unlocked copy keeps it", () => {
+  const f = fixture();
+  const path = f.add("agent-session");
+  const claude = join(f.base, "claude");
+  const projectsDir = join(claude, "projects", path.replace(/[^a-zA-Z0-9]/g, "-"));
+  write(projectsDir, "session.jsonl", "{}");
+  utimesSync(join(projectsDir, "session.jsonl"), new Date(LATER), new Date(LATER));
+  const sweep = sweepRepo(f.main, { now: LATER, stateDir: f.state, alive, configDir: claude, sizeBudgetMs: 5000 });
+  assert.equal(existsSync(path), true);
+  assert.equal(sweep.copies.find((c) => c.path === path).reason, "touched recently");
+});
+
+test("a declared pattern names folders, never everything", () => {
+  for (const ok of ["bin", "src/**/obj", "**/node_modules", "packages/*/dist"]) assert.equal(acceptablePattern(ok), true, ok);
+  for (const bad of ["*", "**", "**/*", "src/*", "../x", "/abs", "C:/x", "a/../b", ".", ".git", "bi?"]) assert.equal(acceptablePattern(bad), false, bad);
+});
+
 test("patterns: a bare name matches at any depth, a path matches whole", () => {
   assert.equal(patternToRegExp("bin").test("src/Web/bin"), true);
   assert.equal(patternToRegExp("bin").test("bin"), true);
@@ -297,6 +343,15 @@ test("the hook shows a pass's line once, and stays silent after", () => {
   assert.equal(JSON.parse(first.stdout).systemMessage, "cs worktrees · main: 3 agent copies removed — 9 GB freed.");
   const second = run();
   assert.equal(second.stdout, "");
+  // A session's end prints nothing, so it leaves an unread line for the next session.
+  writeFileSync(join(state, `last-${repoKey(f.main)}.json`), JSON.stringify({ line: "x", alert: "Disk D: is 4 % free.", removed: 0, freed: 0, shown: false }));
+  const end = spawnSync(process.execPath, [hook], {
+    input: JSON.stringify({ session_id: "s", cwd: f.main, hook_event_name: "SessionEnd" }),
+    encoding: "utf8", env: { ...process.env, HOME: home, USERPROFILE: home },
+  });
+  assert.equal(end.stdout, "");
+  assert.equal(JSON.parse(readFileSync(join(state, `last-${repoKey(f.main)}.json`), "utf8")).shown, false);
+  assert.match(JSON.parse(run().stdout).systemMessage, /4 % free/);
   assert.match(readFileSync(join(state, "repos.json"), "utf8"), /main/);
 });
 
