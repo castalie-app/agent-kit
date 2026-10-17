@@ -56,6 +56,8 @@ export const STATE_DIR = join(homedir(), ".claude", "cs", "worktree-sweep");
 export const TASK_NAME = "Castalie - sweep agent worktrees";
 export const LAUNCHD_LABEL = "app.castalie.worktree-sweep";
 export const AGENT_ROOT = join(".claude", "worktrees");
+/** The sweep's own folder in `.git`: what it moved aside and could not delete yet, emptied first by every pass. */
+export const TRASH = "cs-sweep-trash";
 export const LOW_DISK_RATIO = 0.10;
 export const DEFAULTS = { idleHours: 24, buildIdleDays: 3 };
 
@@ -163,6 +165,17 @@ export function agentActivity(...configDirs) {
     }
   }
   return index;
+}
+
+/**
+ * Both indexes, built once per process for a set of configuration folders: `--all` sweeps many
+ * repositories, and `activityNow` stats a copy's own transcripts again before it is removed.
+ */
+const activityMemo = new Map();
+export function claudeActivity(configDirs) {
+  const memoKey = configDirs.join("|");
+  if (!activityMemo.has(memoKey)) activityMemo.set(memoKey, { agents: agentActivity(...configDirs), sessions: sessionActivity(...configDirs) });
+  return activityMemo.get(memoKey);
 }
 
 /** The folder name Claude Code gives the project of a working directory: every other character a dash. */
@@ -538,7 +551,8 @@ export function rememberConfigDir(configDir = claudeConfigDir(), stateDir = STAT
 
 export function knownConfigDirs(configDir = claudeConfigDir(), stateDir = STATE_DIR) {
   const all = [configDir, ...readJson(join(stateDir, "config-dirs.json"), [])].filter((d) => existsSync(d));
-  return all.filter((d, i) => all.findIndex((o) => samePath(o, d)) === i);
+  const unique = all.filter((d, i) => all.findIndex((o) => samePath(o, d)) === i);
+  return unique.length ? unique : [configDir];   // a folder that does not exist reads nothing, never ~/.claude
 }
 
 /** The newest mtime of a folder and of what sits directly in it: a build rewrites files, not its folder. */
@@ -549,16 +563,30 @@ function newestUnder(folder) {
 }
 
 /**
- * Empties one build folder. Renamed aside first: on Windows a rename fails while any file inside is
- * open, so a running build or server keeps its folder whole instead of losing half of it. What the
- * delete then leaves is recorded and retried by the next pass.
+ * Moves a folder into the sweep's trash, then deletes it there. The move comes first: on Windows a
+ * rename fails while any file inside is open, so a running build or server keeps its folder whole
+ * instead of losing half of it. Whatever the delete leaves stays in the trash — never in a copy, where
+ * it would read as an untracked file — and the next pass empties the trash first. A folder on
+ * another volume than `.git` cannot be moved there and is left as it is.
  */
-function emptyBuildFolder(folder, tombstones) {
-  const aside = `${folder}.cs-sweep-${process.pid}-${Date.now()}`;
-  try { renameSync(folder, aside); } catch { return false; }
-  try { rmSync(aside, { recursive: true, force: true, maxRetries: 2 }); } catch { /* recorded below */ }
-  if (existsSync(aside)) tombstones.push(aside);
+function moveToTrash(folder, trash) {
+  const target = join(trash, `${basename(folder)}-${process.pid}-${Date.now()}`);
+  try { mkdirSync(trash, { recursive: true }); renameSync(folder, target); } catch { return false; }
+  try { rmSync(target, { recursive: true, force: true, maxRetries: 2 }); } catch { /* the next pass */ }
   return true;
+}
+
+function emptyBuildFolder(folder, trash) {
+  return moveToTrash(folder, trash);
+}
+
+/** Everything in the trash is the sweep's own: what an earlier pass moved there and could not delete. */
+function emptyTrash(trash) {
+  let names;
+  try { names = readdirSync(trash); } catch { return; }
+  for (const name of names) {
+    try { rmSync(join(trash, name), { recursive: true, force: true, maxRetries: 2 }); } catch { /* the next pass */ }
+  }
 }
 
 /**
@@ -579,10 +607,15 @@ function takePassLock(repo, stateDir) {
       // another process must not hold every later pass off for ever.
       const { pid, at } = readJson(file, {});
       if (pid && isAlive(Number(pid)) && Date.now() - Date.parse(at || 0) < 3 * HOUR) return null;
-      // A dead pass's file, taken over once: renamed aside, so of two passes taking it over at the
-      // same instant only one moves it, and the other never deletes the first one's fresh file.
+      // A dead pass's file, taken over once: renamed aside and compared with what was read, so of two
+      // passes taking it over at the same instant the second puts back the first one's fresh file.
       const aside = `${file}.${process.pid}`;
       try { renameSync(file, aside); } catch { return null; }
+      const moved = readJson(aside, {});
+      if (moved.pid !== pid || moved.at !== at) {
+        try { renameSync(aside, file); } catch { /* the other pass's release removes nothing of ours */ }
+        return null;
+      }
       rmSync(aside, { force: true });
     }
   }
@@ -595,16 +628,15 @@ function takePassLock(repo, stateDir) {
  * Removes one copy, right after its verdict. No `--force`: git itself refuses a copy that has become
  * dirty or untracked since, a lock taken again, a submodule. Only when git has already dropped the
  * copy's registration — it checked and started deleting, then failed on a long path or a file held
- * open — is the remainder deleted by hand.
+ * open — is the remainder moved to the sweep's trash and deleted there.
  */
-function removeCopy(repo, verdict, remainders = []) {
+function removeCopy(repo, verdict, trash) {
   if (verdict.unlock) git(repo, ["worktree", "unlock", verdict.path]);
   const gitDir = gitDirOf(verdict.path);
   const removed = git(repo, ["worktree", "remove", verdict.path], 600_000);
   if (removed.ok && !existsSync(verdict.path)) return true;
   if (gitDir && !existsSync(gitDir) && existsSync(verdict.path)) {
-    try { rmSync(verdict.path, { recursive: true, force: true, maxRetries: 3 }); } catch { /* reported as failed */ }
-    if (existsSync(verdict.path)) remainders.push(verdict.path);   // git no longer lists it: the next pass retries it
+    moveToTrash(verdict.path, trash);
     return !existsSync(verdict.path);
   }
   // Refused: put back the lock of a session still open, so its agent can still be resumed.
@@ -636,8 +668,7 @@ export function sweepRepo(repo, {
     const defaultBranch = defaultRemoteBranch(main);
     const liveRefs = liveRemoteRefs(main, defaultBranch);
     const configDirs = knownConfigDirs(configDir, stateDir);
-    const agents = agentActivity(...configDirs);
-    const sessions = sessionActivity(...configDirs);
+    const { agents, sessions } = claudeActivity(configDirs);
     const others = [main, ...linked.map((w) => w.path)];
     const key = repoKey(main);
     const heldFile = join(stateDir, `held-${key}.json`);
@@ -646,7 +677,8 @@ export function sweepRepo(repo, {
     const context = { defaultBranch, liveRefs, now, idleHours, protect, alive, agents, sessions, others, heldCache, heldSalt };
 
     let removed = 0, unlocked = 0, failures = 0, estimate = 0;
-    const remainders = [];
+    const trash = join(main, ".git", TRASH);
+    if (!dryRun) emptyTrash(trash);
     const deadline = Date.now() + sizeBudgetMs;
     const verdicts = [];
     // Each copy is judged and removed in one step, so nothing can change between the two but what
@@ -668,7 +700,7 @@ export function sweepRepo(repo, {
         if (v.unlock) unlocked -= 1;
         continue;
       }
-      if (removeCopy(main, v, remainders)) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; if (v.unlock) unlocked -= 1; }
+      if (removeCopy(main, v, trash)) { removed += 1; v.removed = true; } else { failures += 1; v.failed = true; if (v.unlock) unlocked -= 1; }
     }
 
     // Build outputs: every linked worktree still standing, idle long enough, never the caller's.
@@ -677,16 +709,6 @@ export function sweepRepo(repo, {
     const buildFolders = [];
     const scannedFile = join(stateDir, `builds-${key}.json`);
     const scanned = readJson(scannedFile, {});
-    // What a previous pass renamed aside or left behind and could not delete yet: tried again first.
-    const tombstoneFile = join(stateDir, `remainders-${key}.json`);
-    const tombstones = readJson(tombstoneFile, []).filter((p) => existsSync(p));
-    if (!dryRun) {
-      for (const p of [...tombstones]) {
-        try { rmSync(p, { recursive: true, force: true, maxRetries: 2 }); } catch { /* next pass */ }
-        if (!existsSync(p)) tombstones.splice(tombstones.indexOf(p), 1);
-      }
-      for (const p of remainders) if (!tombstones.includes(p)) tombstones.push(p);
-    }
     for (const w of linked) {
       if (w.bare || removedPaths.has(w.path) || !existsSync(w.path)) continue;
       if (protect.some((p) => samePath(real(p), real(w.path)) || inside(real(p), real(w.path)))) continue;
@@ -706,7 +728,7 @@ export function sweepRepo(repo, {
         // Never a folder that holds a worktree, the main checkout, or the caller's copy.
         if ([...others, ...protect].some((o) => !samePath(o, w.path) && (samePath(o, folder) || inside(o, folder) || inside(real(o), real(folder))))) continue;
         if (dryRun) { estimate += folderSize(folder, deadline).bytes; buildFolders.push(folder); continue; }
-        if (emptyBuildFolder(folder, tombstones)) buildFolders.push(folder); else complete = false;
+        if (emptyBuildFolder(folder, trash)) buildFolders.push(folder); else complete = false;
       }
       // Marked only once everything it picked is gone: a file held open is tried again next pass.
       if (complete && !dryRun) scanned[w.path] = mark;
@@ -736,7 +758,6 @@ export function sweepRepo(repo, {
       const standing = new Set(linked.map((w) => w.path));
       writeJson(heldFile, Object.fromEntries([...heldCache].filter(([path]) => standing.has(path))));
       writeJson(scannedFile, Object.fromEntries(Object.entries(scanned).filter(([path]) => standing.has(path))));
-      writeJson(tombstoneFile, tombstones.filter((p) => existsSync(p)));
       writeJson(join(stateDir, `last-${key}.json`), { at: result.at, repo: main, line: result.line, alert: result.alert || null, freed, removed, shown: false });
       try { mkdirSync(stateDir, { recursive: true }); appendFileSync(join(stateDir, "log.txt"), `${result.at} ${result.line}\n`); } catch { /* the line was printed */ }
     }
