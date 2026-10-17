@@ -48,6 +48,7 @@ const KIND_PURPOSES = {
   master_red: "understand and fix a red test on the main branch",
   scheduled_task: "carry out the recurring order a workspace owner wrote for the team's repository and its own project-tracking tools, and report a verdict",
   decision_resume: "resume the agent's interrupted work the way a person's answer to its decision says",
+  decision_answered: "take up the person's answer to a decision this agent asked, apply it to the agent's own work, and record it applied",
 };
 
 const noul = (instructions, yes, no) => ({ type: "noul", instructions, criteria: { true: yes, false: no } });
@@ -134,6 +135,8 @@ export function readApiKey({ env = process.env, platform = process.platform, hom
 export const WARN_ONLY = {
   scheduled_task: ["outbound", "off_purpose"],
   decision_resume: ["outbound", "off_purpose"],
+  // The person's own answer, relayed to the session that asked: the same policy as a resume.
+  decision_answered: ["outbound", "off_purpose"],
 };
 
 /** The answers, turned into a verdict under the kind's policy. Throws on an answer that is missing or not of its type. */

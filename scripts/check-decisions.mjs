@@ -35,6 +35,7 @@ import {
   DECISION_READS,
   INBOX_ID,
   askerOf,
+  askerSessionFieldsOf,
   decisionOf,
   decisionServersOf,
   decisionTouchedBy,
@@ -538,6 +539,21 @@ check("one waiting decision reads in the singular",
       filedOf("mcp__castalie__decision_answer", said({ success: true, decision_id: 3 })) === null &&
       filedOf("mcp__castalie__decision_create", { text: "not json" }) === null &&
       filedOf("mcp__castalie__decision_create", undefined) === null);
+
+  // The session that asks is the one the answer wakes (Castalie, 17 October 2026): its address
+  // rides on the call when the agent left it out, and only then.
+  const here = { id: "6f1c2a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b", hostname: "PC-BG-BUREAU", cwd: "/work/castalie-wt4" };
+  const filled = askerSessionFieldsOf("mcp__castalie__decision_create", { resume_mode: "asker" }, here);
+  check("an asker's decision carries the session that asked, its workstation and its working copy",
+    filled?.asker_session_id === here.id && filled?.asker_hostname === here.hostname && filled?.asker_worktree === here.cwd,
+    JSON.stringify(filled));
+  check("a session the agent named itself, another resume mode or another verb is left as written",
+    askerSessionFieldsOf("mcp__castalie__decision_create", { resume_mode: "asker", asker_session_id: "other" }, here) === null &&
+      askerSessionFieldsOf("mcp__castalie__decision_create", { resume_mode: "subject" }, here) === null &&
+      askerSessionFieldsOf("mcp__castalie__decision_supersede", { resume_mode: "asker" }, here) === null);
+  check("a session that cannot say where it runs adds nothing",
+    askerSessionFieldsOf("mcp__castalie__decision_create", { resume_mode: "asker" }, { ...here, hostname: "" }) === null &&
+      askerSessionFieldsOf("mcp__castalie__decision_create", { resume_mode: "asker" }, { ...here, id: "not-a-session" }) === null);
 
   const answered = settledNotice(decisionOf(answeredSheetAnswer));
   check("a settled decision comes back with the option, the person's words and how to resume",

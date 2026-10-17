@@ -52,7 +52,7 @@ is never called, and no turn ends on « shall I go on? ».
    — a reader asked for more context on a lead: answer with `decision_add_context(id, context_md,
    context_ask_id)`, what they asked and nothing else.
 2. `decision_list(scope=asked_by_agent, asked_by_agent="strategy-scout", status=answered, take=50)`
-   — the answers not yet taken up. For each, read `answer` (`option_title`, `text_md`; when
+   — the answers not yet taken up (`decision-sheet.md` § Read your answers at every step). For each, read `answer` (`option_title`, `text_md`; when
    `adjusted` is true the words count, not the option) and the `resume_state_md` you left:
    - **« Not a good idea »** — `decision_mark_applied(id, note_md="Declined on <date>: not raised
      again unless <the facts it stood on> change.")`.

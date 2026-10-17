@@ -113,7 +113,8 @@ Pick the **oldest** `pending` item. Not the last one typed: a fresh remark joins
    `decision_id` in the item, and move to the next item. Never wait, never end the turn on it.
    The person can also answer it on the decision's page: Castalie puts the remark back in the queue,
    `acceptance_claim_next` hands it to you again, and `decision_get(decision_id)` gives the answer
-   to build.
+   to build — the queue is how this skill reads its answers at every item (`decision-sheet.md`
+   § Read your answers at every step).
 4. Verify it on the surface the person was looking at, in the running product.
 5. One commit, referencing the item, pushed to the session branch.
 6. Mark it `done` with the commit sha and one line of what changed; then

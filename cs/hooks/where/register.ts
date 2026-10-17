@@ -526,7 +526,21 @@ export function register(on: On, also: Companion = NO_COMPANION) {
     // just filed by the id its answer carries. Absent where the call was refused or threw.
     let said: Said | undefined
     try {
-      const result = await next(e)
+      // The other pane may add to the call before it runs: a decision this session files carries
+      // the session's own address, so the answer wakes it. A failure here sends the call as written.
+      let call = e
+      try {
+        const added = await also.filling(String(e.tool), e as unknown as Record<string, unknown>, async () => ({
+          id: await $.session.id(),
+          hostname: (await $.env.get('COMPUTERNAME')) ?? (await $.env.get('HOSTNAME')),
+          cwd: await $.session.cwd(),
+        }))
+        if (added !== null) call = { ...e, ...added } as typeof e
+      } catch (error) {
+        host?.uiLog(`décisions : ${error instanceof Error ? error.message : String(error)}`)
+      }
+
+      const result = await next(call)
       if (result.deny === undefined) said = { text: result.text, isError: result.isError === true }
 
       return result

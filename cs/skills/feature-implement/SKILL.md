@@ -49,6 +49,9 @@ watchdog never fires — ideal.
    or there is no such line: say nothing and carry on** — a team that never wrote one must not be
    able to tell this step exists.
 5. **Implement phase by phase, same turn.** For each phase:
+   - **First read your answers** — every phase boundary, not only on `--continue`: apply each
+     answered decision on this spec or its phases, then mark it applied (« Read your answers at
+     every step », `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`).
    - Mark it `mcp__castalie__feature_spec_set_phase_status(phaseId, status="InProgress")`.
    - Read `${CLAUDE_PLUGIN_ROOT}/instructions/acceptance-criteria.md` and the phase's
      `validationCriterionMd`. Fill missing legacy cases before the relevant code and reuse exact
@@ -75,7 +78,9 @@ watchdog never fires — ideal.
    ships, whatever is stored, unless the workspace's administrator denied it — then stop at PR
    ready and say so in one line. Stop before the merge otherwise only when the person asked it in
    the current turn. No merge path declared by the host → one line, PR ready.
-8. **Close.** `mcp__castalie__feature_spec_complete(specId, prUrl)`. Adjust the brief's follow-up horizon if
+8. **Close.** Read your answers one last time (`decision-sheet.md`) — a spec or a phase carrying an
+   answer nobody applied refuses to close (`answered_decision_not_applied`). Then
+   `mcp__castalie__feature_spec_complete(specId, prUrl)`. Adjust the brief's follow-up horizon if
    delivery slipped (follow-up conventions).
    **Then sweep the spec's decisions.** The answer's `pending_decisions` lists every decision still
    waiting on the spec, its phases, its tickets, its follow-up runs and its acceptance remarks (an
@@ -108,10 +113,10 @@ the phases and cases that do not depend on it, exactly those. **An action only a
 (a provider console, a secret on a server, an access to grant, someone to contact) is not a decision
 (`human_action_is_not_a_decision`): check it is not already made, then `bug_create` it under the spec,
 the gesture as its title, assigned to the person in charge (`decision-sheet.md`), and `bug_set_requires_human(true, reason)`;
-name the ticket in the report and carry on. On
-`--continue`, `decision_list(asked_by_agent="feature-implement", status=answered)`, kept to this
+name the ticket in the report and carry on. Before each
+phase and on `--continue`, `decision_list(asked_by_agent="feature-implement", status=answered)`, kept to this
 spec and its phases, returns what was settled: build each answer as an instruction, then
-`decision_mark_applied`. The only stops left are a hard build/test failure you cannot fix, or
+`decision_mark_applied` (« Read your answers at every step », `decision-sheet.md`). The only stops left are a hard build/test failure you cannot fix, or
 nothing left that does not wait on a decision (report it + the resume command, then `CronDelete`). A gesture the spec's `Authorisations` lists is not one of them: a
 first failure is a reason to retry, not to hand it to someone else. Naming, formatting, file layout, which seam to cut — decide from the
 repo's patterns and keep going. Build + the `ship` panel + the host's CI are the review, and no

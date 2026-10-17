@@ -251,6 +251,10 @@ line with `settings_url` — or the person in front of you asked, in this turn, 
 merge. A fix you judge risky ships with that risk written in the pull request, in one
 sentence with how it is reverted: a flag, never a wait.
 
+Before each of the seven steps, read the answers your decisions on the ticket got and apply them
+(`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md` § Read your answers at every step): a ticket
+carrying an answer nobody applied refuses to close (`answered_decision_not_applied`).
+
 Then sweep the ticket's decisions: `decision_list(scope=subject, subject_kind=bug, subject_id=<id>,
 status=pending)`, plus the ones this session filed. Cancel with `decision_cancel(id, reason)` each
 one the released fix settled (the reason names the pull request), supersede one whose facts moved,
