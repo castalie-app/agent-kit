@@ -189,7 +189,9 @@ the first hook run schedules on its own (Task Scheduler on Windows, launchd on m
 - removes each copy under `.claude/worktrees/` that holds nothing that exists nowhere else — no
   modified or untracked file, no commit that is on no remote and not already in the default branch
   (a squash merge counts) — once nobody has touched it for 24 hours;
-- lifts a lock whose agent is no longer alive; never a live agent's lock, nor one written by hand;
+- lifts a lock whose agent is no longer alive — its session is gone, or its transcript has not moved
+  for a day in a session still open (a lock names the session's pid, and one session open four days
+  held 30 of them); never the lock of an agent still at work, nor one written by hand;
 - empties the build outputs of any worktree idle three days — what `.castalie/worktrees.json`
   declares under `regenerable` (`{ "regenerable": ["bin", "obj", "**/node_modules"] }`), else
   `bin`, `obj`, `dist`, `build`, `target` and their kin — and only folders git reports as ignored;

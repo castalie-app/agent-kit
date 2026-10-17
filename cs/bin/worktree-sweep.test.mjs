@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
-  alertLine, classify, containedIn, lockPid, parseWorktrees, patternToRegExp, regenerableFolders, repoKey,
+  agentActivity, alertLine, classify, containedIn, lockPid, parseWorktrees, patternToRegExp, regenerableFolders, repoKey,
   summaryLine, sweepRepo,
 } from "./worktree-sweep.mjs";
 
@@ -155,9 +155,37 @@ test("a lock: an orphan is lifted, a live agent's and a hand-written one are kep
   }
   const o = verdictOf(f, orphan);
   assert.equal(o.keep, false);
-  assert.equal(o.unlock, true);
+  assert.equal(o.unlock, "dead");
   assert.deepEqual([verdictOf(f, live).keep, verdictOf(f, live).reason], [true, "its agent is alive"]);
   assert.deepEqual([verdictOf(f, byHand).keep, verdictOf(f, byHand).reason], [true, "locked by hand"]);
+});
+
+test("a live session's lock: its agent finished a day ago is removable, one still writing stays", () => {
+  const f = fixture();
+  const finished = f.add("agent-finished");
+  git(f.main, "worktree", "lock", "--reason", `claude agent agent-finished (pid ${process.pid})`, finished);
+  const working = f.add("agent-working");
+  git(f.main, "worktree", "lock", "--reason", `claude agent agent-working (pid ${process.pid})`, working);
+  for (const p of [finished, working]) {
+    const gitDir = readFileSync(join(p, ".git"), "utf8").trim().replace(/^gitdir:\s*/, "");
+    utimesSync(join(gitDir, "locked"), new Date(Date.now() - HOUR), new Date(Date.now() - HOUR));
+  }
+  // Claude Code's own layout: projects/<project>/<session>/subagents/agent-<id>.jsonl
+  const subagents = join(f.base, "claude", "projects", "repo", "session-1", "subagents");
+  write(subagents, "agent-finished.jsonl", "{}");
+  write(subagents, "agent-working.jsonl", "{}");
+  utimesSync(join(subagents, "agent-working.jsonl"), new Date(LATER), new Date(LATER));
+  const agents = agentActivity(join(f.base, "claude"));
+  const done = verdictOf(f, finished, { agents });
+  assert.equal(done.keep, false);
+  assert.equal(done.unlock, "finished");
+  const busy = verdictOf(f, working, { agents });
+  assert.deepEqual([busy.keep, busy.reason], [true, "its agent is alive"]);
+  const sweep = sweepRepo(f.main, { now: LATER, stateDir: f.state, alive, configDir: join(f.base, "claude"), sizeBudgetMs: 5000 });
+  assert.equal(existsSync(finished), false);
+  assert.equal(existsSync(working), true);
+  assert.match(git(f.main, "worktree", "list", "--porcelain"), /locked claude agent agent-working/);
+  assert.equal(sweep.unlocked, 1);
 });
 
 test("the caller's own copy is never removed", () => {
@@ -182,7 +210,7 @@ test("a pass removes what it may, keeps the rest, empties idle build outputs, an
   write(slot, "src/Web/obj/project.assets.json", "{}");
   write(slot, "node_modules/left-pad/index.js", "module.exports = 1;");
 
-  const result = sweepRepo(f.main, { now: LATER, stateDir: f.state, alive, sizeBudgetMs: 5000 });
+  const result = sweepRepo(f.main, { now: LATER, stateDir: f.state, alive, configDir: join(f.base, "claude"), sizeBudgetMs: 5000 });
   assert.equal(existsSync(clean), false);
   assert.equal(existsSync(orphan), false);
   assert.equal(existsSync(dirty), true);
@@ -208,7 +236,7 @@ test("a pass removes what it may, keeps the rest, empties idle build outputs, an
 test("a dry run decides nothing", () => {
   const f = fixture();
   const clean = f.add("agent-dry");
-  const result = sweepRepo(f.main, { dryRun: true, now: LATER, stateDir: f.state, alive, sizeBudgetMs: 5000 });
+  const result = sweepRepo(f.main, { dryRun: true, now: LATER, stateDir: f.state, alive, configDir: join(f.base, "claude"), sizeBudgetMs: 5000 });
   assert.equal(result.removed, 1);
   assert.equal(existsSync(clean), true);
   assert.match(result.line, /1 agent copy to remove/);

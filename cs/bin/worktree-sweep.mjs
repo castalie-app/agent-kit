@@ -9,7 +9,9 @@
 // merged" was written down; nothing ran it.
 //
 // WHAT A PASS DOES, in this order, and nothing else:
-//   1. lifts a lock whose holder is gone (a `claude agent … (pid N)` lock whose process is not alive);
+//   1. lifts a lock whose holder is gone (a `claude agent … (pid N)` lock whose process is not alive),
+//      and treats as finished an agent whose session is still open but whose transcript has not moved
+//      for the whole window — the pid in a lock is the SESSION's, not the agent's;
 //   2. removes each copy under `.claude/worktrees/` that carries no change of its own — nothing
 //      modified, nothing untracked, no commit that is neither on a remote nor already contained in
 //      the default branch (a squash merge counts) — and that nobody touched for `--idle-hours` (24);
@@ -20,8 +22,8 @@
 // It prints ONE line: what it freed. The line also goes to ~/.claude/cs/worktree-sweep/log.txt.
 //
 // WHAT IT NEVER TOUCHES. A copy with a modified or untracked file, with an operation in progress
-// (merge, rebase, cherry-pick), with a commit that exists nowhere else; a copy locked by a live
-// process or locked by hand (a lock that names no pid); the copy the caller stands in; the main
+// (merge, rebase, cherry-pick), with a commit that exists nowhere else; a copy whose agent wrote to
+// its transcript within the window, or locked by hand (a lock that names no pid); the copy the caller stands in; the main
 // checkout; any worktree outside `.claude/worktrees/` for removal (a pool of slots has its own
 // launcher). When git cannot answer a question about a copy, the copy is kept.
 //
@@ -106,6 +108,43 @@ export function isAlive(pid) {
   catch (error) { return error.code === "EPERM"; }
 }
 
+/** The agent a lock names — `claude agent agent-<id> (pid N)` — or null. */
+export function lockAgent(reason) {
+  const match = /claude agent (agent-[\w-]+)/i.exec(String(reason || ""));
+  return match ? match[1] : null;
+}
+
+/** Where Claude Code keeps its sessions: CLAUDE_CONFIG_DIR, else ~/.claude. */
+export function claudeConfigDir() {
+  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+}
+
+/**
+ * When each agent last wrote to its transcript — `projects/<project>/<session>/subagents/agent-<id>.jsonl`
+ * — keyed by `agent-<id>`. A lock names the SESSION's pid, alive for as long as the session stays
+ * open; an agent that finished days ago in a session still open is not alive, and only its
+ * transcript says so. On 17 October 2026, one session open for four days held 30 such locks.
+ */
+export function agentActivity(configDir = claudeConfigDir()) {
+  const index = new Map();
+  const projects = join(configDir, "projects");
+  const dirs = (path) => { try { return readdirSync(path, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name); } catch { return []; } };
+  for (const project of dirs(projects)) {
+    for (const session of dirs(join(projects, project))) {
+      const folder = join(projects, project, session, "subagents");
+      let files;
+      try { files = readdirSync(folder); } catch { continue; }
+      for (const file of files) {
+        if (!file.endsWith(".jsonl")) continue;
+        const name = file.slice(0, -".jsonl".length);
+        const at = mtime(join(folder, file));
+        if (at > (index.get(name) || 0)) index.set(name, at);
+      }
+    }
+  }
+  return index;
+}
+
 /** The administrative folder git keeps for a linked worktree (`.git/worktrees/<name>`). */
 export function gitDirOf(worktreePath) {
   try {
@@ -174,17 +213,22 @@ function real(path) {
  * What a pass may do with one agent copy. `remove` is the only verdict that deletes anything; every
  * other one names why the copy stays. `unlock` says the lock it carries is an orphan to lift first.
  */
-export function classify(entry, { repo, defaultBranch, now = Date.now(), idleHours = DEFAULTS.idleHours, protect = [], alive = isAlive } = {}) {
+export function classify(entry, { repo, defaultBranch, now = Date.now(), idleHours = DEFAULTS.idleHours, protect = [], alive = isAlive, agents = new Map() } = {}) {
   const verdict = (keep, reason, extra = {}) => ({ path: entry.path, keep, reason, ...extra });
   if (protect.some((p) => samePath(real(p), real(entry.path)) || inside(real(p), real(entry.path)))) return verdict(true, "in use by the caller");
   if (!existsSync(entry.path)) return verdict(true, "missing");   // `git worktree prune` settles it
 
+  // `unlock`: "dead" — the session that held the lock is gone, the lock is lifted whatever follows;
+  // "finished" — the session is alive but its agent has not written for the whole window, so the
+  // lock is lifted only to remove a copy proven to hold nothing of its own.
   let unlock = false;
+  const transcript = agents.get(lockAgent(entry.lockReason) || basename(entry.path)) || 0;
   if (entry.locked) {
     const pid = lockPid(entry.lockReason);
     if (pid === null) return verdict(true, "locked by hand");
-    if (alive(pid)) return verdict(true, "its agent is alive");
-    unlock = true;
+    if (!alive(pid)) unlock = "dead";
+    else if (transcript && (now - transcript) / HOUR >= idleHours) unlock = "finished";
+    else return verdict(true, "its agent is alive");
   }
 
   const gitDir = gitDirOf(entry.path);
@@ -195,7 +239,7 @@ export function classify(entry, { repo, defaultBranch, now = Date.now(), idleHou
 
   // Before any git question, which costs seconds on a large checkout: a copy touched within the
   // window stays whatever it holds.
-  const idle = (now - lastActivity(entry.path, gitDir)) / HOUR;
+  const idle = (now - Math.max(lastActivity(entry.path, gitDir), transcript)) / HOUR;
   if (idle < idleHours) return verdict(true, "touched recently", { unlock, idleHours: idle, waiting: true });
 
   const status = git(entry.path, ["status", "--porcelain", "--untracked-files=normal", "--ignore-submodules=none"], 120_000);
@@ -372,7 +416,7 @@ function removeCopy(repo, verdict) {
  * One pass over one repository. Returns the result, with `line` (always) and `alert` (under 10 %).
  * `dryRun` decides nothing on disk and reports what a pass would do.
  */
-export function sweepRepo(repo, { dryRun = false, idleHours = DEFAULTS.idleHours, buildIdleDays = DEFAULTS.buildIdleDays, protect = [], now = Date.now(), stateDir = STATE_DIR, alive = isAlive, sizeBudgetMs = 90_000 } = {}) {
+export function sweepRepo(repo, { dryRun = false, idleHours = DEFAULTS.idleHours, buildIdleDays = DEFAULTS.buildIdleDays, protect = [], now = Date.now(), stateDir = STATE_DIR, alive = isAlive, sizeBudgetMs = 90_000, configDir = claudeConfigDir() } = {}) {
   const main = mainCheckoutOf(repo);
   if (!main) return { repo, skipped: "not a git repository with a working tree", line: `cs worktrees · ${repo}: not a git checkout — nothing swept.` };
   const release = dryRun ? () => {} : takePassLock(main, stateDir);
@@ -385,17 +429,19 @@ export function sweepRepo(repo, { dryRun = false, idleHours = DEFAULTS.idleHours
     const [, ...linked] = parseWorktrees(list.out);
     const agentRoot = join(main, AGENT_ROOT);
     const defaultBranch = defaultRemoteBranch(main);
+    const agents = agentActivity(configDir);
 
     const verdicts = linked
       .filter((w) => !w.bare && (inside(w.path, agentRoot) || inside(real(w.path), real(agentRoot))))
-      .map((w) => classify(w, { repo: main, defaultBranch, now, idleHours, protect, alive }));
+      .map((w) => classify(w, { repo: main, defaultBranch, now, idleHours, protect, alive, agents }));
 
     let removed = 0, unlocked = 0, failures = 0, estimate = 0;
     const deadline = Date.now() + sizeBudgetMs;
     for (const v of verdicts) {
-      if (v.unlock) unlocked += 1;
+      // A dead session's lock is lifted even on a copy that stays; a live session's only to remove.
+      if (v.unlock === "dead" || (v.unlock && !v.keep)) unlocked += 1;
       if (v.keep) {
-        if (v.unlock && !dryRun) git(main, ["worktree", "unlock", v.path]);
+        if (v.unlock === "dead" && !dryRun) git(main, ["worktree", "unlock", v.path]);
         continue;
       }
       if (dryRun) { removed += 1; estimate += folderSize(v.path, deadline).bytes; continue; }
@@ -409,7 +455,10 @@ export function sweepRepo(repo, { dryRun = false, idleHours = DEFAULTS.idleHours
     for (const w of linked) {
       if (w.bare || removedPaths.has(w.path) || !existsSync(w.path)) continue;
       if (protect.some((p) => samePath(real(p), real(w.path)) || inside(real(p), real(w.path)))) continue;
-      if (w.locked && lockPid(w.lockReason) && alive(lockPid(w.lockReason))) continue;
+      const held = w.locked && lockPid(w.lockReason) && alive(lockPid(w.lockReason));
+      const ran = agents.get(lockAgent(w.lockReason) || basename(w.path)) || 0;
+      if (held && (!ran || (now - ran) / HOUR < buildIdleDays * 24)) continue;   // an agent still at work in it
+      if ((now - ran) / HOUR < buildIdleDays * 24) continue;
       if ((now - lastActivity(w.path)) / HOUR < buildIdleDays * 24) continue;
       const own = regenerablePatterns(w.path, main);
       for (const folder of regenerableFolders(w.path, own.declared ? own.patterns : patterns)) {
