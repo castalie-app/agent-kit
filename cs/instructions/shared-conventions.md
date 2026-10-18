@@ -206,6 +206,11 @@ under `.claude/worktrees/` once nothing in it exists nowhere else and nobody tou
 an agent that writes pushes what it keeps — a commit pushed nowhere, or an uncommitted file, holds the
 whole copy on the disk until a person deals with it.
 
+**An agent copy may lack a top-level folder on purpose**: a repository that declares
+`agentCheckoutExclude` in `.castalie/worktrees.json` checks out the rest only
+(`worktree.sparsePaths`). A folder the work needs is brought back inside the copy with
+`git sparse-checkout add <folder>`, never concluded absent from the repository.
+
 ## Your decisions, at the start and at the end
 
 **A tab owns the decisions of its work: it opens them at its start and sweeps them at its end.**

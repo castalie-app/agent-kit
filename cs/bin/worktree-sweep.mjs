@@ -18,8 +18,12 @@
 //   3. empties the regenerable build outputs of every linked worktree idle for `--build-idle-days` (3):
 //      what `.castalie/worktrees.json` declares under `regenerable`, else the usual build folders —
 //      and only ever folders git itself reports as ignored and untracked;
-//   4. measures the disk that holds the repository and, under 10 % free, says what is recoverable.
-// It prints ONE line: what it freed. The line also goes to ~/.claude/cs/worktree-sweep/log.txt.
+//   4. measures the disk that holds the repository and, under 10 % free, says what is recoverable;
+//   5. reads what the default branch commits in `.claude/settings.json` (worktree-settings.mjs): kit
+//      updates switched on for the repository, and `worktree.sparsePaths` in step with the folders
+//      `.castalie/worktrees.json` leaves out of agent copies. It never edits that file; it says so.
+// It prints ONE line: what it freed. The line also goes to ~/.claude/cs/worktree-sweep/log.txt. A
+// settings finding adds its own line, which the hook shows once.
 //
 // WHAT IT NEVER TOUCHES. A copy with a modified or untracked file, with an operation in progress
 // (merge, rebase, cherry-pick), with a commit that exists nowhere else; a copy whose agent wrote to
@@ -38,6 +42,7 @@
 //
 //   cs worktrees sweep     [--repo <dir>] [--all] [--dry-run] [--idle-hours <h>] [--build-idle-days <d>] [--protect <dir>]... [--json]
 //   cs worktrees status    [--repo <dir>]            # the same pass, --dry-run
+//   cs worktrees sparse    [--repo <dir>] [--write]  # worktree.sparsePaths from agentCheckoutExclude
 //   cs worktrees install   [--at HH:MM]              # the daily pass, every repository the hook has seen
 //   cs worktrees uninstall
 
@@ -51,6 +56,7 @@ import * as nodeFs from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import { quote, stableCliPath } from "./agent-tasks.mjs";
+import { runSparse, settingsFindings, topLevelOf } from "./worktree-settings.mjs";
 
 export const STATE_DIR = join(homedir(), ".claude", "cs", "worktree-sweep");
 export const TASK_NAME = "Castalie - sweep agent worktrees";
@@ -651,7 +657,7 @@ function removeCopy(repo, verdict, trash) {
  */
 export function sweepRepo(repo, {
   dryRun = false, idleHours = DEFAULTS.idleHours, buildIdleDays = DEFAULTS.buildIdleDays, protect = [], now = Date.now(),
-  stateDir = STATE_DIR, alive = isAlive, sizeBudgetMs = 90_000, configDir = claudeConfigDir(),
+  stateDir = STATE_DIR, alive = isAlive, sizeBudgetMs = 90_000, configDir = claudeConfigDir(), settingsRoot = null,
 } = {}) {
   const main = mainCheckoutOf(repo);
   if (!main) return { repo, skipped: "not a git repository with a working tree", line: `cs worktrees · ${repo}: not a git checkout — nothing swept.` };
@@ -751,6 +757,9 @@ export function sweepRepo(repo, {
       disk: after, copies: verdicts,
     };
     result.line = summaryLine({ ...result, buildFolders: buildFolders.length });
+    // What the default branch commits, read from the working copy the caller stands in when there is
+    // one: every copy of the repository shares that branch, so the finding is the same from each.
+    try { result.settings = settingsFindings(settingsRoot || main, defaultBranch || "HEAD", basename(main)); } catch { result.settings = []; }
 
     if (after && after.free / after.total < LOW_DISK_RATIO) {
       const sizeDeadline = Date.now() + sizeBudgetMs;
@@ -767,7 +776,9 @@ export function sweepRepo(repo, {
       const standing = new Set(linked.map((w) => w.path));
       writeJson(heldFile, Object.fromEntries([...heldCache].filter(([path]) => standing.has(path))));
       writeJson(scannedFile, Object.fromEntries(Object.entries(scanned).filter(([path]) => standing.has(path))));
-      writeJson(join(stateDir, `last-${key}.json`), { at: result.at, repo: main, line: result.line, alert: result.alert || null, freed, removed, shown: false });
+      writeJson(join(stateDir, `last-${key}.json`), {
+        at: result.at, repo: main, line: result.line, alert: result.alert || null, settings: result.settings, freed, removed, shown: false,
+      });
       try { mkdirSync(stateDir, { recursive: true }); appendFileSync(join(stateDir, "log.txt"), `${result.at} ${result.line}\n`); } catch { /* the line was printed */ }
     }
     return result;
@@ -919,6 +930,7 @@ export function parseArgs(argv) {
     else if (a === "--idle-hours") args.idleHours = Number(next());
     else if (a === "--build-idle-days") args.buildIdleDays = Number(next());
     else if (a === "--at") args.at = next();
+    else if (a === "--write") args.write = true;
   }
   return args;
 }
@@ -927,6 +939,8 @@ const HELP = `cs worktrees — the working copies agents leave behind, given bac
 
   cs worktrees sweep     [--repo <dir>] [--all] [--dry-run] [--idle-hours 24] [--build-idle-days 3] [--protect <dir>]... [--json]
   cs worktrees status    [--repo <dir>]     the same pass, deciding nothing
+  cs worktrees sparse    [--repo <dir>] [--write]
+                                            worktree.sparsePaths computed from agentCheckoutExclude
   cs worktrees install   [--at HH:MM]       the daily pass (the hook schedules it once by itself)
   cs worktrees uninstall                    removes the daily pass and keeps it removed
 
@@ -935,19 +949,29 @@ untracked file, no commit that is on no remote and not already in the default br
 holding its lock, and nobody touched it for --idle-hours. Empties the build outputs that
 .castalie/worktrees.json declares regenerable ({ "regenerable": ["bin", "obj", "**/node_modules"] };
 default: ${DEFAULT_REGENERABLE.join(", ")}) in worktrees idle --build-idle-days, git-ignored folders only.
-Warns when the disk holding the repository is under 10 % free. CS_WORKTREE_SWEEP=off stops the hook.`;
+Warns when the disk holding the repository is under 10 % free. CS_WORKTREE_SWEEP=off stops the hook.
+
+Each pass also reads what the default branch commits in .claude/settings.json and says, once:
+- when "extraKnownMarketplaces" carries no castalie entry with "autoUpdate": true — kit updates then
+  reach the repository's sessions only by hand;
+- when .castalie/worktrees.json declares { "agentCheckoutExclude": ["qa", "publications"] } and
+  worktree.sparsePaths is not every top-level folder tracked at HEAD minus those. \`sparse --write\`
+  sets that key alone, the rest of the file untouched. Inside an agent copy,
+  \`git sparse-checkout add <folder>\` brings an excluded folder back.`;
 
 export async function runCli(argv) {
   const [command, ...rest] = argv;
   const args = parseArgs(rest);
   if (command === "install") return console.log(installDaily({ at: args.at }));
   if (command === "uninstall") return console.log(uninstallDaily());
+  if (command === "sparse") { process.exitCode = runSparse({ repo: args.repo, write: args.write === true }); return; }
   if (command !== "sweep" && command !== "status") return console.log(HELP);
 
   const dryRun = command === "status" || args.dryRun === true;
   const repos = args.all ? knownRepos() : [mainCheckoutOf(resolve(args.repo || process.cwd())) || resolve(args.repo || process.cwd())];
   const options = {
     dryRun,
+    settingsRoot: args.all ? null : topLevelOf(resolve(args.repo || process.cwd())),
     protect: args.protect,
     idleHours: Number.isFinite(args.idleHours) ? Math.max(1, args.idleHours) : DEFAULTS.idleHours,
     buildIdleDays: Number.isFinite(args.buildIdleDays) ? Math.max(1, args.buildIdleDays) : DEFAULTS.buildIdleDays,
@@ -960,6 +984,7 @@ export async function runCli(argv) {
     if (args.json) continue;
     console.log(result.line);
     if (result.alert) console.log(result.alert);
+    for (const finding of result.settings || []) console.log(finding.line);
     if (dryRun && result.copies) {
       for (const v of result.copies) {
         const idle = v.idleHours !== undefined ? `, idle ${Math.round(v.idleHours)} h` : "";

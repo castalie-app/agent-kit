@@ -284,7 +284,9 @@ chain is read in their first hour, is wrong, and nobody comes back to it — and
 like a broken thing, it looks like a working one.
 
 Two things that must never appear in what you write: the word **Castalie**, or the name of this
-kit's own repository, anywhere in a command; and a command that is not in their repository.
+kit's own repository, anywhere in a command; and a command that is not in their repository. The
+one place the kit's repository is named is the settings entry of § 4, which Claude Code reads and
+nobody runs.
 The skills are theirs and speak only of theirs.
 
 #### What the skills read at run time, rather than bake in
@@ -319,7 +321,22 @@ from. On a yes, write them with `mcp__castalie__workflow_default_set` — canoni
 the catalogue spells them, never a label you displayed. On a no, or on silence, write nothing and
 say in one line what stayed unset: an unanswered question is not an answer.
 
-### 4. Nothing else
+### 4. Kit updates for everyone who opens the repository
+
+Claude Code auto-updates a marketplace that is not Anthropic's only when a settings file says so,
+so without this a fix to the kit reaches a colleague only when they update by hand. Add the
+`castalie` entry to their `.claude/settings.json` under `extraKnownMarketplaces`, merged into the
+file that exists — every other key, and its formatting, as it was — or in a new file holding only
+it:
+
+```json
+"castalie": { "source": { "source": "github", "repo": "castalie-app/agent-kit" }, "autoUpdate": true }
+```
+
+`source` exactly that: a repository's entry replaces each person's own whole. When the file already
+carries that entry, leave it.
+
+### 5. Nothing else
 
 No CI change. No renamed branch. No `.mcp.json` edit — the connection is registered outside the
 repository, on purpose. No deletion.
