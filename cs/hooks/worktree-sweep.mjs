@@ -59,14 +59,15 @@ if (payload.hook_event_name !== "SessionEnd") {
       if (last.alert || last.notice || last.removed > 0 || last.freed > 512 * 1024 ** 2) {
         message = [last.line, last.alert, last.notice].filter(Boolean).join("\n");
       }
-      // Each settings finding once, ever: the hourly pass finds it again until someone commits the fix.
+      // Each settings finding once, ever, by its key — never by its text, which says which copy read
+      // it: the hourly pass finds it again, from every copy, until someone commits the fix.
       const seenFile = join(STATE_DIR, `settings-${repoKey(repo)}.json`);
       let seen = [];
       try { seen = JSON.parse(readFileSync(seenFile, "utf8")); } catch { /* none shown yet */ }
-      const fresh = (Array.isArray(last.settings) ? last.settings : []).filter((line) => !seen.includes(line));
+      const fresh = (Array.isArray(last.settings) ? last.settings : []).filter((f) => f?.key && f.line && !seen.includes(f.key));
       if (fresh.length) {
-        message = [message, ...fresh].filter(Boolean).join("\n");
-        writeFileSync(seenFile, JSON.stringify([...seen, ...fresh].slice(-50), null, 2), "utf8");
+        message = [message, ...fresh.map((f) => f.line)].filter(Boolean).join("\n");
+        writeFileSync(seenFile, JSON.stringify([...seen, ...fresh.map((f) => f.key)].slice(-50), null, 2), "utf8");
       }
       writeFileSync(lastFile, JSON.stringify({ ...last, shown: true }, null, 2), "utf8");
     }

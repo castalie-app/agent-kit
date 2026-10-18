@@ -240,7 +240,7 @@ So the repository declares what it leaves **out**, in `.castalie/worktrees.json`
 { "agentCheckoutExclude": ["qa", "publications"] }
 ```
 
-Plain top-level folder names; `.claude` is never excluded. `cs worktrees sparse` computes the
+Plain top-level folder names; `.claude` and `.castalie` are never excluded. `cs worktrees sparse` computes the
 list — every top-level directory tracked at HEAD, minus those — and prints how the committed
 setting differs from it; `cs worktrees sparse --write` sets that one key and leaves the rest of the
 file as it was, formatting included. Commit it. Each pass of the sweep compares the default branch

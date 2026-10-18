@@ -18,21 +18,27 @@
 //    `cs worktrees sparse` computes the list from the folders tracked at HEAD. `--write` sets that key
 //    alone, the rest of the file untouched; the pass reports a drift once.
 //
+// WHAT IT ECHOES. The pass reads a branch of whatever repository a session opens, and its lines reach
+// that session through the hook. So a name from the repository is echoed only cleaned — no control
+// character, at most 60 characters, at most eight names — and an exclude must be a plain folder name.
+//
 //   cs worktrees sparse [--repo <dir>] [--write]
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { lstatSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
 export const SETTINGS_FILE = join(".claude", "settings.json");
 export const WORKTREES_FILE = join(".castalie", "worktrees.json");
 export const KIT_MARKETPLACE = "castalie";
+// The kit's address, also written in setup/setup.mjs (`REPOSITORY`, which setup cannot import: only
+// that file is packed for npx) and in the adapt skill. validate.mjs refuses every former address.
 export const KIT_REPOSITORY = "castalie-app/agent-kit";
 /** The entry a repository commits, exactly: the project entry replaces each person's own whole. */
 export const KIT_ENTRY = { source: { source: "github", repo: KIT_REPOSITORY }, autoUpdate: true };
-/** Folders an agent copy always keeps: its own settings and skills live there. */
-export const NEVER_EXCLUDED = [".claude", ".git"];
+/** Folders an agent copy always keeps: its settings and skills, the sweep's own declarations, git. */
+export const NEVER_EXCLUDED = [".claude", ".castalie", ".git"];
 
 const GIT_ENV = { ...process.env, GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "never" };
 
@@ -40,6 +46,9 @@ function git(cwd, args, timeout = 30_000) {
   const r = spawnSync("git", ["-c", "core.fsmonitor=false", ...args], { cwd, encoding: "utf8", timeout, windowsHide: true, maxBuffer: 16 * 1024 * 1024, env: GIT_ENV });
   return { ok: r.status === 0, out: r.stdout || "" };
 }
+
+const stripBom = (text) => (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+const plainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 
 /** The top of the working copy `dir` sits in, or null outside one. */
 export function topLevelOf(dir) {
@@ -57,10 +66,16 @@ function fileOnDisk(root, path) {
   try { return readFileSync(join(root, path), "utf8"); } catch { return null; }
 }
 
-/** `{ value }`, `{ missing: true }` or `{ invalid: true }` — a file nobody can parse is never rewritten. */
+/**
+ * `{ value }`, `{ missing: true }` or `{ invalid: true }`. A file nobody can parse, or whose top is not
+ * an object, is never rewritten: the harness reads it, and a repair would drop what it did not understand.
+ */
 export function parseJson(text) {
   if (text === null || text === undefined) return { missing: true };
-  try { return { value: JSON.parse(text.replace(/^﻿/, "")) }; } catch { return { invalid: true }; }
+  try {
+    const value = JSON.parse(stripBom(text));
+    return plainObject(value) ? { value } : { invalid: true };
+  } catch { return { invalid: true }; }
 }
 
 /** The top-level directories tracked at `ref`, in git's order. Submodules are not directories here. */
@@ -69,12 +84,24 @@ export function trackedTopLevel(root, ref = "HEAD") {
   return r.ok ? r.out.split("\0").filter(Boolean) : null;
 }
 
+/** A name from the repository as the session may read it: no control or format character, 60 at most. */
+export function shown(name) {
+  const clean = String(name).replace(/[\p{C}\p{Zl}\p{Zp}]/gu, "");
+  return clean.length > 60 ? `${clean.slice(0, 59)}…` : clean;
+}
+
+/** At most eight names, cleaned, then how many more. */
+export function names(list) {
+  const head = list.slice(0, 8).map(shown).join(", ");
+  return list.length > 8 ? `${head} and ${list.length - 8} more` : head;
+}
+
 // ── 1. The kit's marketplace ────────────────────────────────────────────────
 
 /** What is wrong with a settings object's `castalie` entry: null when it is exactly the kit's. */
 export function marketplaceProblem(settings) {
   const entry = settings?.extraKnownMarketplaces?.[KIT_MARKETPLACE];
-  if (!entry || typeof entry !== "object") return "absent";
+  if (!plainObject(entry)) return "absent";
   if (!isDeepStrictEqual(entry.source, KIT_ENTRY.source)) return "source";
   if (entry.autoUpdate !== true) return "autoUpdate";
   return null;
@@ -86,15 +113,18 @@ export function marketplaceSnippet() {
 }
 
 /**
- * The line about kit updates, or null when the committed file already turns them on. `ref` is the
- * state everyone gets (the default branch); `root` is the working copy, which may already carry the fix.
+ * The finding about kit updates — `{ key, line }` — or null when the committed file already turns them
+ * on. `committedText` is what `ref` (the default branch, the state everyone gets) holds; `root` is the
+ * working copy, which may already carry the fix. The key names the finding, never the copy it was
+ * read from, so the hook shows it once whichever copy found it.
  */
-export function marketplaceLine(root, ref, name = basename(root)) {
+export function marketplaceFinding(root, ref, name, committedText = fileAt(root, ref, SETTINGS_FILE)) {
   // The kit's own repository declares the marketplace it IS; it does not install itself from it.
-  const own = parseJson(fileOnDisk(root, join(".claude-plugin", "marketplace.json")));
-  if (own.value?.name === KIT_MARKETPLACE) return null;
-  const committed = parseJson(fileAt(root, ref, SETTINGS_FILE));
-  if (committed.invalid) return `cs worktrees · ${name}: ${SETTINGS_FILE.replace(/\\/g, "/")} on ${ref} is not valid JSON — kit updates cannot be checked.`;
+  if (parseJson(fileOnDisk(root, join(".claude-plugin", "marketplace.json"))).value?.name === KIT_MARKETPLACE) return null;
+  const committed = parseJson(committedText);
+  if (committed.invalid) {
+    return { key: `kit:invalid@${ref}`, line: `cs worktrees · ${name}: .claude/settings.json on ${ref} is not a JSON object — kit updates cannot be checked.` };
+  }
   const problem = marketplaceProblem(committed.value);
   if (!problem) return null;
   const why = {
@@ -103,30 +133,33 @@ export function marketplaceLine(root, ref, name = basename(root)) {
     source: "declares the castalie marketplace from another source, and a project entry replaces each person's own whole",
   }[problem];
   const local = parseJson(fileOnDisk(root, SETTINGS_FILE));
-  const here = !local.invalid && !local.missing && !marketplaceProblem(local.value) ? ` This working copy already carries it: merge it into ${ref}.` : "";
-  return `cs worktrees · ${name}: .claude/settings.json on ${ref} ${why}, so kit updates reach its sessions only by hand. `
-    + `Under "extraKnownMarketplaces", set ${marketplaceSnippet()}.${here}`;
+  const here = local.value && !marketplaceProblem(local.value) ? ` This working copy already carries it: merge it into ${ref}.` : "";
+  return {
+    key: `kit:${problem}@${ref}`,
+    line: `cs worktrees · ${name}: .claude/settings.json on ${ref} ${why}, so kit updates reach its sessions only by hand. `
+      + `Under "extraKnownMarketplaces", set ${marketplaceSnippet()}.${here}`,
+  };
 }
 
 // ── 2. The agent copies' folders ────────────────────────────────────────────
 
-/** A top-level folder name, plain: no separator, no `.` or `..`, never one an agent copy needs. */
+/** A top-level folder name, plain — letters, digits, `.`, `_`, `-`, space — and never one an agent copy needs. */
 export function acceptableExclude(name) {
   const n = String(name).trim();
-  return !!n && !/[\\/*?]/.test(n) && n !== "." && n !== ".." && !NEVER_EXCLUDED.includes(n);
+  return /^[\p{L}\p{N}._ -]{1,100}$/u.test(n) && n !== "." && n !== ".." && !NEVER_EXCLUDED.includes(n);
 }
 
-/** `.castalie/worktrees.json`'s `agentCheckoutExclude`: `{ declared, excludes, refused }`. */
+/** `.castalie/worktrees.json`'s `agentCheckoutExclude`: `{ declared, excludes, refused, invalid }`. */
 export function readExcludes(text) {
   const parsed = parseJson(text);
   const list = parsed.value?.agentCheckoutExclude;
   if (!Array.isArray(list)) return { declared: false, excludes: [], refused: [], invalid: !!parsed.invalid };
-  const names = list.map((n) => String(n).trim().replace(/\/+$/, ""));
-  return { declared: true, excludes: names.filter(acceptableExclude), refused: names.filter((n) => !acceptableExclude(n)) };
+  const all = list.map((n) => String(n).trim().replace(/\/+$/, ""));
+  return { declared: true, excludes: all.filter(acceptableExclude), refused: all.filter((n) => !acceptableExclude(n)), invalid: false };
 }
 
 /**
- * Everything `sparse` and the pass need to know, from three texts and one tree: the folders tracked,
+ * Everything `sparse` and the pass need to know, from two texts and one tree: the folders tracked,
  * the excludes, the list they give, the list the settings hold, and the gap between the two.
  */
 export function sparseState({ tracked, worktreesText, settingsText }) {
@@ -137,7 +170,7 @@ export function sparseState({ tracked, worktreesText, settingsText }) {
   const norm = (p) => p.replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
   const have = new Set((current || []).map(norm));
   const missing = current ? wanted.filter((d) => !have.has(d)) : [];
-  const extra = current ? (current || []).map(norm).filter((p) => !wanted.includes(p)) : [];
+  const extra = current ? current.map(norm).filter((p) => !wanted.includes(p)) : [];
   const untracked = excludes.filter((d) => !(tracked || []).includes(d));
   const leftOut = current ? (tracked || []).filter((d) => !have.has(d)) : [];
   const inSync = declared && current !== null && !missing.length && !extra.length && current.length === wanted.length;
@@ -147,48 +180,58 @@ export function sparseState({ tracked, worktreesText, settingsText }) {
   };
 }
 
-const list = (names) => names.join(", ");
-
-/** The pass's line about agent copies, or null: said only when the repository declares excludes. */
-export function sparseLine(state, ref, name) {
-  if (!state.declared || !state.tracked || state.inSync || state.settingsInvalid) return null;
-  const fix = "`cs worktrees sparse --write` sets it; commit .claude/settings.json.";
-  if (state.current === null) {
-    return `cs worktrees · ${name}: .castalie/worktrees.json on ${ref} declares agentCheckoutExclude (${list(state.excludes)}) but .claude/settings.json `
-      + `sets no worktree.sparsePaths, so agent copies check out every folder. ${fix}`;
-  }
-  const parts = [];
-  if (state.missing.length) parts.push(`agent copies lack ${list(state.missing)}`);
-  if (state.extra.length) parts.push(`it still lists ${list(state.extra)}`);
-  return `cs worktrees · ${name}: worktree.sparsePaths on ${ref} drifts from agentCheckoutExclude — ${parts.join("; ") || "its order differs"}. ${fix}`;
+/** The gap between the computed list and the one the settings hold, in words. */
+function gapOf(state) {
+  if (state.current === null) return "no worktree.sparsePaths yet";
+  return [state.missing.length && `agent copies lack ${names(state.missing)}`, state.extra.length && `it still lists ${names(state.extra)}`]
+    .filter(Boolean).join("; ") || "its order differs";
 }
 
-/** Both lines of the pass, read from what `ref` commits: the state every new copy and teammate gets. */
-export function settingsLines(root, ref = "HEAD", name = basename(root)) {
-  const lines = [];
-  const kit = marketplaceLine(root, ref, name);
-  if (kit) lines.push(kit);
-  const state = sparseState({
-    tracked: trackedTopLevel(root, ref),
-    worktreesText: fileAt(root, ref, WORKTREES_FILE),
-    settingsText: fileAt(root, ref, SETTINGS_FILE),
-  });
-  const sparse = sparseLine(state, ref, name);
-  if (sparse) lines.push(sparse);
-  return lines;
+/**
+ * The pass's finding about agent copies — `{ key, line }` — or null: said only when the repository
+ * declares excludes on `ref`. `local`, the working copy's own state, says when the fix is already there.
+ */
+export function sparseFinding(state, ref, name, local = null) {
+  if (!state.declared || !state.tracked || state.inSync || state.settingsInvalid) return null;
+  const fix = local?.inSync
+    ? ` This working copy already carries it: merge it into ${ref}.`
+    : " `cs worktrees sparse --write` sets it; commit .claude/settings.json.";
+  const key = `sparse@${ref}:${state.current === null ? "none" : `${state.missing.join(",")}|${state.extra.join(",")}`}`;
+  const what = state.current === null
+    ? `.castalie/worktrees.json on ${ref} declares agentCheckoutExclude (${names(state.excludes)}) but .claude/settings.json sets no worktree.sparsePaths, so agent copies check out every folder.`
+    : `worktree.sparsePaths on ${ref} drifts from agentCheckoutExclude — ${gapOf(state)}.`;
+  return { key, line: `cs worktrees · ${name}: ${what}${fix}` };
+}
+
+/**
+ * The pass's findings, `[{ key, line }]`, read from what `ref` commits: the state every new copy and
+ * teammate gets. `root` is the working copy the caller stands in.
+ */
+export function settingsFindings(root, ref = "HEAD", name = basename(root)) {
+  const findings = [];
+  const committedSettings = fileAt(root, ref, SETTINGS_FILE);
+  const kit = marketplaceFinding(root, ref, name, committedSettings);
+  if (kit) findings.push(kit);
+  const state = sparseState({ tracked: trackedTopLevel(root, ref), worktreesText: fileAt(root, ref, WORKTREES_FILE), settingsText: committedSettings });
+  if (state.declared && !state.inSync) {
+    const local = sparseState({ tracked: trackedTopLevel(root, "HEAD"), worktreesText: fileOnDisk(root, WORKTREES_FILE), settingsText: fileOnDisk(root, SETTINGS_FILE) });
+    const sparse = sparseFinding(state, ref, name, local);
+    if (sparse) findings.push(sparse);
+  }
+  return findings;
 }
 
 // ── Writing one key, the rest of the file untouched ─────────────────────────
 
 /**
  * The spans of every member of a JSON text, keyed by its path joined with "\0": where its key starts,
- * where its value starts and ends, and for an object or array where it opens and closes. Strict JSON
- * — the only kind Claude Code reads in a settings file.
+ * where its value starts and ends, and for an object how many members it has. Strict JSON — the only
+ * kind Claude Code reads in a settings file.
  */
 export function jsonSpans(text) {
   const spans = new Map();
   let i = 0;
-  const ws = () => { while (i < text.length && /[\s﻿]/.test(text[i])) i++; };
+  const ws = () => { while (i < text.length && (text.charCodeAt(i) === 0xfeff || /\s/.test(text[i]))) i++; };
   const fail = () => { throw new Error(`unexpected character at ${i}`); };
   const str = () => {
     if (text[i] !== "\"") fail();
@@ -268,12 +311,13 @@ function indentUnit(text) {
  * was: the array replaced in place, else inserted as the first member of `worktree`, else `worktree`
  * inserted as the first member of the file. Line endings follow the file's. Checked by parsing the
  * result: when the edit would change anything but that key, the whole file is re-serialised instead.
+ * The caller has refused a file that is not a JSON object.
  */
 export function withSparsePaths(text, paths) {
   const source = text === null || text === undefined || !text.trim() ? "{}\n" : text;
-  const original = JSON.parse(source.replace(/^﻿/, ""));
+  const original = JSON.parse(stripBom(source));
   const expected = structuredClone(original);
-  expected.worktree = { ...(expected.worktree && typeof expected.worktree === "object" && !Array.isArray(expected.worktree) ? expected.worktree : {}), sparsePaths: [...paths] };
+  expected.worktree = { ...(plainObject(expected.worktree) ? expected.worktree : {}), sparsePaths: [...paths] };
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
   const unit = indentUnit(source.replace(/\r\n/g, "\n"));
   const array = (indent) => (paths.length ? `[${eol}${paths.map((p) => `${indent}${unit}${JSON.stringify(p)}`).join(`,${eol}`)}${eol}${indent}]` : "[]");
@@ -301,10 +345,15 @@ export function withSparsePaths(text, paths) {
   } catch { edited = null; }
 
   if (edited !== null) {
-    try { if (isDeepStrictEqual(JSON.parse(edited.replace(/^﻿/, "")), expected)) return edited; } catch { /* re-serialised below */ }
+    try { if (isDeepStrictEqual(JSON.parse(stripBom(edited)), expected)) return edited; } catch { /* re-serialised below */ }
   }
   const trailing = /\r?\n$/.test(source) ? eol : "";
   return JSON.stringify(expected, null, unit).replace(/\n/g, eol) + trailing;
+}
+
+/** Whether a path is a link: `--write` never writes through one a repository committed. */
+function isLink(path) {
+  try { return lstatSync(path).isSymbolicLink(); } catch { return false; }
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
@@ -321,30 +370,32 @@ export function runSparse({ repo, write = false } = {}, log = console.log) {
   const back = "Inside an agent copy, `git sparse-checkout add <folder>` brings an excluded folder back.";
 
   if (!state.tracked) { log(`${head}: git cannot list the folders at HEAD.`); return 2; }
-  if (state.excludesInvalid) { log(`${head}: .castalie/worktrees.json is not valid JSON — nothing computed.`); return 2; }
-  if (state.settingsInvalid) { log(`${head}: .claude/settings.json is not valid JSON — nothing compared, nothing written.`); return 2; }
-  if (state.refused.length) log(`${head}: agentCheckoutExclude ignores ${list(state.refused)} — a plain top-level folder name only, never ${list(NEVER_EXCLUDED)}.`);
+  if (state.excludesInvalid) { log(`${head}: .castalie/worktrees.json is not a JSON object — nothing computed.`); return 2; }
+  if (state.settingsInvalid) { log(`${head}: .claude/settings.json is not a JSON object — nothing compared, nothing written.`); return 2; }
+  if (state.refused.length) log(`${head}: agentCheckoutExclude ignores ${names(state.refused)} — a plain top-level folder name only, never ${NEVER_EXCLUDED.join(", ")}.`);
 
   if (!state.declared) {
     const current = state.current === null
       ? "no worktree.sparsePaths: agent copies check out every folder"
-      : `worktree.sparsePaths set by hand, ${state.current.length} entries${state.leftOut.length ? ` — it leaves out ${list(state.leftOut)}` : ""}`;
+      : `worktree.sparsePaths set by hand, ${state.current.length} entries${state.leftOut.length ? ` — it leaves out ${names(state.leftOut)}` : ""}`;
     log(`${head}: .castalie/worktrees.json declares no agentCheckoutExclude; ${state.tracked.length} folders tracked at HEAD; ${current}.`);
     log(`  Declare { "agentCheckoutExclude": ["<top-level folder>", ...] } there, then \`cs worktrees sparse --write\`.`);
     return 0;
   }
 
-  const summary = `${state.wanted.length} of ${state.tracked.length} folders tracked at HEAD, without ${list(state.excludes)}`;
-  if (state.untracked.length) log(`${head}: agentCheckoutExclude names ${list(state.untracked)}, tracked at HEAD by no folder.`);
+  const summary = `${state.wanted.length} of ${state.tracked.length} folders tracked at HEAD, without ${names(state.excludes)}`;
+  if (state.untracked.length) log(`${head}: agentCheckoutExclude names ${names(state.untracked)}, tracked at HEAD by no folder.`);
   if (state.inSync) { log(`${head}: worktree.sparsePaths matches — ${summary}. ${back}`); return 0; }
 
-  const gap = state.current === null
-    ? "no worktree.sparsePaths yet"
-    : [state.missing.length && `agent copies lack ${list(state.missing)}`, state.extra.length && `it still lists ${list(state.extra)}`].filter(Boolean).join("; ") || "its order differs";
+  const gap = gapOf(state);
   if (!write) {
     log(`${head}: worktree.sparsePaths drifts — ${gap}. Computed: ${summary}.`);
     log(`  \`cs worktrees sparse --write\` sets that key alone in .claude/settings.json; commit it. ${back}`);
     return 1;
+  }
+  if (isLink(join(root, ".claude")) || isLink(settingsPath)) {
+    log(`${head}: .claude/settings.json is reached through a link — nothing written.`);
+    return 2;
   }
   const next = withSparsePaths(settingsText, state.wanted);
   mkdirSync(dirname(settingsPath), { recursive: true });
@@ -352,4 +403,3 @@ export function runSparse({ repo, write = false } = {}, log = console.log) {
   log(`${head}: worktree.sparsePaths written in .claude/settings.json (${gap} before) — ${summary}. Commit it so every session gets it. ${back}`);
   return 0;
 }
-

@@ -48,7 +48,10 @@ import { fileURLToPath } from "node:url";
  * WHAT THAT RENAME COST, since the last version of this comment promised it: this constant, and
  * the five lines of prose that spell the address out for a reader — four in the README, one in the
  * `connect` skill. The promise held; the grep found six and there was no sixth place. Whoever
- * renames next should expect the same and be told if it is not.
+ * renames next should expect the same and be told if it is not. Since 1.68 the address is also
+ * the source of the auto-update entry a host repository commits: `KIT_REPOSITORY` in
+ * `cs/bin/worktree-settings.mjs` (this file is packed alone for npx and cannot import it) and the
+ * snippet in the `adapt` skill — two more to change, and invariant 3 refuses the old one in each.
  *
  * GitHub redirects the old path, which is exactly what makes a stale one easy to keep: everything
  * goes on working, so nothing gets aligned, and the redirect breaks the day someone creates a
@@ -283,24 +286,29 @@ function installAutoUpdate() {
   const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
   const path = join(configDir, "settings.json");
   const entry = { source: { source: "github", repo: REPOSITORY }, autoUpdate: true };
+  const object = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+  const leave = (why) => {
+    warn(`${path} ${why} — leaving it alone. Add under "extraKnownMarketplaces": "${MARKETPLACE_NAME}": ${JSON.stringify(entry)}`);
+    return "skipped";
+  };
   let settings = {};
   if (existsSync(path)) {
-    try {
-      const parsed = JSON.parse(readFileSync(path, "utf8"));
-      if (parsed && typeof parsed === "object") settings = parsed;
-    } catch {
-      warn(`${path} is not valid JSON — leaving it alone. Add under "extraKnownMarketplaces": "${MARKETPLACE_NAME}": ${JSON.stringify(entry)}`);
-      return "skipped";
-    }
+    try { settings = JSON.parse(readFileSync(path, "utf8")); } catch { return leave("is not valid JSON"); }
+    if (!object(settings)) return leave("is not a JSON object");
   }
-  const known = settings.extraKnownMarketplaces && typeof settings.extraKnownMarketplaces === "object" ? settings.extraKnownMarketplaces : {};
-  if (JSON.stringify(known[MARKETPLACE_NAME]) === JSON.stringify(entry)) {
+  const known = settings.extraKnownMarketplaces === undefined ? {} : settings.extraKnownMarketplaces;
+  if (!object(known)) return leave("holds an extraKnownMarketplaces that is not an object");
+  const existing = object(known[MARKETPLACE_NAME]) ? known[MARKETPLACE_NAME] : null;
+  if (existing?.autoUpdate === true && JSON.stringify(existing.source) === JSON.stringify(entry.source)) {
     ok("auto-update was already on — nothing changed.");
     return "already";
   }
+  // A source of your own — a local copy of the kit, a fork — is kept: only auto-update is switched on.
+  const own = existing?.source && JSON.stringify(existing.source) !== JSON.stringify(entry.source);
+  const next = own ? { ...existing, autoUpdate: true } : { ...existing, ...entry };
   mkdirSync(configDir, { recursive: true });
-  writeFileSync(path, JSON.stringify({ ...settings, extraKnownMarketplaces: { ...known, [MARKETPLACE_NAME]: entry } }, null, 2) + "\n", "utf8");
-  ok(`kit updates arrive by themselves, in ${path} (your other settings are untouched).`);
+  writeFileSync(path, JSON.stringify({ ...settings, extraKnownMarketplaces: { ...known, [MARKETPLACE_NAME]: next } }, null, 2) + "\n", "utf8");
+  ok(`kit updates arrive by themselves, in ${path} (your other settings are kept)${own ? "; the marketplace keeps the source you gave it" : ""}.`);
   return "written";
 }
 

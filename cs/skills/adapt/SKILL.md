@@ -284,7 +284,9 @@ chain is read in their first hour, is wrong, and nobody comes back to it — and
 like a broken thing, it looks like a working one.
 
 Two things that must never appear in what you write: the word **Castalie**, or the name of this
-kit's own repository, anywhere in a command; and a command that is not in their repository.
+kit's own repository, anywhere in a command; and a command that is not in their repository. The
+one place the kit's repository is named is the settings entry of § 4, which Claude Code reads and
+nobody runs.
 The skills are theirs and speak only of theirs.
 
 #### What the skills read at run time, rather than bake in
@@ -331,9 +333,8 @@ it:
 "castalie": { "source": { "source": "github", "repo": "castalie-app/agent-kit" }, "autoUpdate": true }
 ```
 
-`source` exactly that: a repository's entry replaces each person's own whole. It is the one line
-that names the kit's repository, because it is a setting Claude Code reads, never a command. When
-the file already carries that entry, leave it.
+`source` exactly that: a repository's entry replaces each person's own whole. When the file already
+carries that entry, leave it.
 
 ### 5. Nothing else
 

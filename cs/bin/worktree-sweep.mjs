@@ -56,7 +56,7 @@ import * as nodeFs from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import { quote, stableCliPath } from "./agent-tasks.mjs";
-import { runSparse, settingsLines, topLevelOf } from "./worktree-settings.mjs";
+import { runSparse, settingsFindings, topLevelOf } from "./worktree-settings.mjs";
 
 export const STATE_DIR = join(homedir(), ".claude", "cs", "worktree-sweep");
 export const TASK_NAME = "Castalie - sweep agent worktrees";
@@ -759,7 +759,7 @@ export function sweepRepo(repo, {
     result.line = summaryLine({ ...result, buildFolders: buildFolders.length });
     // What the default branch commits, read from the working copy the caller stands in when there is
     // one: every copy of the repository shares that branch, so the finding is the same from each.
-    try { result.settings = settingsLines(settingsRoot || main, defaultBranch || "HEAD", basename(main)); } catch { result.settings = []; }
+    try { result.settings = settingsFindings(settingsRoot || main, defaultBranch || "HEAD", basename(main)); } catch { result.settings = []; }
 
     if (after && after.free / after.total < LOW_DISK_RATIO) {
       const sizeDeadline = Date.now() + sizeBudgetMs;
@@ -984,7 +984,7 @@ export async function runCli(argv) {
     if (args.json) continue;
     console.log(result.line);
     if (result.alert) console.log(result.alert);
-    for (const line of result.settings || []) console.log(line);
+    for (const finding of result.settings || []) console.log(finding.line);
     if (dryRun && result.copies) {
       for (const v of result.copies) {
         const idle = v.idleHours !== undefined ? `, idle ${Math.round(v.idleHours)} h` : "";
