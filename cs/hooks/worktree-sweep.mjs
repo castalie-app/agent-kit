@@ -14,7 +14,9 @@
 //
 // WHAT IT SAYS. The pass writes its one line; the next time this hook fires in a session of that
 // repository, the line is shown once — only when the pass freed something or the disk is under 10 %
-// free. Silence otherwise. CS_WORKTREE_SWEEP=off silences and stops it.
+// free. A settings finding — kit updates off for the repository, the agent copies' folders drifting —
+// is shown once per finding, whichever pass found it. Silence otherwise. CS_WORKTREE_SWEEP=off
+// silences and stops it.
 //
 // stdin:  { session_id, cwd, hook_event_name, ... }
 // stdout: { systemMessage } once per pass worth reading; nothing otherwise. Exit 0 always.
@@ -57,6 +59,15 @@ if (payload.hook_event_name !== "SessionEnd") {
       if (last.alert || last.notice || last.removed > 0 || last.freed > 512 * 1024 ** 2) {
         message = [last.line, last.alert, last.notice].filter(Boolean).join("\n");
       }
+      // Each settings finding once, ever: the hourly pass finds it again until someone commits the fix.
+      const seenFile = join(STATE_DIR, `settings-${repoKey(repo)}.json`);
+      let seen = [];
+      try { seen = JSON.parse(readFileSync(seenFile, "utf8")); } catch { /* none shown yet */ }
+      const fresh = (Array.isArray(last.settings) ? last.settings : []).filter((line) => !seen.includes(line));
+      if (fresh.length) {
+        message = [message, ...fresh].filter(Boolean).join("\n");
+        writeFileSync(seenFile, JSON.stringify([...seen, ...fresh].slice(-50), null, 2), "utf8");
+      }
       writeFileSync(lastFile, JSON.stringify({ ...last, shown: true }, null, 2), "utf8");
     }
   } catch { /* no pass yet */ }
@@ -72,7 +83,9 @@ if (due) {
     writeFileSync(stamp, new Date().toISOString(), "utf8");   // down before the spawn; two hooks racing past it meet the pass's own exclusive lock
     const cli = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "cs.mjs");
     if (existsSync(cli)) {
-      const child = spawn(process.execPath, [cli, "worktrees", "sweep", "--repo", repo, "--protect", cwd, "--from-hook"], {
+      // `--repo` is the session's own folder: the pass sweeps its repository and reads the settings
+      // from the working copy the session stands in.
+      const child = spawn(process.execPath, [cli, "worktrees", "sweep", "--repo", cwd, "--protect", cwd, "--from-hook"], {
         cwd: repo, detached: true, stdio: "ignore", windowsHide: true,
       });
       child.unref();

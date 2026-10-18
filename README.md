@@ -139,9 +139,33 @@ on first use; without it, the file goes as it is.
 ### How updates reach you
 
 The marketplace tracks this repository, so a skill improved here reaches every installation without
-anyone reinstalling anything — that is the whole point of shipping through a marketplace rather than a
-copy per client. What it does not do is arrive the same second: your agent refreshes its marketplace
-cache on its own schedule. To pull the current state right now:
+anyone reinstalling anything — **once auto-update is on for it**. Claude Code auto-updates Anthropic's
+own marketplaces by default and every other one only when a settings file says so: without it, a fix
+reaches a machine only when somebody runs `claude plugin marketplace update castalie` by hand. On
+18 October 2026, the day after the kit started giving back agent copies, every Green Acres
+workstation still ran a version from before.
+
+Two places turn it on. The setup command writes it in your own `~/.claude/settings.json`. And a
+repository commits it once in `.claude/settings.json`, for everyone who opens it (after they trust
+the folder):
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "castalie": {
+      "source": { "source": "github", "repo": "castalie-app/agent-kit" },
+      "autoUpdate": true
+    }
+  }
+}
+```
+
+Keep `source` exactly that: an entry in a repository's file replaces each person's own entry
+whole, so a different source points every session of that repository at it. Claude Code refreshes
+the marketplace a few minutes after the first message of a session and says
+`Plugin updated: cs · Run /reload-plugins to apply`. `cs worktrees status` says when the default
+branch's `.claude/settings.json` lacks that entry, with the line to add, and the end-of-turn hook
+says it once. To pull the current state right now:
 
 ```
 claude plugin marketplace update castalie
@@ -201,6 +225,32 @@ the first hook run schedules on its own (Task Scheduler on Windows, launchd on m
 
 `cs worktrees status` shows what a pass would do, copy by copy. `cs worktrees uninstall` removes the
 daily pass and keeps it removed; `CS_WORKTREE_SWEEP=off` stops the hook.
+
+### Agent copies without the heavy folders
+
+A copy that holds only what agents work on costs less disk and checks out faster. Claude Code's
+`worktree.sparsePaths` in `.claude/settings.json` lists the directories it checks out in each
+worktree it creates, a sub-agent's isolated copy included; root files are always there. It is an
+include list, so it goes stale without a sound: a top-level folder added next month is missing
+from every agent copy, and nothing says so.
+
+So the repository declares what it leaves **out**, in `.castalie/worktrees.json`:
+
+```json
+{ "agentCheckoutExclude": ["qa", "publications"] }
+```
+
+Plain top-level folder names; `.claude` is never excluded. `cs worktrees sparse` computes the
+list — every top-level directory tracked at HEAD, minus those — and prints how the committed
+setting differs from it; `cs worktrees sparse --write` sets that one key and leaves the rest of the
+file as it was, formatting included. Commit it. Each pass of the sweep compares the default branch
+the same way and says once when the two drift apart.
+
+An agent that needs an excluded folder inside its copy brings it back there:
+
+```
+git sparse-checkout add qa
+```
 
 ## The pane beside the transcript
 
@@ -685,6 +735,7 @@ cs prompt gate scheduled-run 412 -- claude --print "/cs:scheduled-run 412"
 cs proof-pack compute               # the delivery's proof, computed from the tools' files: proven, partly proven, not proven
 cs proof-pack push --spec 42 --pr <url>           # stores that pack on the spec; no code, only paths, counts and hashes
 cs worktrees status                 # what a sweep would remove, copy by copy, and what each one keeps
+cs worktrees sparse --write         # worktree.sparsePaths = the tracked folders minus agentCheckoutExclude
 ```
 
 Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first, a Jev
@@ -833,6 +884,7 @@ cs/
   bin/config.mjs                  # where the endpoint and a hand-written token are read from
   bin/agent-tasks.mjs             # cs agent-tasks: this workstation's agent tasks, reported to Castalie
   bin/worktree-sweep.mjs          # cs worktrees: agent copies and build outputs given back, the disk watched
+  bin/worktree-settings.mjs       # cs worktrees sparse, and the pass's check of kit updates and agent copies' folders
   bin/prompt-screen.mjs           # cs prompt screen: Jev screens a text before an unattended agent reads it
   bin/prompt-gate.mjs             # cs prompt gate: a stored scheduled-run or resume prompt screened before it is played
   bin/proof-pack.mjs              # cs proof-pack: canary, compute, render, gate (instructions/proof-pack.md)

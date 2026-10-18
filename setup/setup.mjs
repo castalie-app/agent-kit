@@ -9,7 +9,8 @@
 // Does four things, in order, each best-effort with a clear message on failure:
 //   a) installs the plugin via the Claude CLI (marketplace add + install) — removing first any
 //      marketplace still registered under a former name — or prints manual steps if
-//      `claude` isn't on PATH;
+//      `claude` isn't on PATH; then turns on the marketplace's auto-update in the user's settings,
+//      off by default for every marketplace that is not Anthropic's;
 //   b) registers the MCP endpoint for THIS project under the alias `cs`, with the address and
 //      the token written literally into the local scope — so the connection does not depend on
 //      an environment variable that only one launcher knows how to set;
@@ -265,6 +266,42 @@ function installPlugin(haveClaude) {
     warn("the Claude CLI reported an error — finish the install by hand:");
     manual();
   }
+}
+
+/**
+ * a') `"autoUpdate": true` on the `castalie` entry of the user's `extraKnownMarketplaces`, where
+ * `claude plugin marketplace add` writes it. Claude Code auto-updates a third-party marketplace only
+ * when a settings file says so; without it, a kit fix reaches this machine only when someone runs
+ * `claude plugin marketplace update` — on 18 October 2026 no Green Acres workstation had the
+ * release of the day before. The source is written exactly: a repository's committed entry, when
+ * there is one, replaces this one whole and must say the same (`cs worktrees status` checks it).
+ *
+ * @returns {"written" | "already" | "skipped"} what it did
+ */
+function installAutoUpdate() {
+  step(`Turning on the kit's updates (marketplace \`${MARKETPLACE_NAME}\`, auto-update)`);
+  const configDir = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+  const path = join(configDir, "settings.json");
+  const entry = { source: { source: "github", repo: REPOSITORY }, autoUpdate: true };
+  let settings = {};
+  if (existsSync(path)) {
+    try {
+      const parsed = JSON.parse(readFileSync(path, "utf8"));
+      if (parsed && typeof parsed === "object") settings = parsed;
+    } catch {
+      warn(`${path} is not valid JSON — leaving it alone. Add under "extraKnownMarketplaces": "${MARKETPLACE_NAME}": ${JSON.stringify(entry)}`);
+      return "skipped";
+    }
+  }
+  const known = settings.extraKnownMarketplaces && typeof settings.extraKnownMarketplaces === "object" ? settings.extraKnownMarketplaces : {};
+  if (JSON.stringify(known[MARKETPLACE_NAME]) === JSON.stringify(entry)) {
+    ok("auto-update was already on — nothing changed.");
+    return "already";
+  }
+  mkdirSync(configDir, { recursive: true });
+  writeFileSync(path, JSON.stringify({ ...settings, extraKnownMarketplaces: { ...known, [MARKETPLACE_NAME]: entry } }, null, 2) + "\n", "utf8");
+  ok(`kit updates arrive by themselves, in ${path} (your other settings are untouched).`);
+  return "written";
 }
 
 // (b) Register the MCP endpoint for this project, with literal values.
@@ -579,6 +616,7 @@ async function main() {
   console.log("Castalie Agent Kit — setup");
   const haveClaude = claudeCli() !== null;
   installPlugin(haveClaude);
+  installAutoUpdate();
   registerMcp(haveClaude, endpoint, token);
   writeConfig(endpoint, token);
   await smoke(endpoint, token);
