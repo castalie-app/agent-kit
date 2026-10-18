@@ -1,6 +1,6 @@
 ---
 name: instruction-bench
-description: The instruction bench — each section of the repository's instruction file (CLAUDE.md, AGENTS.md) replayed with and without it on situations drawn from the team's real sessions, and classified — misleads (to correct), no decision changed (to remove or move to a domain file), improves decisions (to keep). `/cs:instruction-bench` shows the latest report and the month's spending; `--install` writes the optional configuration and plays a first pass; `--run` plays a pass by hand. One model call per trial, no tool, under a monthly ceiling Castalie enforces. It proposes; it never edits the instruction file. Fires on "banc d'instructions", "notre CLAUDE.md est trop long", "quelles sections servent ?", "instruction bench", "which CLAUDE.md sections matter?".
+description: The instruction bench — each section of the repository's instruction file (CLAUDE.md, AGENTS.md) replayed with and without it on situations drawn from the team's real sessions, and classified — misleads (to correct), no decision changed (to remove or move to a domain file), improves decisions (to keep). `/cs:instruction-bench` shows the latest report and the month's spending; `--install` writes the optional configuration, plays a first pass and schedules the monthly pass; `--run` plays a pass by hand; `--monthly` is the scheduled pass (unattended-safe, `scheduled-run`). One model call per trial, no tool, under a monthly ceiling Castalie enforces. It proposes; it never edits the instruction file. Fires on "banc d'instructions", "notre CLAUDE.md est trop long", "quelles sections servent ?", "instruction bench", "which CLAUDE.md sections matter?".
 ---
 
 # instruction-bench — each section of the instruction file measured on real situations
@@ -34,6 +34,7 @@ is the opening section. Its key follows the review rules' convention:
 - none — the latest report and the month's spending (§ Status).
 - `--install` — the configuration and a first pass, attended (§ Install).
 - `--run` — one pass by hand (§ Run).
+- `--monthly` — the monthly pass (§ Monthly). Never asks; safe under `/cs:scheduled-run`.
 
 ## Status
 
@@ -63,8 +64,26 @@ request like any other.
    marked `*`). None → the bench has nothing to replay here: say so in one line and stop; it must run on
    a workstation where the team's sessions run.
 4. The first pass — § Run, with `--days 31 --max 150` so it files enough situations for every section.
-5. Report in four lines: the file and its words, the situations filed, the pass's cost and what is left
-   this month, then the sections to correct.
+5. **The monthly task** — a workspace owner only (anyone else: one line, and skip it).
+   `mcp__castalie__scheduled_task_list` → the title « Monthly instruction bench »: found →
+   `scheduled_task_update`, absent → `scheduled_task_create`. Never a second task. It runs on a
+   workstation where the team's sessions run, since the seed reads that machine's transcripts: name
+   it with `workstation_hostname` when the workspace has several.
+
+   | Field | Value |
+   |---|---|
+   | `title` | `Monthly instruction bench` |
+   | `description_md` | « On the 2nd of the month: files the month's session moments as situations, then replays each section of the instruction file with and without it, and records each section's verdict. » — in the workspace's language |
+   | `cron_expression` | `0 5 2 * *` |
+   | `time_zone` | `Europe/Paris` |
+   | `recommended_model` | `claude-opus-5-5` |
+   | `recommended_effort` | `low` — the session orchestrates; each trial carries the bench's own model |
+   | `max_duration_minutes` | `180` |
+   | `prompt_md` | `Run /cs:instruction-bench --monthly in <owner/name>.` |
+
+   A workspace with several repositories gets one line per repository in the same prompt.
+6. Report in five lines: the file and its words, the situations filed, the pass's cost and what is
+   left this month, the sections to correct, and the task's next run.
 
 Commit the configuration, when there is one, through the host's own path (`cs:ship`).
 
@@ -83,13 +102,25 @@ Commit the configuration, when there is one, through the host's own path (`cs:sh
 4. It prints one line per section and the closing line: the verdict counts, the calls, the cost and
    what is left this month. Relay the closing line and the sections to correct.
 
+## Monthly
+
+Played by `/cs:scheduled-run`, or by hand. Never asks a question.
+
+1. `cs instruction-bench run` in each repository the prompt names — the seed (31 days, 60 moments),
+   then every section. `budget_exhausted` at the start → one line, and close the run `passed`: the
+   ceiling did its job.
+2. Close with the closing line of each pass and, in one line each, the sections to correct with the
+   judge's reason. They are a proposal for the person who keeps the file, never an edit: nothing is
+   filed about them.
+
 A situation whose expected decision is wrong is excluded on the screen or with
 `instruction_bench_situation_exclude`, with the reason: no later pass replays it.
 
 ## Cost
 
-About 0.20 $ per section at the API list price (five trials, the judge, the cached file), plus one call
-per new situation: roughly 10 to 30 $ for a file of 40 sections. The workspace's ceiling — 290 $ a
+Measured on Castalie's own file on 17 October 2026: 8.62 $ for 22 sections and 45 new situations,
+302 calls, about an hour — 0.27 $ per section at the API list price, plus about 0.02 $ per session
+moment the seed reads. A file of 40 sections costs about 20 to 40 $ a pass. The workspace's ceiling — 290 $ a
 month, 250 € — stops the bench before it is passed; the cost each call reports is the API-rate
 equivalent, even inside a subscription.
 

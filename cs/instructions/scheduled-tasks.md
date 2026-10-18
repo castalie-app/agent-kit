@@ -196,3 +196,24 @@ is compared with, in its own pull request (`cs review-bench check`, 30 cases, th
 Cost: about 140 $ a pass for four lenses at API price, and about 10 $ per lens modification in the
 pull requests, under the workspace's monthly ceiling, which Castalie enforces (`budget_exhausted`).
 A workspace owner installs it with `/cs:review-bench --install`.
+
+## The monthly instruction bench every workspace can install
+
+`instruction-bench --monthly`: files the month's session moments as situations (a moment of a real
+session where the agent had to decide, paraphrased, with the decision the person showed was right),
+then replays each section of the instruction file with and without it, one call each with no tool,
+and has a judge say which answer came closer. Castalie classifies each section: to correct, without
+effect, mixed, to keep, unmeasured. It runs on a workstation where the team's sessions run: the seed
+reads that machine's transcripts.
+
+| Field | Value |
+|---|---|
+| title | `Monthly instruction bench` |
+| cron | `0 5 2 * *` (the 2nd, 05:00), time zone `Europe/Paris` |
+| model, effort | `claude-opus-5-5`, `low` (each trial carries the bench's own model) |
+| maximum duration | 180 minutes |
+| prompt | `Run /cs:instruction-bench --monthly in <owner/name>.` |
+
+Cost, measured on Castalie's own file on 17 October 2026: 8.62 $ a pass for 22 sections and 45
+situations at API price, about 0.27 $ a section; under the workspace's monthly ceiling, which Castalie
+enforces (`budget_exhausted`). A workspace owner installs it with `/cs:instruction-bench --install`.
