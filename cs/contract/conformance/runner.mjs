@@ -455,15 +455,18 @@ function scanWorkflowOptions() {
     sources.push([`instructions/${file}`, join(instructionsDir, file)]);
   }
 
-  // `<skill>`/`<option>` in prose, or | `<skill>` | `<option>` | in a table. Anchored on a REAL
-  // skill name, without which `file` / `line` and the like read as options.
-  const CITATION = /`([a-z][a-z0-9-]*)`\s*[/|]\s*`([a-z][a-z0-9_]*)`/g;
+  // `<skill>`/`<option>` in prose, or | `<skill>` | `<option>` | opening a table row. Anchored on a
+  // REAL skill name, without which `file` / `line` and the like read as options — and, in a table, on
+  // the row's first cell, without which a header of decision effects (| `continue` | `take_over` |)
+  // reads as an option of the `continue` skill.
+  const CITATION = /`([a-z][a-z0-9-]*)`\s*\/\s*`([a-z][a-z0-9_]*)`|^\|\s*`([a-z][a-z0-9-]*)`\s*\|\s*`([a-z][a-z0-9_]*)`/gm;
   const cited = new Map();             // "skill.option" -> Set of source labels
   for (const [label, file] of sources) {
     let body;
     try { body = readFileSync(file, "utf8"); } catch { continue; }
     for (const m of body.matchAll(CITATION)) {
-      const [, skill, option] = m;
+      const skill = m[1] ?? m[3];
+      const option = m[2] ?? m[4];
       if (!realSkills.has(skill)) continue;
       const key = `${skill}.${option}`;
       if (!cited.has(key)) cited.set(key, new Set());
