@@ -250,15 +250,14 @@ its link.
 
 ## A report you build lands on its objective
 
-**A report that measures something an objective is after is attached to that objective in the same
-motion that creates it**, whatever engine builds it — the workspace's own or another system's. An
-objective reaches a report only through a key result, so attaching it means a key result reading
-it: `report_id` for a report of this workspace, `external_report_url` (its HTTPS address) for one
-that lives elsewhere — the `okr-key-result` skill's two routes. The objective is the one the work
-serves (its brief's, its spec's), otherwise `strategy_search_objectives` on the report's subject.
-A key result already on that objective with no report gets the link
-(`strategy_update_key_result`); otherwise one is created. When no objective fits, the hand-back
-says so in one line — never a report left where no objective can see it.
+**A report that follows the activity of something an objective is after is linked to that
+objective in the same motion that creates it**, whatever engine builds it — the workspace's own or
+another system's. The link is the report itself, never a key result made up to carry it:
+`strategy_link_report(objective_id, report_id)` for a report of this workspace,
+`strategy_link_report(objective_id, external_report_url, title)` for one that lives elsewhere. The
+objective is the one the work serves (its brief's, its spec's), otherwise
+`strategy_search_objectives` on the report's subject. When no objective fits, the hand-back says so
+in one line — never a report left where no objective can see it.
 
 ## Up to the last click
 
