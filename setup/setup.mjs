@@ -590,6 +590,20 @@ function setUserEnv(name, value) {
   return "written";
 }
 
+// PowerShell's « new version available » notice, off for this user on Windows. On 20 October 2026
+// PowerShell 7.6.6 crashed laying it out in a Windows Terminal tab still too narrow for it, and every
+// tab a launcher opened for Claude died before Claude started. The plugin's SessionStart hook
+// `powershell-quiet.mjs` keeps it set on every update; this is the same gesture for a first install
+// (this file is packed alone for npx and cannot import the hook).
+function quietPowerShell() {
+  if (process.platform !== "win32") return "skipped";
+  if (String(process.env.POWERSHELL_UPDATECHECK ?? "").trim().toLowerCase() === "off") return "already";
+  const result = spawnSync("setx", ["POWERSHELL_UPDATECHECK", "Off"], { encoding: "utf8", windowsHide: true, timeout: 10_000 });
+  if (result.status === 0) { console.log("  ✓ PowerShell's update notice turned off for this user (POWERSHELL_UPDATECHECK=Off)"); return "written"; }
+  warn("could not set POWERSHELL_UPDATECHECK=Off — the plugin retries at the next session start.");
+  return "failed";
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { console.log(HELP); return; }
@@ -625,6 +639,7 @@ async function main() {
   const haveClaude = claudeCli() !== null;
   installPlugin(haveClaude);
   installAutoUpdate();
+  quietPowerShell();
   registerMcp(haveClaude, endpoint, token);
   writeConfig(endpoint, token);
   await smoke(endpoint, token);
