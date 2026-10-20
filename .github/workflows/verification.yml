@@ -105,6 +105,9 @@ jobs:
       - name: The resume hook points the automatic continue at /cs:continue
         run: node --test cs/bin/usage-limit-continue.test.mjs
 
+      - name: The kit turns PowerShell's update notice off on Windows, once
+        run: node --test cs/bin/powershell-quiet.test.mjs
+
       # French typography as a script: the no-break spaces inside « » and before : ; ! ?, put in
       # place on a decision's text before it is sent, with code, links and URLs left alone.
       - name: plain-french puts the no-break spaces in place
