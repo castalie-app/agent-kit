@@ -152,11 +152,12 @@ render it.
   `${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md`, carries on with what does not depend on
   it, and ends on *I need you*, naming that decision and its link.
   `> **J'ai besoin de vous** : décision « Fusionner la correction de la TVA ? », adressée à Claire.`
-- **Spending under the person's floor is never asked.** When the person set a spending floor (their
-  instruction file, or `work_md` on their Castalie profile), a `money` choice whose costliest option
-  costs less per month is yours: make it and report it — what, how much, why — on the work item and
-  in the hand-back. Any other reason to ask still holds (`decision-sheet.md`, *File one, or decide
-  yourself*).
+- **Spending is asked by band.** When the leader set spending lines (their instruction file, or
+  `work_md` on their Castalie profile), a `money` choice whose costliest option, measured before
+  launch, costs less per month than the always-yes line is yours: cap it, make it and report it —
+  what, how much, why — on the work item and in the hand-back. Up to the floor it goes to the person
+  in charge of the work, at or above it to the leader; a single line is a floor under which nobody is
+  asked. Any other reason to ask still holds (`decision-sheet.md`, *File one, or decide yourself*).
 
 ## The prose around it
 

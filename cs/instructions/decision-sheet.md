@@ -27,7 +27,7 @@ mandatory:
 
 | Reason | When |
 |---|---|
-| `money` | the answer commits spending: a subscription, a model price rise, a paid service — at or above the addressee's spending floor, when they set one (below) |
+| `money` | the answer commits spending: a subscription, a model price rise, a paid service — at or above the always-yes line the leader set, when they set one (below) |
 | `public_voice` | it speaks in the company's name: a customer email, a public page, a post |
 | `shareholder` | it belongs to the owners: pricing policy, a partnership, equity |
 | `private_knowledge` | the answer lives in someone's head: what a customer really needs, a promise made orally |
@@ -43,17 +43,32 @@ under a minute. A gesture the spec's `Authorisations` section lists, or a workfl
 answers, is not a question either. A sheet that asks what you could have decided costs a person
 three minutes and teaches them to stop reading your sheets.
 
-**Spending under the addressee's floor is yours too.** A person may set a spending floor below
-which no `money` decision reaches them: in their own instruction file (a personal CLAUDE.md:
-« no question under 200 $ a month »), or on their Castalie profile — `member_profile_get(user_id=<addressee>)`,
-a line of `work_md` such as "Spending floor: no money decision under 200 $ per month". Read it before
-filing a `money` decision; when both places name one, the lower holds. Compare the recurring monthly
-cost of the costliest option against it; a one-off cost is compared against the floor as it stands,
-unless the person said otherwise. Under the floor, choose, spend, and report the choice — what, how
-much, why — on the work item and in the hand-back; nobody is asked. The floor lifts `money` alone:
-a choice that is also `irreversible`, `public_voice`, `shareholder`, `private_knowledge` or
-`authorization` is filed under that reason, whatever it costs. An unattended run applies the same
-rule before `decision_create`.
+**Spending falls in three bands, and the leader decides only the top one.** The leader — the person
+`money` decisions climb to, the workspace owner unless the workspace names another — may set two
+lines: an always-yes line, under which the answer is yes, and a floor, under which the person in
+charge of the work decides. They live in the leader's own instruction file (a personal CLAUDE.md:
+« no question under 200 $ a month ») or on their Castalie profile — `member_profile_get(user_id=<leader>)`,
+a line of `work_md` such as "Spending: no money decision under 100 € per month — the person in charge
+decides; under 10 € per month the answer is yes." Read them before filing a `money` decision; when
+both places name a line, the lower holds. Compare the recurring monthly cost of the costliest option,
+measured upfront; a trial bounded to one or two months is compared by its monthly cost over that
+window, with a cap that stops it at the end; a one-off cost is compared as it stands, unless the
+leader said otherwise.
+
+- **Under the always-yes line, nobody is asked.** Measure the cost before launch — a sample run beats
+  an estimate; count the repetitions, the retries, the judge calls — set the cap that stops it,
+  launch, and report what, how much and why on the work item and in the hand-back.
+- **From that line up to the floor, the person in charge decides.** File the `money` decision without
+  `addressee_user_id`: Castalie routes it to the person in charge of the work (*Never ask a person to
+  name a person*), not to the leader.
+- **At or above the floor, the leader decides**: the `money` decision is addressed to the leader who
+  set it.
+
+A leader who names a single line names the floor, and under it nobody is asked, as before. So
+anything can be launched or tested, as long as its cost is measured first and it costs nothing
+significant over a month or two. The bands lift `money` alone: a choice that is also `irreversible`,
+`public_voice`, `shareholder`, `private_knowledge` or `authorization` is filed under that reason,
+whatever it costs. An unattended run applies the same rule before `decision_create`.
 
 ## Three things that are never a decision
 
