@@ -197,6 +197,25 @@ Cost: about 140 $ a pass for four lenses at API price, and about 10 $ per lens m
 pull requests, under the workspace's monthly ceiling, which Castalie enforces (`budget_exhausted`).
 A workspace owner installs it with `/cs:review-bench --install`.
 
+## The weekly SQL cleaning every workspace can install
+
+`sql-cleaning`: the table-removal scripts declared in the SQL inventory (`target=tools`,
+`kind=schema`) whose tables nothing reads any more, whose commit is fifteen days old and served on
+every production address, proved on a throwaway database, then played on every database through the
+channel the host declares — or handed to a person as a ticket when it declares none.
+
+| Field | Value |
+|---|---|
+| title | `Weekly SQL cleaning` |
+| cron | `0 7 * * 2` (Tuesday 07:00), time zone `Europe/Paris` |
+| model, effort | `claude-opus-5-5`, `low` |
+| maximum duration | 45 minutes |
+| workstation | the one the host's binding says holds the channel |
+| prompt | `Run /cs:sql-cleaning in <owner/name>.` |
+
+Cost: about 0.5 to 2 $ a pass at API price; most weeks find nothing. A workspace owner installs it
+with `/cs:sql-cleaning --install`.
+
 ## The monthly instruction bench every workspace can install
 
 `instruction-bench --monthly`: files the month's session moments as situations (a moment of a real
