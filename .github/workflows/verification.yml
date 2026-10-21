@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24.22.1'
 
       - name: Le format des skills, l'absence d'adresse, l'absence de commande fantome
         run: node scripts/validate.mjs

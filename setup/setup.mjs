@@ -29,7 +29,7 @@
 // values outside the repository, keyed to this project, with nothing to export and
 // nothing to commit.
 //
-// Zero dependencies. Node 18+ (global fetch, spawnSync).
+// Zero dependencies. Node 22.23.4+ (global fetch, spawnSync).
 
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from "node:fs";

@@ -15,8 +15,8 @@
 // no npm), the file goes uncompressed and the result says why: compression saves bytes, it never
 // stands between a person and their attachment.
 //
-// THE VERSION IS PINNED, and moves with a kit release. 0.34.x is the last line that runs on Node 18,
-// the oldest the kit supports.
+// THE VERSION IS PINNED, and moves with a kit release. 0.34.x was chosen as the last line that runs on Node 18;
+// the kit now asks for Node 22.23.4 or later (the security releases of 21 October 2026).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
