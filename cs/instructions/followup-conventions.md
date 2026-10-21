@@ -15,21 +15,21 @@ first delivery of a pull request of the spec or of one of its phases; for a bug,
 names it; for a brief without a follow-up date, the first delivery of one of its specs. With no
 delivery recorded they fall back on the subject's completion. So they never wait for a spec to be
 closed. They are played by the usual passes; a failure stays listed among the failed checks and
-follows its `onFailAction`. They never reopen a session. Naming the pull request (`anchorPrUrl`) is optional:
+follows its `onFailAction`. Naming the pull request (`anchorPrUrl`) is optional:
 it pins a check to one phase's delivery instead of the subject's first.
 
 **The post-deploy check** — the immediate verification of a change in production, played minutes
 after its release. Register it when you request the release: `followup_check_add(…, postDeploy=true,
-anchorPrUrl=<the pull request>)`. It is due the moment the delivery is recorded, the developer's own
-machine plays it right away, and it is the only check that reopens the shipping session's work: when
-it fails or needs a decision, or is not played within two hours of the delivery. A skipped run
-never relaunches anything. Register one only when the delivery itself makes the change observable.
+anchorPrUrl=<the pull request>)`. It is due the moment the delivery is recorded and is played right away.
+**A post-deploy check that fails becomes a ticket**, assigned to whoever shipped the change and
+carrying `relaunch_prompt_md` — what to do — word for word. No workstation reopens a session for it.
+A skipped run opens no ticket. Register one only when the delivery itself makes the change observable.
 A check that waits on a scheduled batch or task is an ordinary follow-up, anchored on the delivery
 (`anchorPrUrl`), with an offset that falls after that batch's next pass.
 
 **A check arbitrates on its own; it never asks a person to replay or close it.** A person's decision
-is expensive, and a recurring one is never asked. Only the post-deploy check relaunches a session
-(`relaunch_prompt_md`), with no decision. `decision_create(subject_kind="followup_run")` is refused
+is expensive, and a recurring one is never asked. A failed post-deploy check becomes a ticket
+(`relaunch_prompt_md` is its text), with no decision. `decision_create(subject_kind="followup_run")` is refused
 (`followup_decides_itself`): close the run with `followup_run_complete`, or push it back with
 `followup_run_reschedule`. A run closed on `finalStatus=human_required` is replayed the next day, at
 most twice, then closed as failed with its reason. The one question a check may put to a person is
@@ -45,7 +45,7 @@ neither.
 
 **A check played too early** (its phase not delivered yet, or the batch or task that produces its
 data has not run since the delivery) is rescheduled past that pass (`followup_run_reschedule`),
-never failed, never closed as a relaunch.
+never failed, never turned into a ticket.
 
 ## First horizon — set by `feature-spec`
 
