@@ -69,7 +69,7 @@ const child = windows
 child.on("error", (error) => {
   console.error(
     `Castalie: could not start the Playwright browser server (${error.message}). ` +
-      "It needs Node.js 18 or later with npx — https://nodejs.org — then restart the session.",
+      "It needs Node.js 22.23.4 or later with npx — https://nodejs.org — then restart the session.",
   );
   process.exit(1);
 });

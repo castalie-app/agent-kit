@@ -7,7 +7,7 @@
     "castalie-setup": "./setup.mjs"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.23.4"
   },
   "license": "SEE LICENSE IN ../LICENSE"
 }
