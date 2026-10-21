@@ -63,6 +63,11 @@ watchdog never fires — ideal.
      `mcp__castalie__feature_spec_update_phase(phaseId, validationCriterionMd=...)`, preserving expected outcomes.
      No screen displays that field: a screenshot or a diagram a person must see goes where
      `${CLAUDE_PLUGIN_ROOT}/instructions/rich-content.md` says it renders.
+   - **A table the change retires but the delivery cannot drop** — its migration account holds no
+     `DROP` — is left in place, and the script that removes it is declared on the spec:
+     `mcp__castalie__feature_spec_add_sql_script(feature_spec_id, filename, target="tools",
+     kind="schema")`. Declared, the weekly `sql-cleaning` pass plays it once nothing reads the table;
+     undeclared, nobody ever will.
    - Re-read the phase plan; if the implementation deviated, record it via
      `mcp__castalie__feature_spec_update_phase(phaseId, actionPlanMd=<updated with a "deviation" note>)` —
      never silence a deviation.

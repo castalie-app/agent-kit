@@ -2070,6 +2070,119 @@
       }
     },
     {
+      "name": "feature_spec_add_sql_script",
+      "kind": "write",
+      "description": "Declare one SQL script the spec ships, as a tracked row. target: tenant|registry|server|tools; kind: schema|data. A table-removal script is target=tools, kind=schema: the weekly sql-cleaning pass plays it. Declaring the same filename twice updates the row.",
+      "params": [
+        {
+          "name": "feature_spec_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "filename",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "target",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "expected_state_md",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "spec_phase_id",
+          "type": "int",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "sql_script_id": "int"
+      }
+    },
+    {
+      "name": "feature_spec_list_pending_sql_scripts",
+      "kind": "read",
+      "description": "Every SQL script still to be played across the workspace, oldest declaration first, each with its spec (title, status, pr_url, done_at). target=tools and kind=schema return the table removals the sql-cleaning pass plays.",
+      "params": [
+        {
+          "name": "target",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "declared_before_days",
+          "type": "int",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "total": "int",
+        "sql_scripts": "array"
+      }
+    },
+    {
+      "name": "feature_spec_mark_sql_script_applied",
+      "kind": "write",
+      "description": "Record that a declared script has been played; applied=false puts it back to pending.",
+      "params": [
+        {
+          "name": "sql_script_id",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "applied_at",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "applied",
+          "type": "bool",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
+      "name": "report_search",
+      "kind": "read",
+      "description": "Search the workspace reports whose tables carry a keyword in their SQL query (a table name, a column name). The sql-cleaning pass reads it for each table it is about to drop.",
+      "params": [
+        {
+          "name": "keyword",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "take",
+          "type": "int",
+          "required": false
+        }
+      ],
+      "returns": {
+        "success": "bool"
+      }
+    },
+    {
       "name": "feature_spec_add_acceptance_test",
       "kind": "write",
       "description": "Add a technical acceptance test — your assistant verifies it at end of dev. Kind visual|nonvisual; verificationMd holds the URL/command/query to run (no source code).",
