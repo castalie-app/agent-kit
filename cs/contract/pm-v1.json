@@ -2541,7 +2541,7 @@
     {
       "name": "followup_run_complete",
       "kind": "write",
-      "description": "Close a follow-up run with its verdict and the evidence seen. On a failure or a decision to take, relaunchPromptMd is handed word for word to the session that takes the work back.",
+      "description": "Close a follow-up run with its verdict and the evidence seen. On a failure or a decision to take, relaunchPromptMd says what to do: the text carried into the ticket opened for the failure.",
       "params": [
         {
           "name": "followupRunId",
@@ -2570,7 +2570,7 @@
           "name": "relaunchPromptMd",
           "type": "string",
           "required": false,
-          "description": "Why the check relaunches the work, what was measured, what to do."
+          "description": "What to do: the criterion missed, what was measured, what must be done — the text the ticket carries."
         },
         {
           "name": "rule_question_md",

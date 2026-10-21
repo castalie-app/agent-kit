@@ -35,18 +35,18 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    evidence.
 4. **Act on failure per `onFailAction`.** `create_spec` → draft a corrective `feature-spec`; `bug_fix` /
    `implement_spec` → note the follow-up work. Record what you decided.
-   **A post-deploy check relaunches the work only on a real problem** (`postDeploy` on the check; an
-   ordinary follow-up never does): a criterion measured and missed, or a decision a person must
-   take. Then close its run with `mcp__castalie__followup_run_complete(…, relaunch_prompt_md=…)`: a
-   prompt addressed to the session that will take the work back, which receives it word for word as
-   its first message. Say the criterion that was missed, what you measured (figures, queries,
-   links) and what that session must do: fix, replay the measure, or settle a named decision. It
-   is read alone, without the rest of the report.
-   **A check that could measure nothing yet never relaunches.** When its data is not produced yet
+   **A failed post-deploy check becomes a ticket** (`postDeploy` on the check), and no workstation
+   reopens a session for it. A real problem only: a criterion measured and missed, or a decision a
+   person must take. Close its run with `mcp__castalie__followup_run_complete(…, relaunch_prompt_md=…)`:
+   what to do, the text the ticket carries word for word. Say the criterion that was missed, what
+   you measured (figures, queries, links) and what must be done: fix, replay the measure, or settle
+   a named decision. Then file the ticket, assigned to whoever shipped the change, with that text.
+   It is read alone, without the rest of the report.
+   **A check that could measure nothing yet opens no ticket.** When its data is not produced yet
    (a scheduled batch, a task, an expected trigger that has not run since the delivery) or its
    phase is not delivered yet, reschedule the run past that producer's next pass
    (`followup_run_reschedule`). Never fail it, never close it with `relaunch_prompt_md`: the server
-   refuses a relaunch prompt on a skipped run.
+   refuses `relaunch_prompt_md` on a skipped run.
    **A check never asks a person to replay or close it — it arbitrates on its own.** A person's
    decision is expensive; a recurring one is never asked. `decision_create` on a `followup_run` is
    refused (`followup_decides_itself`). Close the run with your verdict

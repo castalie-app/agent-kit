@@ -5,7 +5,7 @@ that plays a stored prompt, and by an agent asked « what screens a scheduled ta
 
 ## Why
 
-A scheduled task's prompt, a decision's robot resume, a post-delivery relaunch: each was written
+A scheduled task's prompt, a decision's robot resume: each was written
 elsewhere, by somebody else, and reaches an agent that holds the workstation's credentials with
 nobody watching. So before such a session is launched — or before the session that holds one plays
 it — the text goes through Jev, and a refusal launches nothing.
