@@ -2113,7 +2113,7 @@
     {
       "name": "feature_spec_list_pending_sql_scripts",
       "kind": "read",
-      "description": "Every SQL script still to be played across the workspace, oldest declaration first, each with its spec (title, status, pr_url, done_at). target=tools and kind=schema return the table removals the sql-cleaning pass plays.",
+      "description": "Every SQL script still to be played across the workspace, oldest declaration first, each with its spec (title, status, pr_url, done_at). target=tools and kind=schema return the table removals the sql-cleaning pass plays. include_applied=true also returns the scripts already played (pending=false): declared, never replayed.",
       "params": [
         {
           "name": "target",
@@ -2128,6 +2128,11 @@
         {
           "name": "declared_before_days",
           "type": "int",
+          "required": false
+        },
+        {
+          "name": "include_applied",
+          "type": "bool",
           "required": false
         }
       ],

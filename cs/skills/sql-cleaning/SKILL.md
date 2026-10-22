@@ -49,7 +49,11 @@ removal script still to be played, oldest first, each with its spec and that spe
 With `--script`, keep that one row.
 
 **A script of the removal folder that drops a table and is declared nowhere** is a script no pass
-will ever find. Declare it — `feature_spec_add_sql_script(feature_spec_id, filename, target="tools",
+will ever find. "Nowhere" is read against every declaration, played ones included —
+`feature_spec_list_pending_sql_scripts(target="tools", kind="schema", include_applied=true)`: a row
+with `pending=false` was declared and played, and **a played script is never replayed**, whatever
+its file still says. Castalie's first pass took two played scripts for undeclared because the
+pending list did not show them, and replayed them on databases already clean. Declare it — `feature_spec_add_sql_script(feature_spec_id, filename, target="tools",
 kind="schema")` on the spec that retired the table when its history names one, otherwise on the
 spec this pass is playing for — and name it in the verdict. A removal script's place in the
 inventory is the delivery's to give (`feature-implement` declares it on the spec), so a declaration made here
