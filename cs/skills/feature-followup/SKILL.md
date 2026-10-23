@@ -40,7 +40,10 @@ from Castalie, verifies against the running app, reports a verdict, and reschedu
    person must take. Close its run with `mcp__castalie__followup_run_complete(…, relaunch_prompt_md=…)`:
    what to do, the text the ticket carries word for word. Say the criterion that was missed, what
    you measured (figures, queries, links) and what must be done: fix, replay the measure, or settle
-   a named decision. Then file the ticket, assigned to whoever shipped the change, with that text.
+   a named decision. Then file the ticket with that text, assigned to the workspace's automation account (`robot_user_id`
+   from `cs on-behalf`, or `user_lookup` on its `robot_email`) — never unassigned, which routes it to
+   the domain's owner — and to whoever shipped the change only when the workspace has none. Its body
+   names the pull request and who shipped it.
    It is read alone, without the rest of the report.
    **A check that could measure nothing yet opens no ticket.** When its data is not produced yet
    (a scheduled batch, a task, an expected trigger that has not run since the delivery) or its

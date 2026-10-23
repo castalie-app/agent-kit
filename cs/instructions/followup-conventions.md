@@ -21,8 +21,11 @@ it pins a check to one phase's delivery instead of the subject's first.
 **The post-deploy check** — the immediate verification of a change in production, played minutes
 after its release. Register it when you request the release: `followup_check_add(…, postDeploy=true,
 anchorPrUrl=<the pull request>)`. It is due the moment the delivery is recorded and is played right away.
-**A post-deploy check that fails becomes a ticket**, assigned to whoever shipped the change and
-carrying `relaunch_prompt_md` — what to do — word for word. No workstation reopens a session for it.
+**A post-deploy check that fails becomes a ticket**, assigned to the workspace's automation account
+(`robot_user_id` from `cs on-behalf`, or `user_lookup` on its `robot_email`) — never left unassigned,
+which routes it to the domain's owner — and to whoever shipped the change only when the workspace
+has none. Its body names the delivery (its pull request) and who shipped it, and carries
+`relaunch_prompt_md` — what to do — word for word. No workstation reopens a session for it.
 A skipped run opens no ticket. Register one only when the delivery itself makes the change observable.
 A check that waits on a scheduled batch or task is an ordinary follow-up, anchored on the delivery
 (`anchorPrUrl`), with an offset that falls after that batch's next pass.
