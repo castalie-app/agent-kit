@@ -20,7 +20,9 @@ release commands — no one is asked for an authorisation to merge or deploy.
 
 The developer typed the command, then walks away and comes back to a released change. After the spec is loaded,
 **run continuously in the same turn** — implement, build, test, next phase — until every phase is ✅ and
-the PR is shipped. A `watchdog cron` (every ~20 min) is armed **as a safety net**, not an iterator: if the
+the PR is shipped: the whole spec, never one phase of it. A phase waiting on a measure of the previous
+one waits inside the run, a wake-up armed; only a calendar wait of several days becomes a scheduled
+follow-up, never a phase left `NotStarted`. A `watchdog cron` (every ~20 min) is armed **as a safety net**, not an iterator: if the
 turn dies, a new turn resumes with `--continue`. If the turn finishes the whole spec in one go, the
 watchdog never fires — ideal.
 

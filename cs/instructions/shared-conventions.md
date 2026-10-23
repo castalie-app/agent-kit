@@ -104,10 +104,12 @@ render it.
   what needs a person's choice is a filed decision, and the turn ends on *I need you*; what needs a
   person's gesture is work, and the turn ends on *For you to do*. No turn ends on an
   open wait.
-- **Finished waits for the tracker**: while the work item is still open where it is tracked, its code
+- **Finished waits for the tracker**: while the work item is still open where it is tracked (the
+  spec or brief the turn advances, never one of its phases: one phase not Done keeps it open), its code
   unmerged into the main branch, its working copy dirty or off that branch's head, or a decision
   its work settled still pending (§ Your decisions, at the start and at the end), the
-  verdict is *In progress* or *I need you*, on whatever closes it. One exception: when all that is left is a production
+  verdict is *In progress* or *I need you*, on whatever closes it; a remaining phase no agent is on
+  is work for this same turn. One exception: when all that is left is a production
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
   right after the release, and a failure becomes a ticket for whoever shipped it — no workstation
