@@ -30,9 +30,9 @@ reset » prompt and points the resumed turn here.
    and from what it writes to (a branch, a Castalie item, files, a database) what it finished and what
    it did not:
    - delivered → use its result and close it (`TaskStop`);
-   - cut by the limit, or dead → relaunch it on what is left: `SendMessage` while it is still
-     addressable, else a new `Agent` whose brief names what is already done and where it stopped, so it
-     never redoes nor duplicates a write;
+   - cut by the limit, or dead → relaunch it on what is left of its original brief: `SendMessage` while
+     it is still addressable, else a new `Agent` whose brief keeps that brief's whole scope and names
+     what is already done and where it stopped, so it never redoes, duplicates nor drops a step;
    - still running → leave it.
 3. **Re-arm the loops.** `CronList`: a recurring check that fired during the cut and failed fires again
    on its own; one the turn meant to arm and did not is armed now.

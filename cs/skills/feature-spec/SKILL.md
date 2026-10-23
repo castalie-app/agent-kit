@@ -80,7 +80,8 @@ synced by the CLI.
    step): apply each to the tree and the phases, `decision_mark_applied`, and push again.
 5. **Phases.** One `mcp__castalie__feature_spec_add_phase(specId, title, objectiveMd, actionPlanMd,
    validationCriterionMd, estimateHours)` per phase — cut at natural seams (layers, page sets,
-   independent modules), each a coherent unit an implementer can finish and verify. Store its observable
+   independent modules), each a coherent unit an implementer can finish and verify, all of them in one
+   run. A measure window of several days is a follow-up (step 8), never a phase. Store its observable
    completion criterion and case table in `validationCriterionMd`; no separate database structure.
    Only `objectiveMd` shows on the sheet (a ```mermaid diagram renders there, an ```illustration does
    not): the plan and the criterion are read by the implementer, never by a person, so what a reviewer
