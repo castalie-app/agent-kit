@@ -112,7 +112,7 @@ render it.
   is work for this same turn. One exception: when all that is left is a production
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
-  right after the release, and a failure becomes a ticket for whoever shipped it — no workstation
+  right after the release, and a failure becomes a ticket for the workspace's automation account, naming who shipped it — no workstation
   reopens a session.
   Ordinary follow-ups (next day and later) never qualify an open item for this exception, and never
   keep a closed one off *Finished*.
