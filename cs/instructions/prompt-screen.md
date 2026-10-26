@@ -68,7 +68,9 @@ is written:
   bytes, lower-case hex), `warnings` (`outbound`, `off_purpose`), `screened_at` — and every run
   created afterwards carries a copy beside `prompt_snapshot_md`.
 - **A change that leaves the prompt as it was screened** (schedule, workstation, enabling) asks Jev
-  nothing. Sending `prompt_md` again as it stands screens a task that carries no pass for its text:
+  nothing; a new title is screened with the prompt, since the agent reads it beside it. A prompt
+  that differs only by its line endings (a form posts CRLF) is the prompt on file. Sending
+  `prompt_md` again as it stands screens a task that carries no pass for its text:
   that is how a task written before the screen moved, or changed behind the verbs' back, comes back.
 - **A continuation** (`follow_up_md` of `scheduled_task_run_complete`) is screened when the run
   closing writes it. Refused (`follow_up_refused`) or unavailable, the run stays open: the session
