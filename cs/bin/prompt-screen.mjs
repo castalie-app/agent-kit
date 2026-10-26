@@ -25,7 +25,6 @@
 // the probability-weighted mean of 0-based level numbers.
 
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -47,7 +46,6 @@ export const SEVERITY_THRESHOLD = 1.5;
 
 const KIND_PURPOSES = {
   master_red: "understand and fix a red test on the main branch",
-  scheduled_task: "carry out the recurring order a workspace owner wrote for the team's repository and its own project-tracking tools, and report a verdict",
   decision_resume: "resume the agent's interrupted work the way a person's answer to its decision says",
 };
 
@@ -124,16 +122,14 @@ export function readApiKey({ env = process.env, platform = process.platform, hom
 }
 
 /**
- * Which hazards only WARN, by kind. A scheduled task's prompt is written by a workspace owner (only
- * owners manage scheduled tasks) and a robot resume prompt by the agent that filed the decision; some
- * of them reach a third party by design — a mail triage unsubscribes from newsletters, a cost-killer
- * task writes to suppliers. For those kinds, `outbound` and `off_purpose` are kept as warnings
- * (logged, quoted in the run's or the decision's notes) and never refuse on their own; `override`,
+ * Which hazards only WARN, by kind. A robot resume prompt is written by the agent that filed the
+ * decision, and some reach a third party by design — a mail triage unsubscribes from newsletters, a
+ * cost-killer task writes to suppliers. For that kind, `outbound` and `off_purpose` are kept as
+ * warnings (logged, quoted in the decision's note) and never refuse on their own; `override`,
  * `exfiltration`, `destructive` and the severity refuse as everywhere. Any other kind — `master_red`,
  * a kind this table does not name — gets the full policy: every hazard refuses.
  */
 export const WARN_ONLY = {
-  scheduled_task: ["outbound", "off_purpose"],
   decision_resume: ["outbound", "off_purpose"],
 };
 
@@ -258,14 +254,9 @@ the current directory upwards), else the Windows credential 'typesafe' (~/.claud
 
   cs prompt gate scheduled-run|decision-resume <id> [-- <command> <args...>]
 
-Reads a stored prompt from Castalie and clears it — a scheduled run by the Jev verdict Castalie saved
-with its text, a decision resume by Jev — closes the run or the resume on a refusal, and launches
-<command> on a pass only (cs prompt gate, prompt-gate.mjs).
-
-  cs prompt fingerprint (--file <path> | --stdin)
-
-Prints the SHA-256 of the text's UTF-8 bytes, lower-case hex: the value a scheduled run's
-prompt_screen.sha256 (or continuation_screen.sha256) must equal for the run to be played.`;
+Reads a stored prompt from Castalie and clears it — a decision resume by Jev; a scheduled run is not
+screened and goes through — closes the resume on a refusal, and launches <command> on a pass only
+(cs prompt gate, prompt-gate.mjs).`;
 
 /** The key's name the host declares (`.cs/config.json` → `promptScreen.keyEnv`), found from `dir` upwards. */
 export function hostKeyEnv(dir = process.cwd()) {
@@ -280,18 +271,6 @@ export function hostKeyEnv(dir = process.cwd()) {
 /** `cs prompt <command>`: returns the exit code, never throws. */
 export async function runCli(argv) {
   const [command, ...rest] = argv;
-  if (command === "fingerprint") {
-    const args = parseArgs(rest);
-    try {
-      const text = args.file && args.file !== true ? readFileSync(args.file, "utf8") : args.stdin ? await readStdin() : null;
-      if (text === null) throw new Error("--file <path> or --stdin is required");
-      console.log(createHash("sha256").update(text, "utf8").digest("hex"));
-      return 0;
-    } catch (e) {
-      console.error(`cs prompt fingerprint: ${e?.message || e}`);
-      return 1;
-    }
-  }
   if (command !== "screen") { console.log(HELP); return command ? 1 : 0; }
   const args = parseArgs(rest);
   let body;

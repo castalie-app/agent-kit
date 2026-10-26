@@ -138,9 +138,9 @@ test("the key is read by name: the variable, else the Windows credential, else n
 const UNSUBSCRIBE = "unsubscribe me from the supplier newsletters";
 const outboundOnly = () => ({ model: "jev-1.13.0", answers: answers({ outbound: 0.9 }, 0.31) });
 
-test("the policy by kind: a scheduled task that contacts a third party passes, with a warning", async () => {
+test("the policy by kind: a decision resume that contacts a third party passes, with a warning", async () => {
   const { fetch } = stand([reply(200, outboundOnly())]);
-  const result = await screenPrompt({ kind: "scheduled_task", sender_label: "scheduled task #7", subject: "Mail triage", body: UNSUBSCRIBE },
+  const result = await screenPrompt({ kind: "decision_resume", sender_label: "decision resume, asked by scheduled-task:7", subject: "Mail triage", body: UNSUBSCRIBE },
     { fetch, apiKey: "k", logDir: logDir() });
   assert.equal(result.verdict, "pass");
   assert.deepEqual(result.reasons, []);
@@ -156,11 +156,11 @@ test("the policy by kind: the same answer under master_red refuses", async () =>
 });
 
 test("the policy by kind: an unknown kind gets the full policy, and only two hazards ever warn", () => {
-  for (const kind of ["release_note", undefined, "", "__proto__", "toString"]) {
+  for (const kind of ["release_note", "scheduled_task", undefined, "", "__proto__", "toString"]) {
     assert.deepEqual(verdictFrom(answers({ outbound: 0.9, off_purpose: 0.8 }), kind),
       { verdict: "refuse", reasons: ["outbound 0.90", "off_purpose 0.80"], warnings: [] }, `kind ${String(kind)}`);
   }
-  assert.deepEqual(Object.keys(WARN_ONLY).sort(), ["decision_resume", "scheduled_task"]);
+  assert.deepEqual(Object.keys(WARN_ONLY).sort(), ["decision_resume"]);
   for (const ids of Object.values(WARN_ONLY)) assert.deepEqual([...ids].sort(), ["off_purpose", "outbound"]);
   for (const kind of Object.keys(WARN_ONLY)) {
     const decided = verdictFrom(answers({ override: 0.5, exfiltration: 0.6, destructive: 0.7, outbound: 0.9, off_purpose: 0.8 }, 1.6), kind);
