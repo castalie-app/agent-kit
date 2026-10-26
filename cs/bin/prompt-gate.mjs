@@ -1,10 +1,20 @@
-// cs prompt gate — a prompt stored in Castalie is screened by Jev before an unattended session plays it.
+// cs prompt gate — a prompt stored in Castalie is cleared before an unattended session plays it.
 //
 // A scheduled task's prompt (copied onto its run as `prompt_snapshot_md`) and a decision's robot
 // resume (`resume_prompt_md`, played with the person's answer) were written elsewhere, by somebody
 // else, and are played on this workstation with nobody watching. So before a session is launched on
 // one — or before the session that holds one plays it — this reads the stored text from Castalie
-// itself, verbatim, and puts it through `screenPrompt` (prompt-screen.mjs: Jev, fail closed).
+// itself, verbatim, and clears it:
+//
+// - a SCHEDULED RUN is never sent to Jev here. Castalie screens a task's prompt when it is saved,
+//   and a run's continuation when the previous run writes it, and copies the verdict onto the run
+//   with the SHA-256 of the text it was given (`prompt_screen`, `continuation_screen`). The gate
+//   recomputes that fingerprint and plays the run only on a `pass` for that exact text — so a
+//   TypeSafe outage or a spent credit never stops a robot again (Benoît, 26 October 2026: the
+//   TypeSafe organisation ran out of credits on the 25th and every run failed before it started).
+//   A prompt never screened, or changed behind the verbs' back, is refused with what to do: save
+//   the task's prompt again.
+// - a DECISION RESUME is still put through `screenPrompt` (prompt-screen.mjs: Jev, fail closed).
 //
 //   cs prompt gate scheduled-run <run_id>         [--endpoint <url>] [--repo <dir>] [-- <command> <args...>]
 //   cs prompt gate decision-resume <decision_id>  [--endpoint <url>] [--repo <dir>] [-- <command> <args...>]
@@ -22,6 +32,7 @@
 // the session quotes in the notes it closes with.
 
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { readConfigFrom, resolveToken } from "./agent-tasks.mjs";
 import { resolveConnection } from "./auth.mjs";
@@ -64,6 +75,38 @@ export function decisionResumeText(decision) {
 
 const reasonsLine = (reasons) => reasons.join(", ");
 
+/** The fingerprint Castalie keeps a verdict with: SHA-256 of the text's UTF-8 bytes, lower-case hex. */
+export const fingerprint = (text) => createHash("sha256").update(String(text ?? ""), "utf8").digest("hex");
+
+/**
+ * Whether the verdict Castalie copied onto the run covers the text the run carries — the prompt,
+ * then the continuation when there is one. No Jev call: the screen happened when the text was saved.
+ *
+ * @returns {{ verdict: "pass"|"refuse", reasons: string[], warnings: string[] }}
+ */
+export function verifyScheduledRun(run) {
+  const reasons = [];
+  const warnings = [];
+  const check = (label, text, screen) => {
+    if (!screen || typeof screen !== "object" || !screen.verdict) {
+      reasons.push(`${label} never screened by Jev`);
+      return;
+    }
+    if (screen.verdict !== "pass") {
+      reasons.push(`${label} screened ${screen.verdict}, not pass`);
+      return;
+    }
+    if (screen.sha256 !== fingerprint(text)) {
+      reasons.push(`${label} changed since Jev screened it`);
+      return;
+    }
+    if (Array.isArray(screen.warnings)) warnings.push(...screen.warnings.filter((w) => typeof w === "string" && w));
+  };
+  check("prompt", run?.prompt_snapshot_md ?? "", run?.prompt_screen);
+  if (run?.continuation_md) check("continuation", run.continuation_md, run?.continuation_screen);
+  return { verdict: reasons.length ? "refuse" : "pass", reasons, warnings };
+}
+
 /** The warnings of a kind whose policy only warns on them (prompt-screen.mjs, WARN_ONLY). */
 export const warningLine = (warnings) => `Jev warnings, which do not refuse this kind of prompt: ${warnings.join(", ")}.`;
 
@@ -72,15 +115,18 @@ export const GATES = {
   "scheduled-run": {
     kind: "scheduled_task",
     read: async (mcp, id) => (await mcp("scheduled_task_run_get", { id }))?.run,
+    // The verdict Castalie gave when the text was saved, checked against the text — Jev is not asked.
+    verify: (run) => verifyScheduledRun(run),
     message: (run) => ({
       kind: "scheduled_task",
       sender_label: run?.task?.id ? `scheduled task #${run.task.id}` : `scheduled task run #${run?.id}`,
       subject: run?.task?.title || "",
       body: scheduledRunText(run),
     }),
-    noteMd: (reasons) => `Not played: Jev refused the prompt copied onto this run, before any session was launched on it `
-      + `(cs prompt gate). Reasons: ${reasonsLine(reasons)}. A workspace owner reads the task's prompt and rewrites it, `
-      + `or, when the screen was unavailable, gives this workstation its TypeSafe key. The next run is screened again.`,
+    noteMd: (reasons) => `Not played: the text copied onto this run carries no Jev pass for its exact words, so no session `
+      + `was launched on it (cs prompt gate). Reasons: ${reasonsLine(reasons)}. Jev screens a task's prompt when it is saved: `
+      + `a workspace owner saves the task's prompt again (its form on /taches-planifiees, or scheduled_task_update with `
+      + `its prompt_md), and the next run plays it.`,
     close: async (mcp, id, note) => {
       await mcp("scheduled_task_run_complete", { id, outcome: "failed", final_status: "failed", notes_md: note });
       return ["scheduled_task_run_complete"];
@@ -130,9 +176,9 @@ export async function gate(target, id, deps) {
 
   let result;
   try {
-    result = await screen(spec.message(item));
+    result = spec.verify ? spec.verify(item) : await screen(spec.message(item));
   } catch (e) {
-    result = { verdict: "refuse", reasons: [`Jev screening unavailable: ${e?.message || e}`] };
+    result = { verdict: "refuse", reasons: [spec.verify ? `verdict unreadable: ${e?.message || e}` : `Jev screening unavailable: ${e?.message || e}`] };
   }
   const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
   if (result?.verdict === "pass") {
@@ -199,16 +245,18 @@ export function runCommand([command, ...args]) {
   });
 }
 
-export const HELP = `cs prompt gate — screen a prompt stored in Castalie before an unattended session plays it
+export const HELP = `cs prompt gate — clear a prompt stored in Castalie before an unattended session plays it
 
   cs prompt gate scheduled-run <run_id>         [--endpoint <url>] [--repo <dir>] [-- <command> <args...>]
   cs prompt gate decision-resume <decision_id>  [--endpoint <url>] [--repo <dir>] [-- <command> <args...>]
 
-Reads the run's prompt_snapshot_md (and continuation_md), or the decision's resume_prompt_md with the
-person's answer, and screens it with Jev (cs prompt screen, fails closed). Refused: the run is closed
-failed (scheduled_task_run_complete), the resume failed (decision_resume_complete),
-and the command after -- is never launched. Prints { verdict, reasons, warnings, warning_md, closed,
-note_md, calls }: outbound and off_purpose only warn for these two kinds; quote warning_md in the notes.
+scheduled-run: reads the run's prompt_snapshot_md (and continuation_md) and the Jev verdicts Castalie
+copied onto it when the texts were saved (prompt_screen, continuation_screen), and plays it only on a
+pass whose sha256 is that of the text. Jev is not asked: a TypeSafe outage never stops a run.
+decision-resume: reads resume_prompt_md with the person's answer and screens it with Jev (cs prompt
+screen, fails closed). Refused: the run is closed failed (scheduled_task_run_complete), the resume
+failed (decision_resume_complete), and the command after -- is never launched. Prints { verdict,
+reasons, warnings, warning_md, closed, note_md, calls }; quote warning_md in the notes.
 Exit 0 = pass (or the command's own exit code), 2 = refused, 1 = the stored prompt could not be read.`;
 
 /** `cs prompt gate <target> <id>`: returns the exit code, never throws. */

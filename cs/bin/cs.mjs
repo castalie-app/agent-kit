@@ -38,7 +38,8 @@
 //   cs agent-tasks report|install      # declare this workstation's agent tasks (agent-tasks.mjs)
 //   cs worktrees sweep|status|install|uninstall  # give back the copies agents leave behind (worktree-sweep.mjs)
 //   cs prompt screen --kind <k> ...    # screen a text written elsewhere with Jev (prompt-screen.mjs)
-//   cs prompt gate <target> <id>       # screen a stored scheduled-task or resume prompt before it is played (prompt-gate.mjs)
+//   cs prompt gate <target> <id>       # clear a stored scheduled-task or resume prompt before it is played (prompt-gate.mjs)
+//   cs prompt fingerprint --file <f>   # the sha256 a scheduled run's verdict is kept with (prompt-screen.mjs)
 //   cs version                         # the running kit version
 //   cs codex                           # project this kit into the layouts Codex reads
 //   cs review-catalog [--markdown]     # the host's rules with the ids review findings cite (review-catalog.mjs)
@@ -285,8 +286,11 @@ const HELP = `cs — Castalie project-management CLI
                                     # screen a text written elsewhere with Jev before an unattended
                                     #   agent reads it; exit 0 = pass, 2 = refuse (fails closed)
   cs prompt gate scheduled-run|decision-resume <id> [-- <command> <args...>]
-                                    # read a stored prompt from Castalie, screen it, close the run or
+                                    # read a stored prompt from Castalie, clear it (a run: the Jev
+                                    #   verdict saved with its text; a resume: Jev), close the run or
                                     #   the resume on a refusal; launch <command> on a pass only
+  cs prompt fingerprint (--file <path> | --stdin)
+                                    # print the sha256 of a text, as a run's prompt_screen keeps it
   cs version                        # the version of the kit that is running
   cs codex [--verify|--check]       # project this kit's skills, instructions and agents into
                                     #   .agents/ and .codex/ here, for a Codex session
