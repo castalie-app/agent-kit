@@ -1,36 +1,54 @@
 ---
 name: strategy-scout
-description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the leader can add the most value, digs the best few itself, and files each as a Castalie decision the leader judges in a click (« good idea » or « not a good idea »), with the evidence and two or three concrete moves pre-chewed. A few topics drawn at random look for a thread to pull. Learns from the leads already answered. Unattended-safe (`scheduled-run`, a headless `claude --print`). Never writes to the strategy — it proposes, the leader decides.
-allowed-tools: Bash, Read, Skill, mcp__castalie__whoami, mcp__castalie__strategy_list_periods, mcp__castalie__strategy_get_full_strategy, mcp__castalie__strategy_my_okrs, mcp__castalie__strategy_get_objective, mcp__castalie__strategy_get_objective_breadcrumb, mcp__castalie__strategy_navigate_children, mcp__castalie__strategy_check_in_history, mcp__castalie__strategy_key_result_history, mcp__castalie__strategy_list_swot, mcp__castalie__hfpn_list, mcp__castalie__feature_brief_list, mcp__castalie__feature_brief_get, mcp__castalie__feature_brief_list_key_results, mcp__castalie__followup_run_list, mcp__castalie__decision_list, mcp__castalie__decision_get, mcp__castalie__decision_create, mcp__castalie__decision_add_context, mcp__castalie__decision_supersede, mcp__castalie__decision_mark_applied, mcp__castalie__scheduled_task_get
+description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the strategy drifts, digs the best few itself, and SETTLES each one it can take back with one revert — attaches a brief, gives an objective its key result, closes a delivered brief, names an owner, moves a dormant objective to next year — listing what it changed in its report. Only a choice the leader alone can make (money above their line, the company's public voice, the owners' call, what only they know, the irreversible) becomes a Castalie decision — one a day at most, none while three of its questions wait. A few topics drawn at random look for a thread to pull. Learns from the answers, « Décide-toi » included. Unattended-safe (`scheduled-run`, a headless `claude --print`).
+allowed-tools: Bash, Read, Skill, mcp__castalie__strategy_create_key_result, mcp__castalie__strategy_update_key_result, mcp__castalie__strategy_create_check_in, mcp__castalie__feature_brief_update, mcp__castalie__feature_spec_update, mcp__castalie__whoami, mcp__castalie__strategy_list_periods, mcp__castalie__strategy_get_full_strategy, mcp__castalie__strategy_my_okrs, mcp__castalie__strategy_get_objective, mcp__castalie__strategy_get_objective_breadcrumb, mcp__castalie__strategy_navigate_children, mcp__castalie__strategy_check_in_history, mcp__castalie__strategy_key_result_history, mcp__castalie__strategy_list_swot, mcp__castalie__hfpn_list, mcp__castalie__feature_brief_list, mcp__castalie__feature_brief_get, mcp__castalie__feature_brief_list_key_results, mcp__castalie__followup_run_list, mcp__castalie__decision_list, mcp__castalie__decision_get, mcp__castalie__decision_create, mcp__castalie__decision_add_context, mcp__castalie__decision_supersede, mcp__castalie__decision_mark_applied, mcp__castalie__scheduled_task_get
 ---
 
-# strategy-scout — a few leads a day, dug and pre-chewed, for the leader to judge
+# strategy-scout — the strategy kept tidy every morning, and a question only when it is the leader's
 
-A leader does not need seventy changes proposed on the day the workspace opens. They need, every
-morning, two or three topics where **their** decision is worth the most, already dug: what the data
-says, what it means, and what could be done, with its cost. They answer « good idea » or « not a
-good idea », and the scout learns from it.
+A leader does not want to be asked whether a brief belongs under an objective, whether a delivered
+brief should be closed, or whether an objective deserves the key result it obviously lacks. Each
+such sheet costs three minutes and teaches them to stop opening the inbox — on 26 October 2026 a
+leader found twelve of them waiting, none opened, and handed every one back with « Décide-toi ».
+So the scout does the tidying itself and asks only what is truly theirs.
 
-The scout **reads everything and writes only decisions**. It never creates, edits or archives an
-objective, a key result, a check-in, a SWOT item or a brief: the strategy is the leader's, and a
-lead is a proposal on it. What a lead's answer sets in motion is the leader's gesture, or the skill
-the lead names (`okr-key-result`, `feature-brief`, `okr-checkin`).
+**Every topic the scout keeps is one of two kinds, and the test is the decision sheet's own**
+(`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md` § File one, or decide yourself):
+
+- **A fix** — no `escalation_reason` applies, and one revert takes it back. The scout applies its
+  recommended move itself (step 6), and the report lists it in one line the leader can undo.
+  Attaching or detaching a brief, giving an objective a key result read off a report
+  (`okr-key-result`), recording a check-in the data measured, naming the leader owner of an
+  objective nobody owns, closing a brief whose work is delivered, cancelling a brief or spec idle 30
+  days with no work started, moving a dormant objective and its briefs to the next period, sorting
+  briefs filed under a catch-all objective: all fixes.
+- **A question** — one of the six reasons holds: `money` at or above the leader's line,
+  `public_voice` (a post, an email, a page in the company's name), `shareholder`,
+  `private_knowledge` that changes which move is right *and* that the data cannot settle,
+  `irreversible`, `authorization`. Only then a decision is filed (step 7). « It would be better to
+  ask » is not a reason; « only you know whether… » is one only when every move but one is
+  dangerous without the answer — otherwise take the safest move and say what would overturn it.
+
+The scout **never deletes** an objective, a key result, a check-in or a SWOT item, never rewrites
+an objective's title or a key result's target the leader set, and never creates a new root
+objective: those are the strategy itself, not its upkeep.
 
 ## Arguments
 
-- `--max N` — leads filed this run, **3** by default. Never more than **5 a day** across every run:
-  the leads already filed today count against it (step 1).
+- `--max N` — fixes applied this run, **3** by default, **5** at most.
+  Questions are budgeted apart: **one a day** at most, and **none while three of the scout's
+  questions are pending** — they wait for tomorrow's ranking (step 1).
 - `--random K` — topics drawn at random, **2** by default, `0` for none.
-- `--to <email or user id>` — the leader the leads are addressed to. Otherwise, see step 1.
+- `--to <email or user id>` — the leader the questions are addressed to. Otherwise, see step 1.
 
 ## Attended or not, the same run
 
-The scout never asks a question in the turn, attended or not: its product is the leads, and the
-leader judges them in their inbox, on a phone, in a click. Under `/cs:scheduled-run`, or in a plain
+The scout never asks a question in the turn, attended or not: its product is a tidier strategy and,
+rarely, a question the leader judges in their inbox, on a phone, in a click. Under `/cs:scheduled-run`, or in a plain
 headless `claude --print "/cs:strategy-scout"`, it plays exactly the same steps. `AskUserQuestion`
 is never called, and no turn ends on « shall I go on? ».
 
-## 1. Who the leads are for, and what is left for today
+## 1. Who the questions are for, and what is left for today
 
 - `cs on-behalf` — `unattended`, and `robot_user_id` for the signature (step 7).
 - **The leader**, first rung that gives an active member
@@ -41,10 +59,10 @@ is never called, and no turn ends on « shall I go on? ».
      `created_by_user_id`, from `mcp__castalie__scheduled_task_get` — a workspace owner, since only
      an owner writes a task;
   3. otherwise the caller: `mcp__castalie__whoami`.
-- **Today's budget.** `mcp__castalie__decision_list(scope=asked_by_agent,
-  asked_by_agent="strategy-scout", status=all, take=20)`: the leads created today (UTC) are already
-  spent. `N = min(--max, 5 − today's count)`. Zero left: write the report (step 8) with « daily cap
-  reached » and stop.
+- **Today's budget.** Fixes: `N = min(--max, 5)`. Questions:
+  `mcp__castalie__decision_list(scope=asked_by_agent, asked_by_agent="strategy-scout", status=all,
+  take=20)` — one created today (UTC), or three or more still `pending`, and no question is filed
+  this run; a topic that needed one waits for a later ranking, and the report says so in one line.
 
 ## 2. Read the answers first — they come before anything new
 
@@ -56,14 +74,20 @@ is never called, and no turn ends on « shall I go on? ».
    `adjusted` is true the words count, not the option) and the `resume_state_md` you left:
    - **« Not a good idea »** — `decision_mark_applied(id, note_md="Declined on <date>: not raised
      again unless <the facts it stood on> change.")`.
-   - **A move chosen** — `decision_mark_applied(id, note_md=<the move, and the gesture that carries
-     it: the skill to run, the owner who acts>)`. The scout does not carry it out itself when it
-     touches the strategy.
+   - **A move chosen** — carry it out when it is a fix (step 6), then `decision_mark_applied(id,
+     note_md=<what was done, with links>)`. A move that is a person's gesture (publish a post, call
+     a customer) goes in the note as the gesture and who makes it.
+   - **« Décide-toi »** (`answer_kind: "decide_yourself"`) — the leader says this was never theirs.
+     Carry out the move you recommended, as a fix, with the leader's words if any adjusting it, and
+     mark it applied with what was done. Then **the kind is a fix from now on**: a topic of the same
+     signal (the key's slug) is never filed as a question again — read
+     `decision_list(answered_as=decide_yourself, asked_by_agent="strategy-scout", status=all)` in
+     step 4 and treat every signal it names as a fix.
    - **« Dig deeper », or a question in the words** (« creuse », « and the churn? », « compare with
-     last year ») — it is **today's first lead**, before any new one: dig what the answer asks
-     (step 5), file the deeper sheet with the same key and a suffix, `<key>:2` (then `:3`), quote the
-     leader's words in its 250-word level, then mark the first one applied with a link to the new
-     one. It takes one of today's N.
+     last year ») — dig what the answer asks (step 5); if the deeper finding settles it, apply it as
+     a fix, otherwise file the deeper sheet with the same key and a suffix, `<key>:2` (then `:3`),
+     quoting the leader's words in its 250-word level — it is today's question, ahead of any new
+     one. Then mark the first one applied with a link to what followed.
 3. `decision_list(scope=asked_by_agent, asked_by_agent="strategy-scout", status=applied, take=100)`
    — the history the scoring learns from (step 4). Keep the last **60 days**.
 
@@ -109,7 +133,8 @@ Then the weights, multiplied:
   someone else: ×1.
 - **What the leader said before** (the last 60 days of step 2): a topic of the same object and
   signal **declined** ×0.5, declined twice ×0.25; a move **chosen** on that object ×1.5; a dig
-  asked deeper is not scored, it was taken first in step 2.
+  asked deeper is not scored, it was taken first in step 2. A signal handed back with
+  **« Décide-toi »** keeps its score, but its topics are fixes, never questions.
 - **Already filed** — a lead under the same key **pending**: out of the ranking. Its key **declined**
   and the facts not changed materially (below): out of the ranking.
 
@@ -143,11 +168,26 @@ items it touches. Then write down, before drafting anything:
    (`okr-key-result`), frame a brief (`feature-brief`), drop or merge an objective, ask a team for a
    check-in, answer the waiting decision.
 
-A dig that finds the topic is not worth the leader's time (the silence is explained, the gap
-closed yesterday) is dropped and replaced by the next one in the ranking; it is one line in the
-report.
+A dig that finds the topic is not worth acting on (the silence is explained, the gap closed
+yesterday) is dropped and replaced by the next one in the ranking; it is one line in the report.
 
-## 6. File each lead as a decision
+Then **classify it** (the two kinds at the top): no `escalation_reason` holds and one revert takes
+the recommended move back → a fix; otherwise → a question. When in doubt between the two, it is a
+fix: a wrong fix costs the leader one revert, a needless question costs them their trust in the
+inbox.
+
+## 6. Apply each fix, and file a question only when it is the leader's
+
+**A fix is applied, not proposed.** Carry out the recommended move with the strategy's own verbs —
+`feature_brief_update` (objective, status), the instance's verbs that attach a brief to a key
+result and set an objective's owner or period (creating the next period when it is missing),
+`strategy_create_check_in` with a value the run measured, `feature_spec_update` (status), and the
+`okr-key-result` skill for a key result read off a report (it proposes a target: take it, the run
+does not wait for a confirmation). Record each fix as one line for the report (step 8): what
+changed, the link, and how to undo it. A verb refused is a gap in the report, never a decision.
+
+**A question** is filed as below, within today's budget (step 1); over budget, it waits for a
+later ranking.
 
 **Look first**, every time: `decision_list(dedupe_key=<key>, status=all)`. Pending → no second
 sheet; a new fact goes in with `decision_add_context`, a fact that overturns it is a new sheet by
@@ -164,8 +204,8 @@ dropped it).
 
 | Field | What goes in |
 |---|---|
-| `title` | the lead as a question, ending with `?`: « Give "Grow recurring revenue" a key result before the quarter review? » |
-| `escalation_reason` | `idea`. Refused (an instance that does not know it yet): file again with `private_knowledge`, once |
+| `title` | the question, ending with `?`: « Publish the one-question survey on LinkedIn under your name this week? » |
+| `escalation_reason` | the reason that made it a question (step 5): `money`, `public_voice`, `shareholder`, `private_knowledge`, `irreversible` or `authorization` — never `idea`, which let a lead through with no reason at all |
 | `description_100_md` | one or two sentences of context — which objective or topic this is and why it comes up now, for a leader who remembers nothing of it — then the fact that decides, with its figure, and the move you recommend in one sentence — in business terms, no technical names |
 | `description_250_md` | the same context, then what the data says, what it means, and what each move leads to |
 | `description_500_md` | the same context, then the evidence: figures with their dates, the history or the weekly lines quoted, the links to the objective (`/strategie/objectif/<id>`), key results (`/strategie/resultat/<id>`) and briefs; a `mermaid` block when the topic is a flow |
@@ -200,18 +240,19 @@ without it and say so in the report.
 
 A short report, in the leader's language, five lines at most before the links:
 
-- the leads filed, each as its title and the sheet's `url`;
-- the answers taken up (declined, chosen, dug deeper), one line;
+- the fixes applied, one line each: what changed, the link, how to undo it;
+- the question filed, if any, as its title and the sheet's `url`, and the reason that made it one;
+- the answers taken up (declined, chosen, handed back, dug deeper), one line;
 - the random draws and what they gave;
-- the gaps: a read refused, the cap reached, `idea` refused and filed as `private_knowledge`.
+- the gaps: a read or a write refused, a question held back by the budget.
 
 **Attended**, close on the verdict of `${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md`:
-*For you to do* — judge the leads in the decisions inbox — when leads were filed; *Finished here for you*
-when none was.
+*For you to do* — judge the question in the decisions inbox — when one was filed; *Finished here for
+you* otherwise.
 
-**Under `scheduled-run`**, a lead is not a decision the run waits on: nothing is blocked by the
-answer. The run closes `outcome="passed"`, `final_status="done"`, `outcome_type="decision"` and
-`outcome_ref_id` the first lead's id (none filed: no ref), with the report as its `notes_md`.
+**Under `scheduled-run`**, a question is not a decision the run waits on: nothing is blocked by the
+answer. The run closes `outcome="passed"`, `final_status="done"`, with the report as its `notes_md`;
+`outcome_type="decision"` and `outcome_ref_id` the question's id when one was filed.
 
 ## Every morning, on its own
 
@@ -221,23 +262,24 @@ the scheduled tasks screen or with `scheduled_task_create`:
 
 | Field | Value |
 |---|---|
-| `title` | « Propose each morning a few leads on the strategy », in the workspace's language |
+| `title` | « Keep the strategy tidy each morning », in the workspace's language |
 | `cron_expression` | `0 7 * * 1-5` — 07:00 on weekdays, in `time_zone` (`Europe/Paris` by default) |
 | `max_duration_minutes` | `30` |
 | `prompt_md` | `/cs:strategy-scout`, then one line naming the leader: `Leads to: jane@example.com.` |
 
 The workstation's launcher picks the run and plays it through `/cs:scheduled-run <run_id>`, which
 loads this skill from the prompt. Run it once by hand first (`scheduled_task_run_now`) and read the
-leads it files.
+report it writes.
 
 ## Discipline
 
-- **Never write to the strategy.** No objective, key result, check-in, SWOT item or brief created
-  or changed, even to fix an obvious typo: the typo is a lead.
-- **At most N leads, at most five a day.** A sixth good idea waits for tomorrow; the ranking will
-  find it again.
-- **Never invent a figure.** Every number in a sheet was read in this run, with its date.
-- **One topic per sheet.** Two leads on one sheet get one answer.
+- **Fix what one revert takes back; ask only what is the leader's.** A question with no
+  `escalation_reason` of the six is a fix you failed to make.
+- **Never delete, never rewrite the leader's words.** No objective, key result, check-in or SWOT
+  item deleted; no objective title or key result target rewritten; no root objective created.
+- **At most N fixes a run, one question a day, none while three wait.** A second question waits for
+  tomorrow; the ranking will find it again.
+- **Never invent a figure.** Every number in a sheet or a fix was read in this run, with its date.
+- **One topic per sheet.** Two questions on one sheet get one answer.
 - **Name things, never ids**, with a clickable link.
-- **Cheap by construction.** The bounds of step 3 are not raised because a workspace is large;
-  a large workspace gets the same three leads, better chosen.
+- **Cheap by construction.** The bounds of step 3 are not raised because a workspace is large.

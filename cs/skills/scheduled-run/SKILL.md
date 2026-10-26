@@ -159,7 +159,7 @@ answered ones (step 1; `decision-sheet.md` § Read your answers at every step):
 something else this run touched also stays broken. `outcome_type="decision"` and `outcome_ref_id`
 the first decision's id.
 
-**A skill whose product is a decision** — `strategy-scout`, whose leads the leader judges — is not
+**A skill whose product is a decision** — `strategy-scout`, whose rare questions the leader judges — is not
 blocked by it: its decisions keep the skill's own `asked_by_agent` and `dedupe_key`, which its
 learning reads across runs, and the run closes `passed` / `done` with `outcome_type="decision"`.
 
