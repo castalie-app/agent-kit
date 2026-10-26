@@ -268,6 +268,15 @@ objective is the one the work serves (its brief's, its spec's), otherwise
 `strategy_search_objectives` on the report's subject. When no objective fits, the hand-back says so
 in one line — never a report left where no objective can see it.
 
+## Where an artifact goes
+
+**A page made for the team (a deck, a report, any HTML page) is published to the workspace's
+Castalie**: `artifact_publish`, or `cs artifact publish <folder>` when it carries images or weighs
+more than a few MB. The link given back is its `address`, readable by every signed-in member.
+Republish with its `artifact_id`, never as a second artifact. Open it to the outside
+(`artifact_share`) only when the person asks. claude.ai's Artifact tool or a local file only when
+the person asks for one, or when the workspace has no `artifact_publish`.
+
 ## Up to the last click
 
 **You do the gesture yourself, on the website too.** Never « allez sur ce site, cliquez là ».
