@@ -2825,7 +2825,7 @@
     {
       "name": "scheduled_task_create",
       "kind": "write",
-      "description": "Create a scheduled task: a prompt a workstation plays unattended at the hours a cron expression names, in a time zone. Workspace OWNER only (forbidden otherwise, nothing written). Jev screens prompt_md before anything is written: prompt_refused (reasons) or prompt_screen_unavailable (TypeSafe could not answer: retry) writes nothing; the pass is kept as prompt_screen with the text's sha256 and copied onto each run. review-rules --install creates the weekly review pass with it, after looking it up by title with scheduled_task_list so it never makes a second one.",
+      "description": "Create a scheduled task: a prompt a workstation plays unattended at the hours a cron expression names, in a time zone. Workspace OWNER only (forbidden otherwise, nothing written). review-rules --install creates the weekly review pass with it, after looking it up by title with scheduled_task_list so it never makes a second one.",
       "params": [
         {
           "name": "title",
@@ -2894,7 +2894,7 @@
     {
       "name": "scheduled_task_update",
       "kind": "write",
-      "description": "Change a scheduled task; only the fields given change. Workspace OWNER only (forbidden otherwise, nothing written). Runs already created keep the prompt they were created with. A new prompt_md, or one sent again on a task with no pass for it, is screened by Jev as on create; a change that leaves the prompt alone asks nothing.",
+      "description": "Change a scheduled task; only the fields given change. Workspace OWNER only (forbidden otherwise, nothing written). Runs already created keep the prompt they were created with.",
       "params": [
         {
           "name": "id",
@@ -3027,7 +3027,7 @@
       ],
       "returns": {
         "success": "bool",
-        "run": "object: id, scheduled_task_id, scheduled_for (UTC), trigger (schedule | manual), missed_occurrences, prompt_snapshot_md, prompt_screen { verdict, sha256, warnings }, continuation_md, continuation_screen { verdict, sha256, warnings } | null, picked_at, pick_lease_until, assigned_pc_hostname, ran_at, outcome, final_status, notes_md, outcome_type, outcome_ref_id, model_used, total_cost_usd, status_label, task { id, title, time_zone, max_duration_minutes, recommended_model, recommended_effort, workstation_hostname }"
+        "run": "object: id, scheduled_task_id, scheduled_for (UTC), trigger (schedule | manual), missed_occurrences, prompt_snapshot_md, continuation_md, picked_at, pick_lease_until, assigned_pc_hostname, ran_at, outcome, final_status, notes_md, outcome_type, outcome_ref_id, model_used, total_cost_usd, status_label, task { id, title, time_zone, max_duration_minutes, recommended_model, recommended_effort, workstation_hostname }"
       }
     },
     {
@@ -3063,7 +3063,7 @@
     {
       "name": "scheduled_task_run_complete",
       "kind": "write",
-      "description": "Close a scheduled-task run with its verdict. notes_md is required; closing twice answers already_completed and keeps the first verdict. follow_up_not_before creates, in the same transaction, a manual run due at that time carrying follow_up_md as its continuation, screened by Jev first: follow_up_refused or prompt_screen_unavailable leaves the run open.",
+      "description": "Close a scheduled-task run with its verdict. notes_md is required; closing twice answers already_completed and keeps the first verdict. follow_up_not_before creates, in the same transaction, a manual run due at that time carrying follow_up_md as its continuation.",
       "params": [
         {
           "name": "id",
