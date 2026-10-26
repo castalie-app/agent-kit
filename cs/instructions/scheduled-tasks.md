@@ -130,18 +130,19 @@ and the session that plays it does only what `follow_up_md` says.
 
 ## A ready-made task: the strategy scout, every weekday morning
 
-The kit's `strategy-scout` skill digs the strategy and files a few leads a day for the leader to
-judge. A workspace owner schedules it once:
+The kit's `strategy-scout` skill keeps the strategy tidy: it applies what one revert takes back,
+reports it, and files a question only when the choice is the leader's — one a day at most. A workspace owner schedules it once:
 
 | Field | Value |
 |---|---|
-| title | « Propose each morning a few leads on the strategy », in the workspace's language |
+| title | « Keep the strategy tidy each morning », in the workspace's language |
 | cron | `0 7 * * 1-5` (07:00 on weekdays, in the task's time zone) |
 | maximum duration | 30 minutes |
 | prompt | `/cs:strategy-scout`, then `Leads to: <the leader's address>.` |
 
-The launcher plays it like any other run, through `/cs:scheduled-run <run_id>`. The leads land in
-the leader's decisions inbox; the run closes `passed` with the first lead as its outcome.
+The launcher plays it like any other run, through `/cs:scheduled-run <run_id>`. Its report is the
+run's notes; a question, when there is one, lands in the leader's decisions inbox, and the run
+closes `passed`.
 
 ## The weekly review pass every workspace can install
 

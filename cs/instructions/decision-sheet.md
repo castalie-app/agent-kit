@@ -137,11 +137,11 @@ person in charge of the work. The ticket waits « En attente de validation », a
 (`bug_get` returns `is_awaiting_validation`), who answers with `bug_validate(id, note_md?)` or
 `bug_refuse_validation(id, reason_md?)`.
 
-**One more reason, for a question nobody blocked on: `idea`.** A lead an agent raised on the
-strategy unprompted, which the leader judges good or not (`strategy-scout`). It is never a way to
-ask what one of the six reasons above does not cover: a skill blocked on its own work uses those
-six or decides. An instance that does not know `idea` yet refuses it; the lead is then filed as
-`private_knowledge`, since what the leader alone knows is what settles it.
+**`idea` is not a seventh reason.** The server still accepts it, for the leads filed before
+26 October 2026, but no skill files it any more: a lead an agent raises unprompted passes the same
+test as any question. When none of the six reasons holds and one revert takes the move back, the
+agent applies it and reports it (`strategy-scout` does exactly that); a leader handed back twelve
+such leads in one morning with « Décide-toi ».
 
 **Never ask a person to name a person.** A person's attention is the scarcest thing a workspace
 has, and a sheet that asks *who* validates, reviews, downloads or re-reads spends it to find out
