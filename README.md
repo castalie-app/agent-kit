@@ -732,17 +732,17 @@ cs codex                            # project the kit into .agents/ + .codex/ fo
 cs review-catalog --markdown        # the host's rules, one per heading, with the rule_id a review finding cites
 cs prompt screen --kind master_red --file msg.md   # Jev screens a text before an unattended agent reads it
 cs prompt gate scheduled-run 412 -- claude --print "/cs:scheduled-run 412"
-                                                   # the stored prompt screened first; launched on a pass only
+                                                   # the Jev verdict saved with the prompt checked; launched on a pass only
 cs proof-pack compute               # the delivery's proof, computed from the tools' files: proven, partly proven, not proven
 cs proof-pack push --spec 42 --pr <url>           # stores that pack on the spec; no code, only paths, counts and hashes
 cs worktrees status                 # what a sweep would remove, copy by copy, and what each one keeps
 cs worktrees sparse --write         # worktree.sparsePaths = the tracked folders minus agentCheckoutExclude
 ```
 
-Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first, a Jev
-screen that fails closed — a scheduled task's run and a decision's robot resume through
-`cs prompt gate`, which reads the stored prompt from Castalie and closes the run or the resume on a
-refusal. The screen, its policy by kind and its thresholds are in `cs/instructions/prompt-screen.md`.
+Any unattended launch of a prompt written elsewhere goes through Jev first, a screen that fails
+closed. A scheduled task's prompt is screened by Castalie when it is saved, and `cs prompt gate`
+checks that verdict against the text copied on the run, without calling TypeSafe; a decision's robot
+resume is screened by `cs prompt gate` itself. The gate closes the run or the resume on a refusal. The screen, its policy by kind and its thresholds are in `cs/instructions/prompt-screen.md`.
 
 It reads its config from `CASTALIE_ENDPOINT` / `CASTALIE_TOKEN` or `.cs/config.json` (the variables and
 the folder the kit used under its former names are still read, after these). Like the tools, it only

@@ -15,7 +15,7 @@ signed-in browser, a device — names that machine.
 
 Each occurrence produces a **run**. The run carries a copy of the prompt as it stood when the run was
 created (`prompt_snapshot_md`), so the history says what was asked that day even after the prompt
-changed. A run is due at `scheduled_for` (UTC), held by one workstation under a lease, then closed
+changed, and a copy of Jev's verdict on it (`prompt_screen`). A run is due at `scheduled_for` (UTC), held by one workstation under a lease, then closed
 with a verdict:
 
 | Label | Rule |
@@ -40,6 +40,11 @@ a task that names its workstation, that this one is not; the screen names the wo
 
 - **Only a workspace owner creates, edits, disables or archives a task.** A scheduled prompt is an
   order the robot plays alone, with its own rights; it is written by someone who answers for it.
+- **Jev screens the prompt when it is saved.** Creating a task or changing its prompt is refused when
+  Jev refuses it (`prompt_refused`, its reasons with it) or when TypeSafe cannot answer
+  (`prompt_screen_unavailable`: try again). The verdict is kept with the text's SHA-256 and copied
+  onto every run; a change that leaves the prompt alone asks nothing. The policy and the fields are
+  in `${CLAUDE_PLUGIN_ROOT}/instructions/prompt-screen.md`.
 - **Any member, the robot included, may run a task now** (`scheduled_task_run_now`, at once or from
   a given time). It replays a prompt an owner already wrote. Disabling a task stops its schedule, not
   a manual run; an archived task runs no more.
@@ -63,15 +68,17 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    launcher on a station kept for its own work passes `only_targeted=true` and takes only the runs of
    the tasks that name it. The task is known only once the run is picked, so a launcher passes the
    longest maximum duration it plays, plus 15 (at most 495). `picked=false`: release the slot, exit.
-3. **Screen the prompt, before any session.** `cs prompt gate scheduled-run <run_id>` reads the
-   run's `prompt_snapshot_md` (and `continuation_md`) from Castalie and asks Jev, failing closed.
-   Exit 2: refused, and the gate already closed the run `failed` with Jev's reasons in its notes —
-   launch nothing, and skip the fallback close below. Exit 1: it could not read the run — launch
+3. **Check the prompt's verdict, before any session.** `cs prompt gate scheduled-run <run_id>`
+   reads the run's `prompt_snapshot_md` (and `continuation_md`) from Castalie with the Jev verdicts
+   copied onto it, and passes only a `pass` whose SHA-256 is that of the text. It asks TypeSafe
+   nothing, so the launcher needs no TypeSafe key. Exit 2: refused — a prompt never screened, or
+   changed since — and the gate already closed the run `failed`, its notes saying to save the
+   task's prompt again — launch nothing, and skip the fallback close below. Exit 1: it could not read the run — launch
    nothing, and close it as the fallback below does, « not screened: <what it printed> ». Exit 0:
    carry on. The gate can launch the session itself, on a pass only:
    `cs prompt gate scheduled-run <run_id> -- claude --print --output-format json "/cs:scheduled-run <run_id>"`
    returns the session's own exit code, prints its verdict on stderr, and leaves stdout to the
-   session. `scheduled-run` screens the prompt again as its first gesture, for a launcher that
+   session. `scheduled-run` checks the verdict again as its first gesture, for a launcher that
    does not.
 4. **One working copy per slot**, reset to the default branch before each run, never the main
    checkout another automation or a person is using. A run that opens a pull request opens it from
@@ -94,11 +101,16 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    `cs agent-tasks` on that machine (`--always-on` on a robot) so Castalie shows whether it runs, fails
    or is stuck, beside the tasks it plays — `${CLAUDE_PLUGIN_ROOT}/instructions/agent-tasks.md`.
 
-**Any unattended launch of a prompt written elsewhere goes through `cs prompt screen` first**, and a
-refusal launches nothing: the prompt reaches an agent that holds the workstation's credentials, with
-nobody watching. For a scheduled run that is step 3, and the first gesture of `scheduled-run` once it knows the run
-is its own. The
-screen and its thresholds are in `${CLAUDE_PLUGIN_ROOT}/instructions/prompt-screen.md`.
+**Any unattended launch of a prompt written elsewhere goes through Jev first**, and a refusal
+launches nothing: the prompt reaches an agent that holds the workstation's credentials, with nobody
+watching. For a scheduled task Jev is asked when the prompt is saved; step 3, and the first gesture
+of `scheduled-run` once it knows the run is its own, check that verdict. The screen and its
+thresholds are in `${CLAUDE_PLUGIN_ROOT}/instructions/prompt-screen.md`.
+
+**A task with no verdict is refused at launch.** A task written before Castalie screened prompts at
+saving, or a prompt changed outside the verbs, carries no `pass` for its text: its runs close `failed`
+with that reason. An owner brings it back by saving its prompt again — `scheduled_task_update(id,
+prompt_md=<the same text>)`, or the form — which screens it.
 
 ## How to name and describe the task
 

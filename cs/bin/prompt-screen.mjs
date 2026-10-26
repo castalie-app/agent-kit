@@ -25,6 +25,7 @@
 // the probability-weighted mean of 0-based level numbers.
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -257,8 +258,14 @@ the current directory upwards), else the Windows credential 'typesafe' (~/.claud
 
   cs prompt gate scheduled-run|decision-resume <id> [-- <command> <args...>]
 
-Reads a stored prompt from Castalie, screens it the same way, closes the run or the resume on a
-refusal, and launches <command> on a pass only (cs prompt gate, prompt-gate.mjs).`;
+Reads a stored prompt from Castalie and clears it — a scheduled run by the Jev verdict Castalie saved
+with its text, a decision resume by Jev — closes the run or the resume on a refusal, and launches
+<command> on a pass only (cs prompt gate, prompt-gate.mjs).
+
+  cs prompt fingerprint (--file <path> | --stdin)
+
+Prints the SHA-256 of the text's UTF-8 bytes, lower-case hex: the value a scheduled run's
+prompt_screen.sha256 (or continuation_screen.sha256) must equal for the run to be played.`;
 
 /** The key's name the host declares (`.cs/config.json` → `promptScreen.keyEnv`), found from `dir` upwards. */
 export function hostKeyEnv(dir = process.cwd()) {
@@ -273,6 +280,18 @@ export function hostKeyEnv(dir = process.cwd()) {
 /** `cs prompt <command>`: returns the exit code, never throws. */
 export async function runCli(argv) {
   const [command, ...rest] = argv;
+  if (command === "fingerprint") {
+    const args = parseArgs(rest);
+    try {
+      const text = args.file && args.file !== true ? readFileSync(args.file, "utf8") : args.stdin ? await readStdin() : null;
+      if (text === null) throw new Error("--file <path> or --stdin is required");
+      console.log(createHash("sha256").update(text, "utf8").digest("hex"));
+      return 0;
+    } catch (e) {
+      console.error(`cs prompt fingerprint: ${e?.message || e}`);
+      return 1;
+    }
+  }
   if (command !== "screen") { console.log(HELP); return command ? 1 : 0; }
   const args = parseArgs(rest);
   let body;
