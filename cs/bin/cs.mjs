@@ -7,8 +7,8 @@
 // a local file so you never shove a whole body through a tool argument.
 //
 // Strictly outward: this CLI reads strategy/briefs/specs and writes back their
-// text (bodies). It never sends your source code — there is no verb that reads a
-// repository file.
+// text (bodies). It never sends your source code — the one command that reads a
+// folder, `artifact publish`, sends the page the person named for the team.
 //
 // Config resolution (first hit wins per field):
 //   env CASTALIE_ENDPOINT / CASTALIE_TOKEN (then the same two under the kit's first name)
@@ -27,6 +27,8 @@
 //   GET  /api/pm/content/<type>/<id>/body  -> text/markdown
 //   PUT  /api/pm/content/<type>/<id>/body  <- { "Body": "<markdown>" }
 //   POST /api/pm/proof-packs/<kind>/<id>   <- { "pack": {…}, "pr_url": "…" }  (kind = bug | spec | brief)
+//   POST /api/pm/artifacts                 <- { title, description, artifact_id, files: [{ path, content_base64 }] }
+//   GET  /api/pm/artifacts                 -> { success, artifacts }
 //
 // Commands:
 //   cs search <query>
@@ -48,6 +50,8 @@
 //   cs login [<workspace url>]         # sign this machine in when it has no token (auth.mjs)
 //   cs proof-pack <command>            # compute a delivery's proof from the tools' files (proof-pack.mjs)
 //   cs proof-pack push (--bug|--spec|--brief) <id>   # store the computed pack on that work item
+//   cs artifact publish <folder> [--title <t>] [--description <d>] [--id <artifact_id>]   # a page or deck for the team (artifact.mjs)
+//   cs artifact list                   # the workspace's artifacts
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -55,6 +59,7 @@ import { fileURLToPath } from "node:url";
 import { findConfig } from "./config.mjs";
 import { defaultEndpoint, loginCommand, NO_ENDPOINT_HELP, openBrowser, renew, resolveConnection, startLogin } from "./auth.mjs";
 import { attachFiles } from "./attach.mjs";
+import { ArtifactError, prepareArtifact } from "./artifact.mjs";
 
 const TYPES = new Set(["feature-brief", "feature-spec", "bug"]);
 
@@ -90,7 +95,10 @@ async function request(method, path, { json, raw } = {}) {
   const text = await res.text();
   if (!res.ok) {
     let msg = text.slice(0, 300);
-    try { msg = JSON.parse(text).error || msg; } catch { /* keep raw */ }
+    try {
+      const answer = JSON.parse(text);
+      msg = [answer.error, answer.path, answer.message].filter(Boolean).join(" — ") || msg;
+    } catch { /* keep raw */ }
     if (res.status === 401) msg = `unauthorized — sign in again with '${loginCommand(conn.endpoint)}', or replace CASTALIE_TOKEN`;
     die(`${method} ${path} → HTTP ${res.status}: ${msg}`);
   }
@@ -244,6 +252,26 @@ async function cmdProofPackPush(args) {
   console.log(`Stored the pack on ${kind} ${id}: ${stored.verdict ?? pack.verdict}, commit ${String(pack.commit ?? "").slice(0, 7)}${stored.proof_pack_id ? ` (pack ${stored.proof_pack_id})` : ""}`);
 }
 
+// Publishes a folder as an artifact for the workspace's members (artifact.mjs), or lists them. The
+// limits are checked before anything is sent; the server's answer is printed as it comes.
+async function cmdArtifact(args) {
+  const [action, folder] = args._;
+  if (action === "list") return print(await request("GET", "/api/pm/artifacts"));
+  if (action !== "publish" || !folder || [args.title, args.description, args.id].includes(true)) {
+    die("Usage: cs artifact publish <folder> [--title <t>] [--description <d>] [--id <artifact_id>]   |   cs artifact list");
+  }
+  let body;
+  try {
+    body = prepareArtifact(folder, { title: args.title, description: args.description, artifactId: args.id });
+  } catch (e) {
+    if (e instanceof ArtifactError) die(`${e.error}${e.path ? ` (${e.path})` : ""}: ${e.message}`);
+    throw e;
+  }
+  const answer = await request("POST", "/api/pm/artifacts", { json: body });
+  print(answer);
+  if (answer.success === false) process.exitCode = 1;
+}
+
 // ── arg parsing / output ────────────────────────────────────────────────────
 function parseArgs(argv) {
   const out = { _: [] };
@@ -279,6 +307,10 @@ const HELP = `cs — Castalie project-management CLI
                                     #   canary, compute, render, gate (instructions/proof-pack.md)
   cs proof-pack push (--bug|--spec|--brief) <id> [--pack <file>] [--pr <url>]
                                     # store the computed pack on that work item in Castalie
+  cs artifact publish <folder> [--title <t>] [--description <d>] [--id <artifact_id>]
+                                    # publish a page or a deck (index.html at the folder's root) for
+                                    #   the workspace's members; --id replaces that artifact in place
+  cs artifact list                  # the workspace's artifacts, with their addresses
   cs agent-tasks help               # declare this workstation's agent tasks to Castalie
   cs worktrees help                 # give back the agent copies and build outputs nobody uses
   cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
@@ -305,7 +337,7 @@ const HELP = `cs — Castalie project-management CLI
 Config: env CASTALIE_ENDPOINT / CASTALIE_TOKEN, or .cs/config.json { "endpoint", "token" }.
 On whose behalf: env CS_UNATTENDED, CS_ROBOT_USER_ID / CS_ROBOT_EMAIL, or .cs/config.json
   { "robot_user_id", "robot_email" }.
-Castalie never sees your code — this CLI only carries work items and their text.`;
+Castalie never sees your code — this CLI only carries work items, their text, and the pages you publish for the team.`;
 
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
@@ -372,6 +404,7 @@ async function main() {
     case "content": return cmdContent(args);
     case "on-behalf": return cmdOnBehalf();
     case "attach": return cmdAttach(args);
+    case "artifact": return cmdArtifact(args);
     case "login": return cmdLogin(args);
     // What `kit_feedback_send` reports as `kit_version`: read from the manifest beside this file,
     // so a Claude and a Codex session name the same number without knowing where the plugin sits.

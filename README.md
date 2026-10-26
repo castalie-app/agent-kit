@@ -136,6 +136,16 @@ per machine, which opens your workspace's own approval page and keeps the sign-i
 `~/.castalie/credentials.json`. Image compression uses `sharp`, installed once into `~/.castalie/deps`
 on first use; without it, the file goes as it is.
 
+### Pages for the team, published to your workspace
+
+A deck, a report or any HTML page your assistant makes for the team is published to your workspace
+(`artifact_publish`), and the link it hands back opens for every signed-in member; the outside link
+opens only when you ask (`artifact_share`). A folder with images or a few MB goes from a terminal:
+`cs artifact publish <folder>`, with `index.html` at its root, its `<title>` as the title unless
+`--title` says otherwise, and `--id` to replace an artifact in place. Dotfiles and `README.md` stay
+on your machine; the limits (5 MiB a file, 25 MiB and 500 files an artifact) are checked before
+anything is sent.
+
 ### How updates reach you
 
 The marketplace tracks this repository, so a skill improved here reaches every installation without
@@ -735,6 +745,8 @@ cs prompt gate decision-resume 88 -- claude --print "/cs:decision-resume 88"
                                                    # the stored resume screened first; launched on a pass only
 cs proof-pack compute               # the delivery's proof, computed from the tools' files: proven, partly proven, not proven
 cs proof-pack push --spec 42 --pr <url>           # stores that pack on the spec; no code, only paths, counts and hashes
+cs artifact publish ./deck          # the folder's index.html and its files, for the workspace's members
+cs artifact list                    # the workspace's artifacts, with their addresses
 cs worktrees status                 # what a sweep would remove, copy by copy, and what each one keeps
 cs worktrees sparse --write         # worktree.sparsePaths = the tracked folders minus agentCheckoutExclude
 ```
@@ -881,6 +893,7 @@ cs/
   bin/playwright-mcp.mjs          # starts the browser the plugin declares in .mcp.json, on every OS
   bin/castalie-files-mcp.mjs      # starts castalie-files: attach_file and login (castalie-files.mjs)
   bin/attach.mjs                  # reads, lightens and uploads a local file — shared by attach_file and cs attach
+  bin/artifact.mjs                # cs artifact publish: a folder read, checked against the limits, sent
   bin/auth.mjs                    # the workspace sign-in (OAuth, PKCE, loopback) and its renewal
   bin/config.mjs                  # where the endpoint and a hand-written token are read from
   bin/agent-tasks.mjs             # cs agent-tasks: this workstation's agent tasks, reported to Castalie

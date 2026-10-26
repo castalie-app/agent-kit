@@ -118,6 +118,11 @@ jobs:
       - name: castalie-files attaches a local file, lighter, through one MCP session
         run: node cs/bin/castalie-files.test.mjs
 
+      # What a folder becomes before `cs artifact publish` sends it: which files go (never a
+      # dotfile, a README or a link out of the folder), the page's title, the server's limits.
+      - name: cs artifact publish reads a folder and checks the limits before sending
+        run: node --test cs/bin/artifact.test.mjs
+
       # The decisions panel the same way: its cards, its groups per agent and its whole sheet are
       # pure functions, replayed on answers in the server's own shape. What reaches the engine
       # itself — the bind, the panes, a press, on the terminal's table and the desktop's — is

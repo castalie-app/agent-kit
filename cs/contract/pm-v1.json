@@ -120,6 +120,18 @@
         "method": "GET",
         "path": "/api/pm/proof-packs/{kind}/{id}?proof_pack_id=<n>",
         "returns": "{ success, proof_pack } — the latest pack, or the one named; null when none"
+      },
+      {
+        "method": "POST",
+        "path": "/api/pm/artifacts",
+        "body": "{ \"title\": \"…\", \"description\": \"…\", \"artifact_id\": <n>|null, \"files\": [{ \"path\": \"index.html\", \"content_base64\": \"…\" }] }",
+        "note": "The same service, rights, limits and refusals as artifact_publish; files is the whole artifact. `cs artifact publish <folder>` reads the folder and sends it.",
+        "returns": "{ success, artifact_id, title, kind, revision, file_count, total_bytes, address, share_address, warnings } or { success: false, error, path, message }"
+      },
+      {
+        "method": "GET",
+        "path": "/api/pm/artifacts",
+        "returns": "{ success, artifacts } — the same answer as artifact_list"
       }
     ]
   },
@@ -372,6 +384,135 @@
         "address": "string|null",
         "error": "string",
         "message": "string|null"
+      }
+    },
+    {
+      "name": "artifact_list",
+      "kind": "read",
+      "description": "The workspace's artifacts: the decks, report pages and other HTML pages its members and agents published for the team. Each carries artifact_id, title, description, kind (deck | page), author, published_at, revision, file_count, total_bytes, address (the members' link, sign-in required), shared and share_address (the public read-only link, or null while it is closed). Any active member reads them.",
+      "params": [],
+      "returns": {
+        "success": "bool",
+        "artifacts": "object[]"
+      }
+    },
+    {
+      "name": "artifact_get",
+      "kind": "read",
+      "description": "One artifact, as artifact_list answers it, with its files (path, content_type, byte_size — never their content). Any active member reads it.",
+      "params": [
+        {
+          "name": "artifact_id",
+          "type": "int",
+          "required": true,
+          "description": "The artifact's id, from artifact_list or artifact_publish."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "artifact_id": "int",
+        "title": "string",
+        "description": "string|null",
+        "kind": "string",
+        "author": "string",
+        "published_at": "string",
+        "revision": "int",
+        "file_count": "int",
+        "total_bytes": "int",
+        "address": "string",
+        "shared": "bool",
+        "share_address": "string|null",
+        "files": "object[]",
+        "error": "string"
+      }
+    },
+    {
+      "name": "artifact_publish",
+      "kind": "write",
+      "description": "Publish an HTML page or a deck for the workspace's members, and get back its address (never build it by hand). files is the WHOLE artifact, with index.html at its root; artifact_id republishes an existing one in place, keeping its address and its share state. A deck is an index.html whose <main class=\"deck\"> holds <div class=\"frame\"><section id=\"…\"> slides of 1920×1080; Castalie serves it in its deck viewer. Owner or member publishes; republishing is for the author or an owner. A refused file publishes nothing and names its path: forbidden, not_found, title_required, invalid_path, unsupported_type, file_too_large, artifact_too_large, too_many_files, duplicate_path, invalid_content, empty_artifact, no_index. Keep one call under ~15 MB of base64; `cs artifact publish <folder>` sends heavier ones.",
+      "params": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "The name the members read in the list and on the page."
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "One sentence under the title."
+        },
+        {
+          "name": "files",
+          "type": "object[]",
+          "required": true,
+          "description": "The whole artifact: each {path, content} for UTF-8 text or {path, content_base64} for bytes. path is relative, forward slashes, case-sensitive (index.html, img/chart.png); index.html is required. Static types only; at most 5 MiB per file, 25 MiB and 500 files per artifact."
+        },
+        {
+          "name": "artifact_id",
+          "type": "int",
+          "required": false,
+          "description": "An existing artifact to replace, from artifact_list; omit to publish a new one."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "artifact_id": "int",
+        "title": "string",
+        "kind": "string",
+        "revision": "int",
+        "file_count": "int",
+        "total_bytes": "int",
+        "address": "string",
+        "share_address": "string|null",
+        "warnings": "string[]",
+        "error": "string",
+        "path": "string|null",
+        "message": "string|null"
+      }
+    },
+    {
+      "name": "artifact_share",
+      "kind": "write",
+      "description": "Open or close an artifact's public read-only link. open=true returns share_address, readable without signing in; open=false closes it, and the link then answers 404. The author or an owner only.",
+      "params": [
+        {
+          "name": "artifact_id",
+          "type": "int",
+          "required": true,
+          "description": "The artifact's id."
+        },
+        {
+          "name": "open",
+          "type": "bool",
+          "required": true,
+          "description": "true opens the outside link, false closes it."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "artifact_id": "int",
+        "shared": "bool",
+        "share_address": "string|null",
+        "error": "string"
+      }
+    },
+    {
+      "name": "artifact_delete",
+      "kind": "write",
+      "description": "Delete an artifact: its address and its share link answer 404 from then on. The author or an owner only.",
+      "params": [
+        {
+          "name": "artifact_id",
+          "type": "int",
+          "required": true,
+          "description": "The artifact's id."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "error": "string"
       }
     },
     {
