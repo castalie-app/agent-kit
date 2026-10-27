@@ -63,8 +63,9 @@ leader said otherwise.
 - **From that line up to the floor, the person in charge decides.** File the `money` decision without
   `addressee_user_id`: Castalie routes it to the person in charge of the work (*Never ask a person to
   name a person*), not to the leader.
-- **At or above the floor, the leader decides**: the `money` decision is addressed to the leader who
-  set it.
+- **At or above the floor, the budget's holder decides**: the person the leader's profile or
+  instruction file names for the budget the spend falls in (« Budgets: marketing — <name> »),
+  whatever the amount; the leader who set the floor only when nobody holds that budget.
 
 A leader who names a single line names the floor, and under it nobody is asked, as before. So
 anything can be launched or tested, as long as its cost is measured first and it costs nothing
