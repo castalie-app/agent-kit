@@ -210,6 +210,21 @@ sub-agent never waits on a background task or a monitor of its own — nothing r
 runs its commands in the foreground. A tab or a window the person has to watch hands the follow-up
 to them: open one only when they ask for it.
 
+**An unattended run never opens work on a person's machine** — no tab, no window, no terminal, no
+agent session started for them, no worktree reserved in their name. Unattended means a scheduled
+run, a headless `claude --print`, a robot, a hook: nobody is at the keyboard to ask. An answer to a
+decision is not that ask: « go ahead », « livre tout » settles what is done, not who starts it on
+whose machine. Work that follows an answer goes to the team's robot — the decision's robot resume, a
+ticket the robot takes, a scheduled task it plays — and the report says where it went. On
+27 October 2026 a scout run from a person's own Task Scheduler applied an answer by opening three
+sessions on their workstation; they had asked for none.
+
+**No person's workstation schedules an agent.** Recurring agent work is a Castalie scheduled task,
+played by the team's robot (`${CLAUDE_PLUGIN_ROOT}/instructions/scheduled-tasks.md`). A task in a
+person's own scheduler that starts an agent session on the team's work is removed, and its prompt
+becomes a scheduled task. A person's own automations — their mailbox, their bank — are theirs, and
+none of this touches them.
+
 **A sub-agent's copy is given back by the kit**, not by you: the `worktree-sweep` hook removes a copy
 under `.claude/worktrees/` once nothing in it exists nowhere else and nobody touched it for a day. So
 an agent that writes pushes what it keeps — a commit pushed nowhere, or an uncommitted file, holds the
