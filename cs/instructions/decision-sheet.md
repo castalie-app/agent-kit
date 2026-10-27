@@ -45,6 +45,10 @@ under a minute. A gesture the spec's `Authorisations` section lists, or a workfl
 answers, is not a question either. A sheet that asks what you could have decided costs a person
 three minutes and teaches them to stop reading your sheets.
 
+**The option that makes the user's life simplest is yours to take, under any reason but `money`.**
+A decision is filed only to ADD a constraint on users — a step, a limit, a message, a refusal;
+removing one, or keeping a path smooth, is applied and reported.
+
 **Spending falls in three bands, and the leader decides only the top one.** The leader — the person
 `money` decisions climb to, the workspace owner unless the workspace names another — may set two
 lines: an always-yes line, under which the answer is yes, and a floor, under which the person in
