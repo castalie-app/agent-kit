@@ -21,7 +21,9 @@ and by any skill that is about to stop for a person.
 
 ## File one, or decide yourself
 
-File a decision only when one of six reasons applies. A decision is a CHOICE only a person can make;
+File a decision only when it carries a business tension — two directions for the company, with
+something at stake — and one of six reasons applies. A gap in the tracking (an empty field, a
+missing key result or owner, a status out of date) is never one. A decision is a CHOICE only a person can make;
 a gesture a person has to perform is never one (below). It is the `escalation_reason`, and it is
 mandatory:
 

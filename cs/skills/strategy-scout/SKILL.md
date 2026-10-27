@@ -1,28 +1,23 @@
 ---
 name: strategy-scout
-description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the strategy drifts, digs the best few itself, and SETTLES each one it can take back with one revert — attaches a brief, gives an objective its key result, closes a delivered brief, names an owner, moves a dormant objective to next year — listing what it changed in its report. Only a choice the leader alone can make (money above their line, the company's public voice, the owners' call, what only they know, the irreversible) becomes a Castalie decision — one a day at most, none while three of its questions wait. A few topics drawn at random look for a thread to pull. Learns from the answers, « Décide-toi » included. Unattended-safe: a Castalie scheduled task the team's robot plays (`scheduled-run`); never opens a session on anybody's machine.
+description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the strategy drifts, digs the best few itself, settles each one it can take back with one revert, listing what it changed in its report, and never spends a run on an empty field of the tree. Only a business tension the leader alone can settle (money above their line, the company's public voice, the owners' call, what only they know, the irreversible) becomes a Castalie decision — one a day at most, none while three of its questions wait. A few topics drawn at random look for a thread to pull. Learns from the answers, « Décide-toi » included. Unattended-safe: a Castalie scheduled task the team's robot plays (`scheduled-run`); never opens a session on anybody's machine.
 allowed-tools: Bash, Read, Skill, mcp__castalie__strategy_create_key_result, mcp__castalie__strategy_update_key_result, mcp__castalie__strategy_create_check_in, mcp__castalie__feature_brief_update, mcp__castalie__feature_spec_update, mcp__castalie__whoami, mcp__castalie__strategy_list_periods, mcp__castalie__strategy_get_full_strategy, mcp__castalie__strategy_my_okrs, mcp__castalie__strategy_get_objective, mcp__castalie__strategy_get_objective_breadcrumb, mcp__castalie__strategy_navigate_children, mcp__castalie__strategy_check_in_history, mcp__castalie__strategy_key_result_history, mcp__castalie__strategy_list_swot, mcp__castalie__hfpn_list, mcp__castalie__feature_brief_list, mcp__castalie__feature_brief_get, mcp__castalie__feature_brief_list_key_results, mcp__castalie__followup_run_list, mcp__castalie__decision_list, mcp__castalie__decision_get, mcp__castalie__decision_create, mcp__castalie__decision_add_context, mcp__castalie__decision_supersede, mcp__castalie__decision_mark_applied, mcp__castalie__scheduled_task_get
 ---
 
-# strategy-scout — the strategy kept tidy every morning, and a question only when it is the leader's
+# strategy-scout — a question to the leader only when the business is torn
 
-A leader does not want to be asked whether a brief belongs under an objective, whether a delivered
-brief should be closed, or whether an objective deserves the key result it obviously lacks. Each
-such sheet costs three minutes and teaches them to stop opening the inbox — on 26 October 2026 a
-leader found twelve of them waiting, none opened, and handed every one back with « Décide-toi ».
-So the scout does the tidying itself and asks only what is truly theirs.
+A leader decides business tensions: two directions for the company pulling apart, with something
+at stake, that their context settles. An empty field of the strategy tree — an objective with no
+key result or owner, a brief attached to nothing, a status out of date — is not one: the scout
+neither asks about it nor spends the run on it. On 26 October 2026 a leader handed back twelve such
+sheets with « Décide-toi », and the next day dismissed the last one as no decision for a leader.
 
 **Every topic the scout keeps is one of two kinds, and the test is the decision sheet's own**
 (`${CLAUDE_PLUGIN_ROOT}/instructions/decision-sheet.md` § File one, or decide yourself):
 
 - **A fix** — no `escalation_reason` applies, and one revert takes it back. The scout applies its
   recommended move itself (step 6), and the report lists it in one line the leader can undo.
-  Attaching or detaching a brief, giving an objective a key result read off a report
-  (`okr-key-result`), recording a check-in the data measured, naming the leader owner of an
-  objective nobody owns, closing a brief whose work is delivered, cancelling a brief or spec idle 30
-  days with no work started, moving a dormant objective and its briefs to the next period, sorting
-  briefs filed under a catch-all objective: all fixes.
-- **A question** — one of the six reasons holds: `money` at or above the leader's line,
+- **A question** — a business tension the leader's context settles, and one of the six reasons holds: `money` at or above the leader's line,
   `public_voice` (a post, an email, a page in the company's name), `shareholder`,
   `private_knowledge` that changes which move is right *and* that the data cannot settle,
   `irreversible`, `authorization`. Only then a decision is filed (step 7). « It would be better to
@@ -127,13 +122,13 @@ one signal. Score each, the same way every day, so two runs a month apart are co
 | Signal | How it is seen | Base |
 |---|---|---|
 | A key result off track, or declining over its last three measured points | last check-in `off_track`; `strategy_key_result_history` | 5 |
-| An objective with no key result, or no owner | the tree | 4 |
 | A gap between the weekly points and the plan: an objective with fires two weeks running while its key results read on track, or one no weekly line has named in three weeks, or a topic the lines keep naming that no objective carries | `hfpn_list` against the tree | 4 |
 | An opportunity or a threat in the SWOT no objective covers | SWOT items against objective titles and descriptions | 4 |
-| A key result at risk, or silent 21 days or more and read off no report | last check-in `at_risk`; `days_since_check_in`; no `report_id` nor `external_report_url` | 3 |
-| An open brief that serves no key result | `feature_brief_list_key_results` empty | 3 |
-| A decision pending 14 days or more on a subject the strategy carries | `decision_list` pending, its age | 3 |
+| A key result at risk | last check-in `at_risk` | 3 |
 | A follow-up check failed on a brief, with no new run since | `followup_run_list` | 2 |
+
+A gap in the tracking is not a signal: an objective with no key result or owner, a brief attached
+to nothing, a silent check-in or a decision left waiting count only through a signal above.
 
 Then the weights, multiplied:
 
@@ -281,7 +276,7 @@ report it writes.
 
 ## Discipline
 
-- **Fix what one revert takes back; ask only what is the leader's.** A question with no
+- **Fix what one revert takes back; ask only a business tension, never a tracking gap.** A question with no
   `escalation_reason` of the six is a fix you failed to make.
 - **Never delete, never rewrite the leader's words.** No objective, key result, check-in or SWOT
   item deleted; no objective title or key result target rewritten; no root objective created.
