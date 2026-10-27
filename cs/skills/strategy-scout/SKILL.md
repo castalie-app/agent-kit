@@ -1,6 +1,6 @@
 ---
 name: strategy-scout
-description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the strategy drifts, digs the best few itself, and SETTLES each one it can take back with one revert — attaches a brief, gives an objective its key result, closes a delivered brief, names an owner, moves a dormant objective to next year — listing what it changed in its report. Only a choice the leader alone can make (money above their line, the company's public voice, the owners' call, what only they know, the irreversible) becomes a Castalie decision — one a day at most, none while three of its questions wait. A few topics drawn at random look for a thread to pull. Learns from the answers, « Décide-toi » included. Unattended-safe (`scheduled-run`, a headless `claude --print`).
+description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the strategy drifts, digs the best few itself, and SETTLES each one it can take back with one revert — attaches a brief, gives an objective its key result, closes a delivered brief, names an owner, moves a dormant objective to next year — listing what it changed in its report. Only a choice the leader alone can make (money above their line, the company's public voice, the owners' call, what only they know, the irreversible) becomes a Castalie decision — one a day at most, none while three of its questions wait. A few topics drawn at random look for a thread to pull. Learns from the answers, « Décide-toi » included. Unattended-safe: a Castalie scheduled task the team's robot plays (`scheduled-run`); never opens a session on anybody's machine.
 allowed-tools: Bash, Read, Skill, mcp__castalie__strategy_create_key_result, mcp__castalie__strategy_update_key_result, mcp__castalie__strategy_create_check_in, mcp__castalie__feature_brief_update, mcp__castalie__feature_spec_update, mcp__castalie__whoami, mcp__castalie__strategy_list_periods, mcp__castalie__strategy_get_full_strategy, mcp__castalie__strategy_my_okrs, mcp__castalie__strategy_get_objective, mcp__castalie__strategy_get_objective_breadcrumb, mcp__castalie__strategy_navigate_children, mcp__castalie__strategy_check_in_history, mcp__castalie__strategy_key_result_history, mcp__castalie__strategy_list_swot, mcp__castalie__hfpn_list, mcp__castalie__feature_brief_list, mcp__castalie__feature_brief_get, mcp__castalie__feature_brief_list_key_results, mcp__castalie__followup_run_list, mcp__castalie__decision_list, mcp__castalie__decision_get, mcp__castalie__decision_create, mcp__castalie__decision_add_context, mcp__castalie__decision_supersede, mcp__castalie__decision_mark_applied, mcp__castalie__scheduled_task_get
 ---
 
@@ -44,9 +44,17 @@ objective: those are the strategy itself, not its upkeep.
 ## Attended or not, the same run
 
 The scout never asks a question in the turn, attended or not: its product is a tidier strategy and,
-rarely, a question the leader judges in their inbox, on a phone, in a click. Under `/cs:scheduled-run`, or in a plain
-headless `claude --print "/cs:strategy-scout"`, it plays exactly the same steps. `AskUserQuestion`
-is never called, and no turn ends on « shall I go on? ».
+rarely, a question the leader judges in their inbox, on a phone, in a click. Under `/cs:scheduled-run`, or typed by the
+leader, it plays exactly the same steps. `AskUserQuestion` is never called, and no turn ends on
+« shall I go on? ».
+
+**It never starts work on anybody's machine.** No tab, no window, no `claude` session, no worktree
+opened or reserved — not even to apply an answer that says « go ahead »: the answer is recorded,
+the work it calls for goes to the robot (the decision's robot resume, or a ticket), and the report
+names where it went (`${CLAUDE_PLUGIN_ROOT}/instructions/shared-conventions.md` § Work you hand off).
+On 27 October 2026 a scout run from the leader's own Task Scheduler opened three sessions on their
+workstation to deliver a spec; they had asked for none. It is scheduled on the robot, never in a
+person's own scheduler.
 
 ## 1. Who the questions are for, and what is left for today
 
@@ -267,7 +275,7 @@ the scheduled tasks screen or with `scheduled_task_create`:
 | `max_duration_minutes` | `30` |
 | `prompt_md` | `/cs:strategy-scout`, then one line naming the leader: `Leads to: jane@example.com.` |
 
-The workstation's launcher picks the run and plays it through `/cs:scheduled-run <run_id>`, which
+The robot's launcher picks the run and plays it through `/cs:scheduled-run <run_id>`, which
 loads this skill from the prompt. Run it once by hand first (`scheduled_task_run_now`) and read the
 report it writes.
 

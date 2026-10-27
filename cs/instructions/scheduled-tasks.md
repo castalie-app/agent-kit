@@ -49,9 +49,11 @@ a task that names its workstation, that this one is not; the screen names the wo
 
 ## Who plays it: one of your workstations, never Castalie
 
-Castalie never plays a run. A **launcher** on a workstation of the team (often the one that already
-plays follow-ups unattended) takes the due runs and starts a headless session on
-`/cs:scheduled-run <run_id>` in a working copy of your repository. The code, the session and the
+Castalie never plays a run. A **launcher** on the team's robot — an always-on workstation nobody
+works on, often the one that already plays follow-ups unattended — takes the due runs and starts a
+headless session on `/cs:scheduled-run <run_id>` in a working copy of your repository. Never on a
+person's own workstation, and never from that person's own scheduler: a run that starts there hands
+them work they did not ask for (`shared-conventions.md` § Work you hand off). The code, the session and the
 credentials stay on that workstation; Castalie receives the verdict and the cost.
 
 ## What the launcher owes
