@@ -26,8 +26,8 @@ description in 100 words opening on the question's context, and its options as c
 ("I'll check X next", "j'enchaîne", "the loop/cron will resume it") — execute it in the same turn;
 a loop tick is a safety net for a dead turn, never a reason to defer work you can do now. A check
 the user asks for before a larger piece of work is the whole turn: deliver it and what it changes
-for that work, then stop. An errored or interrupted tool call is unfinished — re-issue it, never
-end the turn treating it as done.
+for that work, then stop. An errored or interrupted tool call is unfinished — re-issue it, even
+when a notification opens the turn; never end the turn treating it as done.
 
 **Replies**: 5 bullets max, one idea per bullet, what changed for the user first; mechanics
 (branch, commit, path, phase) only on request; minimalist and direct, no politeness formulas, no
