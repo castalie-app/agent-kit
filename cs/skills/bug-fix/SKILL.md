@@ -112,6 +112,10 @@ been served, who can confirm the intent in one message, and whether anything els
 the same change is suspect too. When the search comes back empty, say so: "present since the
 beginning" is a finding, a guess dressed as one is not.
 
+**A major defect found while a person runs the session tells the project's owner at once** (the
+spec's or domain's owner, else that change's author): on the ticket, and in their team's channel.
+A session nobody runs tells no one.
+
 ### 3. Settle the nature, and motivate a refusal
 
 Four natures, and the diagnosis is not finished until one of them is written down with what its

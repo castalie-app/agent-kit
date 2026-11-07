@@ -147,19 +147,22 @@ on the first row.
 
 `proof-pack canary` picks one line of changed production code from `git diff <base>` (a comparison,
 a boolean, a `return` of a literal, an arithmetic operator), breaks it, runs the test command,
-restores the file **byte for byte**, and writes `<evidence>/canary/canary.json`:
+restores the file **byte for byte** with a fresh date, so an incremental build recompiles it, and
+writes `<evidence>/canary/canary.json`:
 
 ```json
 { "schema": "castalie-proof-canary/1", "file": "src/Web/Proof/ProofPackService.cs", "line": 42,
-  "operator": "==→!=", "originalSha256": "…", "restoredSha256": "…", "ranAt": "2026-10-17T10:20:00Z",
-  "results": [".tmp/proof/canary/canary.trx"] }
+  "operator": "==→!=", "originalSha256": "…", "originalMtimeMs": 1792318800000, "restoredSha256": "…",
+  "ranAt": "2026-10-17T10:20:00Z", "results": [".tmp/proof/canary/canary.trx"] }
 ```
+
+While that file's content matches `originalSha256`, its freshness is `originalMtimeMs`, not its date.
 
 The line's text is never written, only its place and hashes. `--file <path> --line <n>` picks the
 line by hand; the result file still decides.
 
 One canary at a time in a working copy, held by `<evidence>/canary/canary.lock` for the whole run;
-`compute` waits for it too. Before the break, the file's bytes and dates are copied to
+`compute` waits for it too. Before the break, the file's bytes are copied to
 `<evidence>/canary/pending.*`; a run killed from outside leaves that copy, and the next `canary` or
 `compute` puts the file back — only while it still holds the broken bytes, never over an edit made
 since, which it refuses instead. A run longer than 30 minutes, or a command that cannot start,

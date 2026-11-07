@@ -44,6 +44,10 @@ synced by the CLI.
    separated them into the `solution` field: an option nobody wrote down is proposed again by the next
    reader, and the same argument is had twice, the second time without the facts. If a decision is
    genuinely contested, invoke `contrarian` before committing.
+   A category the brief names is modelled as named, by an explicit field, never by a neighbouring
+   attribute that partly covers it. A data correction goes in a migration only when the repository
+   can run it before production; otherwise in an idempotent service replayed at startup, covered by
+   a test.
    **End `solution` with an `Authorisations` section**: one line per outgoing or lasting gesture the
    delivery requires — publishing, granting access, tagging, changing a setting, writing to someone
    else — naming the gesture, its exact target (repository, package, environment, recipient) and the

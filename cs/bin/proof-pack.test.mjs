@@ -148,6 +148,29 @@ test("a canary that leaves every test green is not proven", () => {
   assert.equal(pack.verdict, "NOT_PROVEN");
 });
 
+test("after a canary, an incremental build recompiles the restored line, and earlier results stay current", () => {
+  const { root, base } = repo({ config: CONFIG });
+  const past = (path, seconds) => { const t = new Date(Date.now() - seconds * 1000); utimesSync(join(root, path), t, t); };
+  past("src/app.js", 60);
+  write(root, ".tmp/proof/tests/r.trx", trx([["App.Same", "Passed"]]));
+  past(".tmp/proof/tests/r.trx", 30);
+  // A build that decides by date, like make or MSBuild: the output is rewritten only when the source is newer.
+  write(root, "build.mjs", `import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+mkdirSync("out", { recursive: true });
+if (!existsSync("out/app.js") || statSync("src/app.js").mtimeMs > statSync("out/app.js").mtimeMs) writeFileSync("out/app.js", readFileSync("src/app.js"));`);
+  write(root, "run-tests.mjs", `import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+const outcome = readFileSync("out/app.js", "utf8").includes("a == b") ? "Passed" : "Failed";
+mkdirSync(".tmp/proof/canary", { recursive: true });
+writeFileSync(".tmp/proof/canary/canary.trx", '<TestRun><Results><UnitTestResult testName="App.Same" outcome="' + outcome + '" /></Results></TestRun>');`);
+  const r = runCanary({ root, evidence: ".tmp/proof", base, run: "node build.mjs && node run-tests.mjs", results: [".tmp/proof/canary/*.trx"], config: loadConfig(root), log: () => {} });
+  assert.equal(r.code, 0, r.message);
+  execFileSync("node", ["build.mjs"], { cwd: root });
+  assert.ok(readFileSync(join(root, "out/app.js"), "utf8").includes("a == b"), "the incremental build serves the restored line, not the mutant");
+  const pack = computePack({ root, base });
+  assert.equal(check(pack, "tests").state, "pass", "a result written before the canary is judged by the restored file's content, not its date");
+  assert.equal(check(pack, "canary").state, "pass");
+});
+
 test("a canary run on an earlier state of the code no longer counts", () => {
   const { root, base } = repo({ config: CONFIG });
   runCanary({ root, evidence: ".tmp/proof", base, run: testCommand(root, { notices: true }), results: [".tmp/proof/canary/*.trx"], config: loadConfig(root), log: () => {} });

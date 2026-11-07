@@ -19,7 +19,7 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -422,8 +422,8 @@ export function recoverCanary(root, evidence = ".tmp/proof") {
     if (now === meta.originalSha256) { rmSync(pending.bytes, { force: true }); rmSync(pending.meta, { force: true }); return null; }
     throw new InputError(`${meta.file} changed since a canary broke it; its copy before the break is ${slash(relative(root, pending.bytes))}. Restore it by hand, then delete ${slash(relative(root, pending.meta))}.`);
   }
+  // A fresh date: the run built the broken line, and an incremental build must see the file changed.
   writeFileSync(full, readFileSync(pending.bytes));
-  utimesSync(full, new Date(meta.atimeMs), new Date(meta.mtimeMs));
   rmSync(pending.bytes, { force: true }); rmSync(pending.meta, { force: true });
   return meta.file;
 }
@@ -475,12 +475,12 @@ function canaryUnderLock({ root, evidence, base, run, results, file, line, confi
     const broken = Buffer.from(lines.join(eol), "utf8");
     mkdirSync(pending.dir, { recursive: true });
     writeFileSync(pending.bytes, original);
-    writeFileSync(pending.meta, JSON.stringify({ file: candidate.file, pid: process.pid, atimeMs: stamp.atimeMs, mtimeMs: stamp.mtimeMs,
+    writeFileSync(pending.meta, JSON.stringify({ file: candidate.file, pid: process.pid,
       originalSha256: sha256(original), mutatedSha256: sha256(broken) }));
-    // Restored byte for byte AND with its modification time: a restore that looked like an edit
-    // would make every result file written before the canary older than the code. A signal is not
-    // delivered while the run is in progress, so the restore is the `finally`, and a run killed
-    // with this process is put back by the next one.
+    // Restored byte for byte with a fresh date; `compute` judges the file by its content against
+    // originalSha256, so earlier result files stay current. A signal is not delivered while the run
+    // is in progress, so the restore is the `finally`, and a run killed with this process is put
+    // back by the next one.
     let run_;
     try {
       writeFileSync(full, broken);
@@ -495,7 +495,7 @@ function canaryUnderLock({ root, evidence, base, run, results, file, line, confi
     const restored = sha256(readFileSync(full));
     const files = results.flatMap((g) => expandGlob(root, g)).filter((p) => mtime(join(root, p)) >= started - 1000);
     record = { schema: CANARY_SCHEMA, file: candidate.file, line: candidate.line, operator: mutated.operator,
-      originalSha256: sha256(original), restoredSha256: restored, ranAt: new Date(started).toISOString(), exitCode: run_.status, results: files };
+      originalSha256: sha256(original), originalMtimeMs: stamp.mtimeMs, restoredSha256: restored, ranAt: new Date(started).toISOString(), exitCode: run_.status, results: files };
     if (files.length) break;
     // A run that finished green and wrote nothing matched a wrong glob, and the next line would miss
     // it the same way. Only a run that failed — a break that does not compile — tries the next line.
@@ -655,15 +655,18 @@ function judgeModule(ctx, m) {
   const { root, change, config, t, evidenceFiles, ignored, walks } = ctx;
   const parsed_ = (p) => { if (!ctx.parsed.has(p)) ctx.parsed.set(p, parseTestResults(join(root, p))); return ctx.parsed.get(p); };
   const hash = (p) => { if (!ctx.hashes.has(p)) ctx.hashes.set(p, sha256(readFileSync(join(root, p)))); return ctx.hashes.get(p); };
-  const newest = Math.max(0, ...m.changed.map((f) => mtime(join(root, f))));
+  const canaryPath = slash(m.canary ?? join(ctx.evidence, "canary", "canary.json"));
+  const record = existsSync(join(root, canaryPath)) ? readJson(join(root, canaryPath)) : null;
+  const canaryResults = new Set(record?.results ?? []);
+  // The file the canary restored carries a fresh date; while its content is the one before the
+  // break, it is as old as that content.
+  const changedAt = (f) => record?.schema === CANARY_SCHEMA && f === record.file && Number.isFinite(record.originalMtimeMs)
+    && existsSync(join(root, f)) && hash(f) === record.originalSha256 ? record.originalMtimeMs : mtime(join(root, f));
+  const newest = Math.max(0, ...m.changed.map(changedAt));
   const isCurrent = (p) => mtime(join(root, p)) > newest;
   const counted = (p) => { evidenceFiles.add(p); return p; };
   const missing = [];
   const evidence = {};
-
-  const canaryPath = slash(m.canary ?? join(ctx.evidence, "canary", "canary.json"));
-  const record = existsSync(join(root, canaryPath)) ? readJson(join(root, canaryPath)) : null;
-  const canaryResults = new Set(record?.results ?? []);
 
   // 1. tests — the canary's own run is never counted here: its failures are the point of it.
   const testFiles = (m.tests ?? []).flatMap((g) => expandGlob(root, g, walks)).filter((p) => !canaryResults.has(p));

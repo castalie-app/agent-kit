@@ -65,6 +65,9 @@ Nothing else is edited on the way past. A brief somebody wrote is theirs.
 
 ## Create the record
 
+Before framing, `pm_search` the tickets and specs of the last 7 days on the same
+entity; one that already covers the need is resumed, never framed twice.
+
 `mcp__castalie__feature_single_deliverable_create` makes all four objects at once — brief, user story,
 spec, phase:
 
