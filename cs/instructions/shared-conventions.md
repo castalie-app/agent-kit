@@ -210,6 +210,11 @@ sub-agent never waits on a background task or a monitor of its own — nothing r
 runs its commands in the foreground. A tab or a window the person has to watch hands the follow-up
 to them: open one only when they ask for it.
 
+**A session does what a session can do.** Labelling, a bench reference, a one-off judgment or
+backfill runs in the session, spread over parallel agents, never through a per-call model API, which
+costs about forty times more; that API is for what runs unattended. A tool offering only the API for
+such work first gets a write path for the session.
+
 **An unattended run never opens work on a person's machine** — no tab, no window, no terminal, no
 agent session started for them, no worktree reserved in their name. Unattended means a scheduled
 run, a headless `claude --print`, a robot, a hook: nobody is at the keyboard to ask. An answer to a
