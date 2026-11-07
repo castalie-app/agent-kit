@@ -123,6 +123,9 @@ Measured on Castalie's own file on 17 October 2026: 8.62 $ for 22 sections and 4
 moment the seed reads. A file of 40 sections costs about 20 to 40 $ a pass. The workspace's ceiling — 290 $ a
 month, 250 € — stops the bench before it is passed; the cost each call reports is the API-rate
 equivalent, even inside a subscription.
+A pass played by hand runs on the session's subscription: keep `ANTHROPIC_API_KEY` out of its
+environment, or every `claude` call is billed per call, about forty times more. The model key is for
+the unattended monthly pass.
 
 ## What it never does
 

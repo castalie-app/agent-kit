@@ -21,7 +21,10 @@ The economical rhythm, the default:
 
 - **In the pull request that modifies a lens**: that lens alone replays 30 cases drawn from its
   reference, and its note is compared with the reference's **on the same cases**. Lower → the step
-  fails, naming the cases lost. About 10 $ per modification at Opus 5.5 API price.
+  fails, naming the cases lost. About 10 $ per modification at Opus 5.5 API price. The session that
+  modifies the lens plays `cs review-bench check` itself, on its subscription (shared conventions,
+  « A session does what a session can do »); the step's model key is for a pull request no session
+  plays.
 - **Once a month**: every lens replays about 100 cases, half regressions, half sound. Each pass
   becomes its lens's reference. About 140 $ for four lenses.
 
