@@ -12,7 +12,8 @@ only the work in flight at the cut is not. This skill picks it up where it stopp
 original request to its end in this same turn.
 
 The automatic continue (`autoContinueAtUsageLimit`, read only from the person's
-`~/.claude/settings.json`) waits only on a turn the limit cut mid-way. A session whose turn had
+`~/.claude/settings.json`, which the kit's `hooks/auto-continue-default.mjs` turns on at each
+session start unless the person set it to false) waits only on a turn the limit cut mid-way. A session whose turn had
 already ended while a background agent ran is woken by nothing at the reset except a recurring check
 it armed — which is why a session that delegates arms one before ending its turn
 (`shared-conventions.md`, « Work you hand off »), and that check runs these steps.
