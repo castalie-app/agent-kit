@@ -158,6 +158,13 @@ const DEGRADATIONS = [
     advice: "Codex's native web tool.",
   },
   {
+    id: "Workflow",
+    pattern: /`Workflow` tool/,
+    advice: "Codex has no workflow orchestrator. Play the script's phases yourself, in the same order, " +
+      "with the prompts and output fields it spells: one subagent per item where Codex offers " +
+      "subagents, one after the other otherwise. Skip no phase, the verification ones least of all.",
+  },
+  {
     id: "CronCreate",
     pattern: /\bCronCreate\b/,
     advice: "A scheduled task on the host, with an explicit stop condition written down.",

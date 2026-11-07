@@ -177,6 +177,10 @@ A ticket is the team's work, and the robot's name on a wrong one costs a colleag
   ones). A match open for the same symptom gets a `discussion_post(entity_type="bug", …)` with this
   occurrence, its date and figures — never a second ticket.
 - **Create** with `bug_create`, the title in the words of whoever suffers it, `author_kind="agent"`.
+- **A skill whose product is a proved defect** — `bug-bash`, `state-machine-audit` — files what it
+  proved on the first occurrence: a failing reproduction test, or a code path an adversarial verifier
+  traced from a wired entry point to the write, is not an automatic signal. It still searches before
+  creating, and an open ticket for the same defect is reused, never filed twice.
   `outcome_type="bug"` and `outcome_ref_id` the ticket's id when it is the run's main product.
 
 ## 6. The robot's signature
