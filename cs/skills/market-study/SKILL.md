@@ -37,8 +37,13 @@ competitor. Say in one line how many were already known.
 
 ### 2. Gather the raw material — the whole method rests on it
 
-Fan it out to **five sub-agents in parallel**, one per source, each writing raw extracts (not
-summaries) into the working folder `.tmp/market-study/<slug>/` with the URL of every extract:
+Fan it out to sub-agents in parallel — several per source, a few competitors each — each saving
+**whole documents** into the working folder `.tmp/market-study/<slug>/raw/`: one file per page,
+transcript, review or thread, its URL and date at the head, then its full text. **Not an extract,
+not a summary, not a fiche.** A web-fetch tool that summarises a page is the wrong instrument here:
+render the page and keep its full text. A study built on summaries is a summary of summaries — the
+« research the market for X » this skill exists to replace, one step removed. A summary already
+written about a competitor is a starting list, never the corpus.
 
 | # | Source | What to bring back |
 |---|---|---|
@@ -48,8 +53,11 @@ summaries) into the working folder `.tmp/market-study/<slug>/` with the URL of e
 | 4 | **Every Reddit or forum thread where people vent about the category** | the pain in the buyer's own words, and what they switched from or to |
 | 5 | **What each French competitor filed with INPI** — through Castalie, see below | revenue, net income, equity and headcount over the years, capital, creation date, representatives, the deeds that tell a story (capital increase, change of control, transfer of seat) |
 
-A page refused to a plain fetch goes through the browser before it is called unreachable. Count what
-came back; under 20 sites or 60 reviews, say so — a thin corpus gives a confident, wrong study.
+A page refused to a plain fetch goes through the browser before it is called unreachable. Then a
+completeness critic counts what came back — files and words per source, which competitors lack a
+pricing page, how many reviews and threads are whole — fetches the worst gaps itself, and writes the
+inventory. Under 20 whole sites or 100 whole reviews, say so — a thin corpus gives a confident,
+wrong study.
 
 **France: read the register, not the competitor's own claims.** A French company's site says what it
 wants; what it filed with INPI says what it is. For every French competitor and incumbent, through the
