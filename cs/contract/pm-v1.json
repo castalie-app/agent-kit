@@ -5921,6 +5921,236 @@
         "success": "bool",
         "data": "object"
       }
+    },
+    {
+      "name": "competitor_list",
+      "kind": "read",
+      "description": "The workspace's competitors — its competitive study, as the « Concurrents » screen lists it: id, name, SIREN, website, archived, last update, by name. Any member reads it, a viewer included.",
+      "params": [
+        {
+          "name": "include_archived",
+          "type": "bool",
+          "required": false,
+          "description": "True also lists the archived sheets."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "competitors": "object[]",
+        "error": "string"
+      }
+    },
+    {
+      "name": "competitor_get",
+      "kind": "read",
+      "description": "One competitor's sheet, as competitor_save writes it, with its files. Any member reads it. Refusals: not_a_member, competitor_not_found.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": true,
+          "description": "The sheet, from competitor_list."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "competitor": "object",
+        "error": "string"
+      }
+    },
+    {
+      "name": "competitor_save",
+      "kind": "write",
+      "description": "Create a competitor's sheet (no id: name required) or update one. A parameter left out keeps what is stored; an empty string clears it — the name excepted. Owner and members write; a viewer is refused. Cite the source of every figure written in the notes. Refusals: not_a_member, forbidden, competitor_not_found, name_required, name_too_long (200), name_taken (one sheet per name), invalid_siren, invalid_website, text_too_long (200 000), nothing_to_set.",
+      "params": [
+        {
+          "name": "id",
+          "type": "int",
+          "required": false,
+          "description": "The sheet to update; omitted, a new sheet."
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": false,
+          "description": "The competitor's name, one sheet per name."
+        },
+        {
+          "name": "website",
+          "type": "string",
+          "required": false,
+          "description": "An http or https address."
+        },
+        {
+          "name": "siren",
+          "type": "string",
+          "required": false,
+          "description": "Nine digits, for a French company."
+        },
+        {
+          "name": "summary_md",
+          "type": "string",
+          "required": false,
+          "description": "What it is: business, markets, positioning."
+        },
+        {
+          "name": "notes_md",
+          "type": "string",
+          "required": false,
+          "description": "Everything else the study gathered, each figure with its source."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "competitor": "object",
+        "error": "string"
+      }
+    },
+    {
+      "name": "company_search",
+      "kind": "read",
+      "description": "Search French companies by name, SIREN, SIRET, a representative's name or a town in the State's public directory (Annuaire des Entreprises, Licence Ouverte 2.0) — free, spending none of the INPI quota. Each result gives the SIREN, name, activity, legal form, headcount bracket, seat, representatives and the published revenue and net income by year, with `source` and its `citation`. Any member. Refusals: authentication_required, invalid_query, query_rejected, not_available, outbound_flow_disabled, rate_limited, search_unavailable.",
+      "params": [
+        {
+          "name": "q",
+          "type": "string",
+          "required": true,
+          "description": "A name, SIREN, SIRET, representative or words with a town — 3 to 200 characters."
+        },
+        {
+          "name": "department",
+          "type": "string",
+          "required": false,
+          "description": "Only companies with an establishment in this department."
+        },
+        {
+          "name": "postal_code",
+          "type": "string",
+          "required": false,
+          "description": "Only companies with an establishment in this postal code."
+        },
+        {
+          "name": "page",
+          "type": "int",
+          "required": false,
+          "description": "1 to 1000."
+        },
+        {
+          "name": "per_page",
+          "type": "int",
+          "required": false,
+          "description": "1 to 10, 5 by default."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "results": "object[]",
+        "source": "object",
+        "error": "string"
+      }
+    },
+    {
+      "name": "company_registry_get",
+      "kind": "read",
+      "description": "A French company's record in the national company register (RNE, INPI), by SIREN: creation, modifications, representatives, establishments, filings history, unaltered in `data`, with a `summary` and `privacy` — when privacy.prospection_opposition is true the company must not be prospected. Representatives' names are personal data. The deployment shares one INPI account (10 requests a minute, INPI terms article 6.1): answers are cached by SIREN for 24 h, calls beyond the quota queue up to two minutes, then answer rate_limited with retry_after_seconds — wait, do not loop. A workspace gets at most 6 of the minute's 10 and 300 a day (daily_limit_reached past it). Every answer carries `source` with a ready `citation`: cite it wherever the data is reused, never alter the data. Any member. Refusals: authentication_required, invalid_siren, company_registry_not_configured, rate_limited, daily_limit_reached, registry_credentials_refused, outbound_flow_disabled, registry_unavailable. Also company_not_found.",
+      "params": [
+        {
+          "name": "siren",
+          "type": "string",
+          "required": true,
+          "description": "The company's SIREN, nine digits; spaces allowed."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "summary": "object",
+        "privacy": "object",
+        "data": "object",
+        "source": "object",
+        "error": "string"
+      }
+    },
+    {
+      "name": "company_registry_accounts",
+      "kind": "read",
+      "description": "A French company's annual accounts as entered by INPI, newest closing first, with key_figures read from the tax forms — revenue (FJ), net income (HN), equity (DL), headcount (YP) — year and previous year. Only public filings; `withheld` counts the others. The deployment shares one INPI account (10 requests a minute, INPI terms article 6.1): answers are cached by SIREN for 24 h, calls beyond the quota queue up to two minutes, then answer rate_limited with retry_after_seconds — wait, do not loop. A workspace gets at most 6 of the minute's 10 and 300 a day (daily_limit_reached past it). Every answer carries `source` with a ready `citation`: cite it wherever the data is reused, never alter the data. Any member. Refusals: authentication_required, invalid_siren, company_registry_not_configured, rate_limited, daily_limit_reached, registry_credentials_refused, outbound_flow_disabled, registry_unavailable.",
+      "params": [
+        {
+          "name": "siren",
+          "type": "string",
+          "required": true,
+          "description": "The company's SIREN, nine digits; spaces allowed."
+        },
+        {
+          "name": "include_liasse",
+          "type": "bool",
+          "required": false,
+          "description": "True adds every line of the filed forms."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "filings": "object[]",
+        "withheld": "int",
+        "source": "object",
+        "error": "string"
+      }
+    },
+    {
+      "name": "company_registry_documents",
+      "kind": "read",
+      "description": "The public documents a French company filed with the register: deeds (statutes, minutes, appointments) and filed accounts, each with its id for company_registry_download. The deployment shares one INPI account (10 requests a minute, INPI terms article 6.1): answers are cached by SIREN for 24 h, calls beyond the quota queue up to two minutes, then answer rate_limited with retry_after_seconds — wait, do not loop. A workspace gets at most 6 of the minute's 10 and 300 a day (daily_limit_reached past it). Every answer carries `source` with a ready `citation`: cite it wherever the data is reused, never alter the data. Any member. Refusals: authentication_required, invalid_siren, company_registry_not_configured, rate_limited, daily_limit_reached, registry_credentials_refused, outbound_flow_disabled, registry_unavailable.",
+      "params": [
+        {
+          "name": "siren",
+          "type": "string",
+          "required": true,
+          "description": "The company's SIREN, nine digits; spaces allowed."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "deeds": "object[]",
+        "filed_accounts": "object[]",
+        "withheld": "int",
+        "source": "object",
+        "error": "string"
+      }
+    },
+    {
+      "name": "company_registry_download",
+      "kind": "read",
+      "description": "One public PDF filed with the French company register — a deed (acte) or annual accounts (bilan) — by SIREN and the id company_registry_documents lists, as content_base64. The deployment shares one INPI account (10 requests a minute, INPI terms article 6.1): answers are cached by SIREN for 24 h, calls beyond the quota queue up to two minutes, then answer rate_limited with retry_after_seconds — wait, do not loop. A workspace gets at most 6 of the minute's 10 and 300 a day (daily_limit_reached past it). Every answer carries `source` with a ready `citation`: cite it wherever the data is reused, never alter the data. Any member. Refusals: authentication_required, invalid_siren, company_registry_not_configured, rate_limited, daily_limit_reached, registry_credentials_refused, outbound_flow_disabled, registry_unavailable. Also invalid_kind, invalid_document_id, document_not_found, document_too_large (10 MiB).",
+      "params": [
+        {
+          "name": "siren",
+          "type": "string",
+          "required": true,
+          "description": "The company's SIREN, nine digits; spaces allowed."
+        },
+        {
+          "name": "kind",
+          "type": "string",
+          "required": true,
+          "description": "acte or bilan."
+        },
+        {
+          "name": "document_id",
+          "type": "string",
+          "required": true,
+          "description": "From company_registry_documents."
+        }
+      ],
+      "returns": {
+        "success": "bool",
+        "file_name": "string",
+        "content_type": "string",
+        "size_bytes": "int",
+        "sha256": "string",
+        "content_base64": "string",
+        "source": "object",
+        "error": "string"
+      }
     }
   ]
 }
