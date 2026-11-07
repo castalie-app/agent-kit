@@ -98,7 +98,8 @@ blockquote is the whole mechanism: the terminal draws it as a vertical bar, and 
 render it.
 
 - **Exactly one of the four**, and it is the last block of the turn.
-- **In progress only while an agent is at work** (a sub-agent, a workflow, a tab or another
+- **In progress only while an agent is at work, and always while one is**, whatever the turn
+  answered (a sub-agent, a workflow, a tab or another
   session this one handed it to, its own background command). What no agent moves (a release
   pipeline, an outside event, a date) is a scheduled follow-up, and the turn ends on *Finished*;
   what needs a person's choice is a filed decision, and the turn ends on *I need you*; what needs a
