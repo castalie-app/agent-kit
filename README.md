@@ -917,4 +917,5 @@ scripts/check-decisions.mjs       # the decisions panel's cards and sheet, repla
 
 ## License
 
-Proprietary — see [LICENSE](LICENSE). Use is tied to a valid Castalie account.
+Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). The licence covers this kit only: the
+Castalie service it connects to, and the Castalie name, are not part of it.
