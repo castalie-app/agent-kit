@@ -56,6 +56,19 @@ Use `--approve-only` when preparing a protocol without executing its judge.
 
 ## Install
 
+### No workspace yet — one command, no e-mail, no screen
+
+```
+npx -y github:castalie-app/agent-kit --new --name "<a name for your workspace>"
+```
+
+It opens a free Castalie workspace at Castalie's one public signup address,
+`https://www.castalie.app/api/workspaces`, for an account that needs no e-mail address to start, then
+connects this project to it exactly as Option A does — the token goes into the local configuration and
+is never printed, so your agent may run it itself (`/cs:connect` does). Attach an e-mail address
+later, to sign in by e-mail or Google: ask your agent (`account_claim`), or open *My profile* in
+Castalie.
+
 ### Option A — one command (recommended)
 
 ```

@@ -2,6 +2,11 @@
 // castalie-setup — one-command onboarding for the Castalie Agent Kit.
 //
 //   npx -y github:<this repository> <token> --endpoint https://<your-workspace>.castalie.app
+//   npx -y github:<this repository> --new [--name "<workspace name>"]
+//
+// `--new` is for someone who has no workspace yet: it opens a free one at Castalie's one public
+// signup address (`SIGNUP_ADDRESS` below), with no e-mail and no screen, and goes on exactly as if
+// the token and address it got back had been typed — the token is never printed.
 //
 // The repository's own address is written once, in `REPOSITORY` below, and every line that prints
 // it reads it from there.
@@ -33,7 +38,7 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
@@ -64,6 +69,19 @@ import { fileURLToPath } from "node:url";
  * cost every one of them a second migration for a spelling nobody types.
  */
 const REPOSITORY = "castalie-app/agent-kit";
+
+/**
+ * WHERE A NEW ACCOUNT OPENS ITS WORKSPACE — Castalie's one public signup address, served by the
+ * product on its public site's host. It is the single workspace-side address this kit hardcodes,
+ * and it can be: every OTHER address is a workspace's own host, which a newcomer does not have yet.
+ *
+ * Before it existed, an agent asked to open a workspace had nothing to call: it tried castalie.app,
+ * app., www., two workspaces' hosts, read the home page's links, and found a page that wanted an
+ * e-mail address and a click in a mailbox (ticket 364, 8 November 2026). `POST` here answers with
+ * the new workspace's address and its first token; `GET` describes the door without opening
+ * anything. `--signup <url>` points at another instance — a test bench — and nothing else should.
+ */
+const SIGNUP_ADDRESS = "https://www.castalie.app/api/workspaces";
 
 // What Claude Code reads before it loads a single hooks module — the pane beside the
 // transcript among them. Absent, nothing of the module loads, the classic hooks and the
@@ -168,6 +186,9 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--endpoint") { out.endpoint = argv[++i]; }
+    else if (a === "--new") { out.new = true; }
+    else if (a === "--name") { out.name = argv[++i]; }
+    else if (a === "--signup") { out.signup = argv[++i]; }
     else if (a === "-h" || a === "--help") { out.help = true; }
     else if (a === "--no-statusline") { out.statusline = false; }
     else if (a === "--no-pane") { out.pane = false; }
@@ -186,9 +207,13 @@ function warn(msg) { console.log(`  ! ${msg}`); }
 const HELP = `castalie-setup — connect your agent to your Castalie workspace
 
   npx -y github:${REPOSITORY} <token> --endpoint https://<your-workspace>.castalie.app
+  npx -y github:${REPOSITORY} --new [--name "<workspace name>"]
 
   <token>       your Castalie API token
   --endpoint    the address of your workspace
+  --new         no workspace yet: open a free one now — no e-mail, no screen — and connect it here.
+                Its name is --name, or this folder's name. Attach an e-mail address later, from
+                your agent (account_claim) or from your profile in Castalie
   --no-statusline  do not touch the status line under your prompt
   --no-pane        do not enable the pane beside the transcript (/where)
   --enable-pane    enable that pane and do nothing else (no token needed)
@@ -604,6 +629,35 @@ function quietPowerShell() {
   return "failed";
 }
 
+/**
+ * Opens a free workspace at the public signup address and returns `{ endpoint, token, workspace }`.
+ * The token is returned to the caller and never printed: it goes straight into the local scope
+ * and `.cs/config.json`, like a token typed on the command line, minus the transcript.
+ */
+async function openWorkspace(signupAddress, name) {
+  const locale = (Intl.DateTimeFormat().resolvedOptions().locale || "").toLowerCase().startsWith("fr") ? "fr" : "en";
+  let response;
+  try {
+    response = await fetch(signupAddress, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ name, locale }),
+    });
+  } catch (e) {
+    fail(`could not reach ${signupAddress} (${e.message}). Check this machine reaches the internet, then run it again.`);
+  }
+
+  let body = {};
+  try { body = await response.json(); } catch { /* the status says enough */ }
+  if (response.status === 429) {
+    fail(`${body.message ?? "Castalie opens no more workspaces for now."}${body.reopens_at ? `\n  It reopens at ${body.reopens_at} (UTC).` : ""}`);
+  }
+  if (response.status !== 201 || !body.token || !body.endpoint) {
+    fail(`${signupAddress} did not open a workspace (${response.status}${body.error ? `, ${body.error}` : ""}).${body.message ? `\n  ${body.message}` : ""}`);
+  }
+  return body;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { console.log(HELP); return; }
@@ -626,13 +680,32 @@ async function main() {
     return;
   }
 
-  const token = args._[0];
+  let token = args._[0];
+  let rawEndpoint = args.endpoint;
+  if (args.new) {
+    // A NEW workspace is never opened over an existing connection: run twice by mistake, `--new`
+    // would leave the first workspace orphaned and connect this folder to the second.
+    if (token || rawEndpoint) fail("--new opens a workspace and brings its own token and address: drop the token and --endpoint.");
+    const existing = join(process.cwd(), CONFIG_DIR, "config.json");
+    if (existsSync(existing)) {
+      fail(`this folder is already connected (${existing}). Run setup with that workspace's token instead of --new,\n  or remove ${CONFIG_DIR}/ first if you really want a second workspace.`);
+    }
+    const name = (args.name ?? basename(process.cwd())).trim();
+    step(`Opening a free Castalie workspace${name ? ` named "${name}"` : ""} — no e-mail, no screen`);
+    const opened = await openWorkspace(args.signup ?? SIGNUP_ADDRESS, name);
+    ok(`workspace "${opened.workspace?.name ?? name}" opened at ${opened.endpoint}`);
+    ok("its first token goes into this project's configuration below, and is never printed.");
+    console.log("    Attach an e-mail address whenever you like: ask your agent (account_claim), or open My profile in Castalie.");
+    token = opened.token;
+    rawEndpoint = opened.endpoint;
+  }
   if (!token) fail("missing token.\n" + HELP);
   // No default address on purpose: Castalie is multi-tenant, and a guessed host fails as a 401
-  // that reads like a bad token — sending the user after the wrong problem.
-  if (!args.endpoint) fail("missing --endpoint.\n" + HELP);
-  const endpoint = args.endpoint.replace(/\/+$/, "").replace(/\/mcp$/i, "");
-  if (!/^https?:\/\//i.test(endpoint)) fail(`--endpoint must be a full url, got "${args.endpoint}".`);
+  // that reads like a bad token — sending the user after the wrong problem. The one exception is
+  // `--new`, whose address comes back from the signup door itself.
+  if (!rawEndpoint) fail("missing --endpoint.\n" + HELP);
+  const endpoint = rawEndpoint.replace(/\/+$/, "").replace(/\/mcp$/i, "");
+  if (!/^https?:\/\//i.test(endpoint)) fail(`--endpoint must be a full url, got "${rawEndpoint}".`);
   if (!/^[0-9a-f]{64}$/i.test(token)) warn("token doesn't look like a 64-hex string — continuing anyway.");
 
   console.log("Castalie Agent Kit — setup");

@@ -1,6 +1,6 @@
 ---
 name: connect
-description: Connect this repository to a Castalie workspace — opening one first if the user has none, without ever sending them to a page they cannot sign in to. Also diagnoses a connection that is not answering — 401, wrong address, missing token, two servers with the same name. Registers the MCP endpoint for this project without the user pasting anything into a config file, and never writes a token into a committable file.
+description: Connect this repository to a Castalie workspace — opening a free one first if the user has none, from the agent alone, with no e-mail, no screen and no token copied. Also diagnoses a connection that is not answering — 401, wrong address, missing token, two servers with the same name. Registers the MCP endpoint for this project without the user pasting anything into a config file, and never writes a token into a committable file.
 ---
 
 # connect — wire this repository to a Castalie workspace
@@ -17,34 +17,49 @@ want their repository to talk to Castalie. Which of the two paths that takes is 
 
 **They have one** — the rest of this skill applies. Diagnose, then the setup command.
 
-**They do not** — do not send them to the "Connect my agent" page. It is behind a sign-in to a workspace
-they do not have, and pointing at it is a dead end dressed as an instruction. Use the enrolment verbs
-instead: they exist for exactly this case.
+**They do not** — open one for them, now, from here. No e-mail to type, no page to open, no token to
+copy: run this yourself, at the root of the repository they work in:
 
-| Verb | What it does |
-|---|---|
-| `enrolment_request_code(email)` | sends a one-time code to that address, and answers the same whether the address is known or not |
-| `enrolment_redeem_code(handle, code, plan)` | exchanges the code for an API token, creating the user and the workspace if needed |
+```bash
+npx -y github:castalie-app/agent-kit --new --name "<a name for the workspace>"
+```
 
-They live on a separate, unauthenticated entry point — `/mcp-signup` on the instance — because the main
-one refuses everything without a token, which is the chicken-and-egg this path exists to break. An
-anonymous caller sees those two verbs and nothing else.
+The name is optional — the folder's name stands in for it — and it only seeds the workspace's address
+(`<name>.castalie.app`, with a short suffix when it is taken). Take it from what they said, or from the
+repository; do not ask for one.
 
-The plan is asked with `AskUserQuestion`, in the user's language, and **the free tier and the dedicated
-database open immediately**; the two above them record an intent and say what happens next. Say, in the
-same breath, the thing that a price shown in a terminal otherwise implies: **choosing a paid tier here
-commits nothing and charges nothing** — no contract, no payment method asked for or kept.
+What it does, and why you may run it yourself where you may not run the token command:
 
-Then continue with the token you just obtained, exactly as if they had pasted one: the rest of this
-skill does not care where it came from.
+- it calls **Castalie's one public signup address, `https://www.castalie.app/api/workspaces`** —
+  the only workspace-side address the kit hardcodes, and the only one a newcomer can reach. **Never
+  look for another**: not `castalie.app`, not `app.`, not a workspace's host, not
+  the signup page. `GET` on it describes the door without opening anything, if you want to check it
+  answers first;
+- Castalie opens a **free** workspace there, for an account that has no e-mail address yet, and hands
+  back its address and its first token;
+- the token goes **straight** into this project's local MCP scope and `.cs/config.json` (gitignored),
+  then the connection is tested — exactly the setup below, minus the copy. **It is never printed**, so
+  it never enters this conversation;
+- it refuses to run where `.cs/config.json` already exists: a second `--new` would orphan the first
+  workspace.
+
+Castalie opens at most a fixed number of workspaces a day, all doors together. Refused for that, the
+command says when it reopens: say it in one sentence and stop — do not retry in a loop.
+
+**Then, in one sentence each, two things they can do later and need not do now:** attach an e-mail
+address to the account — the `account_claim` verb (a confirmation link goes to that address), or
+*My profile* in Castalie — after which they sign in by e-mail or Google like anybody; and open the
+workspace's screen before that — the `account_sign_in_link` verb gives a single-use link. Nothing
+requires either to start working.
 
 ## What has to be true
 
-Two values, and neither may be typed into a tracked file:
+For a workspace that already exists — two values, and neither may be typed into a tracked file:
 
 - **the address of their instance** — `https://<their-workspace>.castalie.app`, their own host. There is
   no single Castalie address to hardcode: this is a multi-tenant product, and every workspace answers on its
-  own name. A kit that assumed one address would authenticate nobody.
+  own name. A kit that assumed one address would authenticate nobody. (The signup address above opens
+  workspaces; it serves none of them.)
 - **their token** — minted by them, shown once.
 
 Both are on the same page, and they never leave the machine: **Connect my agent**, in the top bar of
@@ -124,8 +139,10 @@ Say what changed, in one line, then get out of the way — the user came to work
 - **Never print a token back**, not even truncated, not even to confirm it was read.
 - **Never store one in the Windows registry via `setx`**, or in a shell profile: that leaves the value
   in clear for every process on the machine, and a token opens the whole workspace.
-- **Never guess the workspace address.** Ask. A wrong host does not fail loudly — it fails as a 401 that
-  looks like a bad token, and sends the user hunting for the wrong problem.
+- **Never guess the workspace address.** For a workspace that exists, ask: a wrong host does not fail
+  loudly — it fails as a 401 that looks like a bad token, and sends the user hunting for the wrong
+  problem. For a new one there is nothing to guess: `--new` calls the one public signup address and
+  gets the workspace's address back.
 
 ## Hand back
 
