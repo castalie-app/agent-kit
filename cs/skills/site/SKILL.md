@@ -1,6 +1,6 @@
 ---
 name: site
-description: The company's first project with Claude, for a leader who is not a technician — two new versions of the company's home page built in parallel from a short interview (« Sublimer », inside the current brand; « Réinventer », free to rework it), each refined by a contrarian review, published by Castalie at the workspace's castalie.page address in about fifteen minutes, with no GitHub account and no repository; then the chosen one is iterated, and put on the company's own domain, or on its own GitHub, only on the leader's explicit request. Fires on "/cs:site", "refais mon site", "une nouvelle version de notre site", "redo our website", "mets le nouveau site en ligne", and as the next step after `onboard-team`. Every technical gesture is done for the leader; they are asked only for what they alone can give.
+description: A website built and published for a person who is not a technician, at the workspace's castalie.page address, with no GitHub account and no repository. Two paths. A free request — a site on a theme, a new project, an event, one page, with no current site to redesign — gets ONE version, built and published directly, no interview. A company's existing site gets two new versions of its home page built in parallel from a short interview (« Sublimer », inside the current brand; « Réinventer », free to rework it), each refined by a contrarian review; then the chosen one is iterated, and put on the company's own domain, or on its own GitHub, only on an explicit request. Fires on "/cs:site", "fais un site sur…", "crée-moi une page pour…", "make a website about…", "refais mon site", "une nouvelle version de notre site", "redo our website", "mets le nouveau site en ligne", and as the next step after `onboard-team`.
 ---
 
 # site — two new versions of the company's home page, then the real one
@@ -18,6 +18,18 @@ answer. No GitHub account, no repository, no GitHub Pages is asked of them.
 **Fifteen minutes for the first pair.** What counts is two links that open two excellent home
 pages, with their own words and their own contact details. The other pages, a blog, a form: later,
 one request at a time.
+
+## 0. Which path
+
+- **A redesign** — the company has a site of its own and wants it redone (« refais mon site », an
+  address given, the next step after `onboard-team`): sections 1 to 7, the interview and the two
+  versions.
+- **A free request** — a site on a theme, a new project, an event, a single page, with **no current
+  site to redesign** (« fais un site sur le thème X », « crée-moi une page pour… »): section 1, then
+  section 8, the short path. One version, published directly, no interview.
+
+When the request reads both ways, the short path: a redesign is asked for with the word
+« refaire », « nouvelle version » or a site address, and the leader can always ask for one next.
 
 ## 1. Where the site is published
 
@@ -248,6 +260,46 @@ GitHub.
      Update the line in their `CLAUDE.md`. Tell them to keep their old hosting for a few weeks: it
      is the way back, with the records written down above.
 
+## 8. The short path — one version, published directly
+
+A free request needs no interview. **Read everything you need from the request itself** and from
+what you already know of them (their `CLAUDE.md`, this conversation), and decide the rest yourself:
+the tone, the palette, the typefaces, the sections, the order. A choice of taste is never a
+question: you make it, and they change it afterwards in one sentence.
+
+**One question at most, and only when something truly blocks**: the request names no subject at
+all (« fais-moi un site »), or the page cannot exist without a fact only they have (the date and
+the place of an event they announce). Ask it in one sentence, wait for the answer, then go on
+without another. A missing contact detail is not blocking: the page goes out without it, it is
+never invented.
+
+1. **The working copy** is the local folder `site` of section 3. When `site_get` answers nothing
+   live, the version is built at its root. **When a site is already live**, the new one goes in
+   its own folder (`site/<short-name>/`, from the theme, in lower case and without accents), and
+   the existing files stay where they are: the publication of section 4 carries the whole site,
+   and nothing already online disappears. A missing working copy is downloaded first, as section 1
+   says.
+2. **One version, one builder**: you, or one sub-agent. The frame of section 3 holds whole —
+   plain HTML, LESS, relative links, light photos, the three.js hero, `noindex`, phone first,
+   contact by links. The content comes from the request and from what is generally true of the
+   theme; never a figure, a client, a testimonial, a price, a date or a promise they did not give.
+   No photo is downloaded from the web unless its licence allows it to be published: draw the
+   visuals in SVG or CSS, or use the images they gave.
+3. **The contrarian loop of section 3**, two rounds at most.
+4. **Publish it with the publishing step of section 4**, without the side-by-side root page, and
+   look at it in the browser at 390 px and 1440 px as section 4 says. Note it in their personal
+   `CLAUDE.md`, one line: « Site <thème> : <address> ».
+
+Then the link first, and two lines:
+
+> Voici votre site : <address>
+> Google ne le référence pas. Dites-moi ce que vous voulez changer : un texte, une couleur, une
+> photo, une section, une autre page. Je le fais, et la page se met à jour en une minute.
+
+Each later request follows section 5's iteration loop (change it, recompile the LESS, publish the
+whole site again, look, give the link again); there is no version to move to the root. Their own
+domain is section 6, on their explicit request only.
+
 ## What this skill never does
 
 - **Never ask for GitHub** while Castalie publishes the site: no account, no repository, no Pages,
@@ -258,7 +310,8 @@ GitHub.
   cancel or change the old hosting.
 - **Never publish anything private**: only the files a browser loads.
 - **Never invent** a fact, a figure, a client, a testimonial or a photo; a redesigned logo comes
-  only in « Réinventer ».
+  only in « Réinventer », or on the short path, where there is no brand to keep.
+- **Never interview** on the short path: one question at most, and only when something blocks.
 - **Never pay** for anything: no paid plan, no site builder, no theme, no hosting.
 - **Never send** the links to anyone: the leader shares them.
 - **Never unpublish** (`site_unpublish`) unless the leader asks to take the site offline.
@@ -270,3 +323,5 @@ Close the turn on the reply and the verdict of
 the reply. After the first pair, the verdict is *I need you*: which version to pursue, **1.A** « Sublimer », **1.B**
 « Réinventer ». Sharing the links and, on the GitHub path, the sign-in at the registrar are the
 leader's gestures: they end the turn on *For you to do* once nothing else is pending, never a question.
+On the short path there is no choice to make: the link is published and the turn ends on
+*Finished here for you*, unless the one blocking question of section 8 is pending.
