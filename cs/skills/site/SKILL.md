@@ -34,9 +34,12 @@ When the request reads both ways, the short path: a redesign is asked for with t
 ## 1. Where the site is published
 
 **Castalie publishes it.** Your tool catalogue carries the workspace's site verbs:
-`mcp__castalie__site_get`, `site_publish`, `site_stage` and `site_unpublish`. Every address you give
-the leader is the `address` one of them returned: **never build a site URL by hand**, not even from
-the workspace's name.
+`mcp__castalie__site_get`, `site_publish`, `site_stage` and `site_unpublish`. **You publish with the
+kit's command, never by passing files to `site_publish`**: `cs site publish <folder>` uploads the
+folder's bytes in one request and answers in seconds, where a tool call would make you re-type every
+byte of the site as text — minutes for one small page, and images as base64 on top. Every address
+you give the leader is the `address` the command or a verb returned: **never build a site URL by
+hand**, not even from the workspace's name.
 
 Two cases leave this path for section 7 (GitHub Pages), and only these two:
 
@@ -133,25 +136,28 @@ Wait for both. **Only you publish**, once both are done.
 - Write a small root `index.html`: the company's name, and two links, « Sublimer » to `sublimer/`
   and « Réinventer » to `reinventer/`, each with one line that says what it is. Same `noindex`,
   readable on a phone, nothing more.
-- **One `site_publish` call carries the whole site**: the root `index.html`, then every served file
-  of `sublimer/` and `reinventer/`, each at its relative path (`sublimer/index.html`,
-  `sublimer/css/main.css`, `reinventer/assets/logo.svg`…). HTML, CSS, JS, SVG and JSON go as
-  `content` (UTF-8 text); images, fonts and PDFs as `content_base64` (`base64 -w0 <file>`, or
-  `[Convert]::ToBase64String([IO.File]::ReadAllBytes("<file>"))` in PowerShell). Never the LESS
-  sources, never `material/`: only what a browser loads.
-- **The batch is the whole site.** It replaces the previous one at once: a file left out of the
-  batch is gone. So every later publication sends every file again, not only the changed ones.
-- **When the batch is too big for one call** (over about 15 MB of base64), prepare it in pieces:
-  `site_stage(files)` returns a `version_id`, each next `site_stage(files, version_id)` adds to
-  it, then `site_publish(version_id=<that id>)` puts the whole draft online.
+- **One command publishes the whole site**, from the working copy's folder:
+  `cs site publish <path of site> --exclude material`. It sends the root `index.html` and every served file
+  of `sublimer/` and `reinventer/` at its relative path (`sublimer/index.html`,
+  `sublimer/css/main.css`, `reinventer/assets/logo.svg`…), as bytes, images included. It leaves on
+  the machine what a browser does not load: `material/` (the `--exclude`), dotfiles, `README.md`,
+  `CLAUDE.md`, and every type Castalie does not serve — the LESS sources are listed under
+  `skipped_files` in its answer; read that list, and move anything private out of the folder
+  before publishing. Never copy a file's content into `site_publish` yourself.
+- **The folder is the whole site.** It replaces the previous one at once: a file no longer in the
+  folder is gone from the site. So every later publication is the same command on the same folder.
+- **When the command is not there** (`cs` answers no `site` command: a kit too old to carry it),
+  update the kit rather than falling back on `site_publish`.
+  Only when it still cannot run, publish with `site_publish(files)` — each file as `content` (text)
+  or `content_base64` — and, over about 15 MB, with `site_stage` then `site_publish(version_id)`.
 - **A refusal writes nothing**: the site already online keeps answering. Fix the cause and
   publish again. `file_too_large` or `site_too_large`: shrink the photos. `too_many_files`: drop
   what the pages do not load. `invalid_path`, `duplicate_path`, `unsupported_type` (a `.less`, a
-  `.md`): correct the batch. `empty_site`: the batch carried no file. `version_not_found`: stage
+  `.md`): correct the folder. `empty_site`: the folder holds no served file. `version_not_found`: stage
   again. `forbidden`: the leader only reads in this Castalie workspace; say so in one sentence (an
   owner of the workspace makes them a member) and stop there. Read every `warnings` line the verb
   returns, and fix what it names.
-- **Keep the `address` the verb returns.** The two demo addresses are that address followed by
+- **Keep the `address` the command returns.** The two demo addresses are that address followed by
   `sublimer/` and `reinventer/`. Check both answer 200 with `curl -sI`.
 - **Look at both before they do**, in the kit's `playwright` browser at 390 px and 1440 px wide
   (`${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`): each page answers, the animation runs and its fallback shows
@@ -171,14 +177,15 @@ not indexed:
 
 **The chosen version goes to the root, alone.** In the local folder, its files move to the root
 (`index.html`, `css/`, `less/`, `assets/`, and the rest), and the other version's folder and the
-side-by-side page are deleted. Then a new `site_publish` with the chosen version's files at the
-root and nothing else: the other version is dropped from the site, not kept under its folder. The
+side-by-side page are deleted. Then `cs site publish <path of site> --exclude material` again: the folder
+now holds the chosen version at its root and nothing else, so the other version is dropped from
+the site, not kept under its folder. The
 demo address becomes the `address` itself. Then two lines, no more:
 
 > Dites-moi ce que vous voulez changer : un texte, une couleur, une photo, une section, une autre
 > page. Je le fais, et la page se met à jour en une minute.
 
-On each request: change it, recompile the LESS, publish the whole site again with `site_publish`,
+On each request: change it, recompile the LESS, publish the whole site again with `cs site publish`,
 look at it in the browser, give the link again. Ask one question when the request is unclear,
 never a list of options. Other pages come the same way, on request, in the same LESS base, each in
 its own folder (`contact/index.html` answers at `<address>contact/`).

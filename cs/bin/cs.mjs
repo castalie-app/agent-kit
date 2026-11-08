@@ -8,7 +8,7 @@
 //
 // Strictly outward: this CLI reads strategy/briefs/specs and writes back their
 // text (bodies). It never sends your source code — the one command that reads a
-// folder, `artifact publish`, sends the page the person named for the team.
+// folders, `artifact publish` and `site publish`, send the pages the person named.
 //
 // Config resolution (first hit wins per field):
 //   env CASTALIE_ENDPOINT / CASTALIE_TOKEN (then the same two under the kit's first name)
@@ -29,6 +29,8 @@
 //   POST /api/pm/proof-packs/<kind>/<id>   <- { "pack": {…}, "pr_url": "…" }  (kind = bug | spec | brief)
 //   POST /api/pm/artifacts                 <- { title, description, artifact_id, files: [{ path, content_base64 }] }
 //   GET  /api/pm/artifacts                 -> { success, artifacts }
+//   POST /api/pm/site                      <- multipart/form-data: paths (JSON array), files (one part each)
+//   GET  /api/pm/site                      -> site_get's answer
 //
 // Commands:
 //   cs search <query>
@@ -54,6 +56,8 @@
 //   cs artifact list                   # the workspace's artifacts
 //   cs git-credential install [<url>]  # git asks the kit for a workspace's repositories; no password (git-credential.mjs)
 //   cs git-credential get|store|erase  # git's credential protocol, called by git itself
+//   cs site publish <folder> [--exclude <a,b>]   # the workspace's static site, uploaded as bytes (site.mjs)
+//   cs site get                        # the site's address, live version and files
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -62,6 +66,7 @@ import { findConfig } from "./config.mjs";
 import { defaultEndpoint, loginCommand, NO_ENDPOINT_HELP, openBrowser, renew, resolveConnection, startLogin } from "./auth.mjs";
 import { attachFiles } from "./attach.mjs";
 import { ArtifactError, prepareArtifact } from "./artifact.mjs";
+import { prepareSite, SiteError } from "./site.mjs";
 
 const TYPES = new Set(["feature-brief", "feature-spec", "bug"]);
 
@@ -78,7 +83,7 @@ async function connection() {
 }
 
 // ── HTTP ──────────────────────────────────────────────────────────────────
-async function request(method, path, { json, raw } = {}) {
+async function request(method, path, { json, raw, form } = {}) {
   let conn = await connection();
   const send = (token) => fetch(`${conn.endpoint}${path}`, {
     method,
@@ -87,7 +92,8 @@ async function request(method, path, { json, raw } = {}) {
       "Accept": raw ? "text/markdown, text/plain, */*" : "application/json",
       ...(json ? { "Content-Type": "application/json" } : {}),
     },
-    body: json ? JSON.stringify(json) : undefined,
+    // A FormData body sets its own multipart Content-Type, boundary included.
+    body: json ? JSON.stringify(json) : form,
   });
   let res = await send(conn.token);
   if (res.status === 401 && conn.oauth) {
@@ -274,6 +280,31 @@ async function cmdArtifact(args) {
   if (answer.success === false) process.exitCode = 1;
 }
 
+// Publishes a folder as the workspace's static site (site.mjs), or reads it. The folder's bytes are
+// uploaded by this process: none of them passes through the agent's tool calls (ticket 367).
+async function cmdSite(args) {
+  const [action, folder] = args._;
+  if (action === "get") return print(await request("GET", "/api/pm/site"));
+  if (action !== "publish" || !folder || args.exclude === true) {
+    die("Usage: cs site publish <folder> [--exclude <folder,folder>]   |   cs site get");
+  }
+  let prepared;
+  try {
+    prepared = prepareSite(folder, { exclude: args.exclude });
+  } catch (e) {
+    if (e instanceof SiteError) die(`${e.error}${e.path ? ` (${e.path})` : ""}: ${e.message}`);
+    throw e;
+  }
+  const started = Date.now();
+  const answer = await request("POST", "/api/pm/site", { form: prepared.form });
+  print({
+    ...answer,
+    ...(prepared.skipped.length ? { skipped_files: prepared.skipped } : {}),
+    upload_seconds: Math.round((Date.now() - started) / 100) / 10,
+  });
+  if (answer.success === false) process.exitCode = 1;
+}
+
 // ── arg parsing / output ────────────────────────────────────────────────────
 function parseArgs(argv) {
   const out = { _: [] };
@@ -316,6 +347,12 @@ const HELP = `cs — Castalie project-management CLI
   cs git-credential install [<workspace or clone url>]
                                     # git asks the kit for that workspace's repositories (clone,
                                     #   pull, push): no password issued, none printed, none typed
+  cs site publish <folder> [--exclude <folder,folder>]
+                                    # publish the folder as the workspace's static site (the WHOLE
+                                    #   site: a file left out is gone); its bytes are uploaded here,
+                                    #   never through a tool call. Dotfiles, README/CLAUDE/AGENTS.md,
+                                    #   node_modules and unserved types (.less) stay, and are listed
+  cs site get                       # the site's address, live version and files
   cs agent-tasks help               # declare this workstation's agent tasks to Castalie
   cs worktrees help                 # give back the agent copies and build outputs nobody uses
   cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
@@ -416,6 +453,7 @@ async function main() {
     case "on-behalf": return cmdOnBehalf();
     case "attach": return cmdAttach(args);
     case "artifact": return cmdArtifact(args);
+    case "site": return cmdSite(args);
     case "login": return cmdLogin(args);
     // What `kit_feedback_send` reports as `kit_version`: read from the manifest beside this file,
     // so a Claude and a Codex session name the same number without knowing where the plugin sits.

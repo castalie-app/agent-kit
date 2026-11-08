@@ -318,7 +318,7 @@
     {
       "name": "site_publish",
       "kind": "write",
-      "description": "Publish the workspace's static site at its Castalie address, returned as address (never build it by hand). files is the WHOLE new site and replaces the previous one in one gesture; or version_id publishes a draft prepared with site_stage, for a site too large for one call. Owner or member (a viewer gets forbidden), the same rule as /admin/site. A refused file publishes nothing and names its path: invalid_path, unsupported_type, file_too_large, site_too_large, too_many_files, duplicate_path, invalid_content, empty_site, version_not_found, files_or_version_id. warnings carries no_root_index when / has no index.html.",
+      "description": "Publish the workspace's static site at its Castalie address, returned as address (never build it by hand). A site that is a folder on disk is published with the kit's `cs site publish <folder>` instead, which uploads its bytes (POST /api/pm/site) without passing them through a tool call. files is the WHOLE new site and replaces the previous one in one gesture; or version_id publishes a draft prepared with site_stage, for a site too large for one call. Owner or member (a viewer gets forbidden), the same rule as /admin/site. A refused file publishes nothing and names its path: invalid_path, unsupported_type, file_too_large, site_too_large, too_many_files, duplicate_path, invalid_content, empty_site, version_not_found, files_or_version_id. warnings carries no_root_index when / has no index.html.",
       "params": [
         {
           "name": "files",
