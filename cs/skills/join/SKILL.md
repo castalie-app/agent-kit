@@ -103,13 +103,17 @@ install does not see the new command: call it by its full path
 
 ### In Castalie
 
-1. `mcp__castalie__git_credential_issue`, with this computer's name as `label`: a git password for
-   this person, which opens their workspace's repositories and nothing else.
-2. Give its `credential_input`, as it is, to `git credential approve` on standard input: the
-   machine's credential helper keeps it. The password never goes into a file, a message or the
-   reply.
-3. `git ls-remote <address>` answers with the space's branches: the access is open. A refusal
-   means the password was not kept — issue a new one; never ask the person for it.
+1. `cs git-credential install <address>`: git on this machine now asks the kit for this
+   workspace's repositories, with the sign-in the kit already holds. No password is issued, shown
+   or typed, so nothing secret crosses the conversation. When it says the kit holds no key for the
+   workspace, `cs login <workspace url>` once (the person approves in their browser), then go on.
+2. `git ls-remote <address>` answers with the space's branches: the access is open. A refusal
+   means the kit's sign-in lapsed — `cs login <workspace url>` again; never ask the person for a
+   password.
+3. Only on a machine without the kit (no `cs` command):
+   `mcp__castalie__git_credential_issue` with the computer's name as `label`, its
+   `credential_input` given as it is to `git credential approve` on standard input. The password
+   never goes into a file, a message or the reply.
 
 Nothing else: their membership of the workspace is what opens the space.
 

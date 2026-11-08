@@ -52,6 +52,8 @@
 //   cs proof-pack push (--bug|--spec|--brief) <id>   # store the computed pack on that work item
 //   cs artifact publish <folder> [--title <t>] [--description <d>] [--id <artifact_id>]   # a page or deck for the team (artifact.mjs)
 //   cs artifact list                   # the workspace's artifacts
+//   cs git-credential install [<url>]  # git asks the kit for a workspace's repositories; no password (git-credential.mjs)
+//   cs git-credential get|store|erase  # git's credential protocol, called by git itself
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -311,6 +313,9 @@ const HELP = `cs — Castalie project-management CLI
                                     # publish a page or a deck (index.html at the folder's root) for
                                     #   the workspace's members; --id replaces that artifact in place
   cs artifact list                  # the workspace's artifacts, with their addresses
+  cs git-credential install [<workspace or clone url>]
+                                    # git asks the kit for that workspace's repositories (clone,
+                                    #   pull, push): no password issued, none printed, none typed
   cs agent-tasks help               # declare this workstation's agent tasks to Castalie
   cs worktrees help                 # give back the agent copies and build outputs nobody uses
   cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
@@ -376,6 +381,12 @@ async function main() {
   if (cmd === "proof-pack") {
     const proof = await import("./proof-pack.mjs");
     process.exitCode = proof.runCli(rest);
+    return;
+  }
+  // `git-credential` speaks git's protocol on stdin/stdout: the shared parser and print() stay out of it.
+  if (cmd === "git-credential") {
+    const helper = await import("./git-credential.mjs");
+    process.exitCode = await helper.runCli(rest);
     return;
   }
   if (cmd === "codex") {

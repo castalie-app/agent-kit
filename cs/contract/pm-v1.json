@@ -194,7 +194,7 @@
     {
       "name": "git_repository_list",
       "kind": "read",
-      "description": "The workspace's git repositories hosted by Castalie, no GitHub account needed: each {name, clone_url, head, head_id, branch_count, total_bytes, object_count, last_push_at, last_push_by, read_only, moved_to_url, moved_at}. clone_url is https://<workspace>/git/<name>.git — use it as given for git clone, git push and claude plugin marketplace add. A git client authenticates with a password from git_credential_issue. Any active member reads them, the same rule as /admin/depots.",
+      "description": "The workspace's git repositories hosted by Castalie, no GitHub account needed: each {name, clone_url, head, head_id, branch_count, total_bytes, object_count, last_push_at, last_push_by, read_only, moved_to_url, moved_at}. clone_url is https://<workspace>/git/<name>.git — use it as given for git clone, git push and claude plugin marketplace add. git authenticates through the kit's credential helper (cs git-credential install <clone_url>), or else with a password from git_credential_issue. Any active member reads them, the same rule as /admin/depots.",
       "params": [],
       "returns": {
         "success": "bool",
@@ -205,7 +205,7 @@
     {
       "name": "git_repository_create",
       "kind": "write",
-      "description": "Create an empty git repository hosted by Castalie for the workspace (e.g. bonnes-pratiques, the company's skills marketplace) and return it with its clone_url. Owner or member (a viewer gets forbidden), the same rule as /admin/depots. Refusals: invalid_name, already_exists, too_many_repositories.",
+      "description": "Create an empty git repository hosted by Castalie for the workspace (e.g. bonnes-pratiques, the company's skills marketplace) and return it with its clone_url and git_auth — the command that lets git push to it with no password in the conversation (cs git-credential install <clone_url>). Owner or member (a viewer gets forbidden), the same rule as /admin/depots. Refusals: invalid_name, already_exists, too_many_repositories.",
       "params": [
         {
           "name": "name",
@@ -217,6 +217,7 @@
       "returns": {
         "success": "bool",
         "repository": "object",
+        "git_auth": "string",
         "error": "string",
         "message": "string"
       }
@@ -255,7 +256,7 @@
     {
       "name": "git_credential_issue",
       "kind": "write",
-      "description": "Issue a git password for the CALLER, so git on this machine clones and pushes the workspace's repositories. Returns username, password (shown once, starts with cgit_), host and credential_input — pipe it to `git credential approve` so the machine's credential helper keeps it; never write the password into a file. It opens /git/ of this workspace and nothing else, and what it may do follows the caller's role. Any active member, the same rule as /admin/depots.",
+      "description": "Where the kit is installed, use cs git-credential install <clone_url> instead: no secret crosses the conversation. Otherwise: issue a git password for the CALLER, so git on this machine clones and pushes the workspace's repositories. Returns username, password (shown once, starts with cgit_), host and credential_input — pipe it to `git credential approve` so the machine's credential helper keeps it; never write the password into a file. It opens /git/ of this workspace and nothing else, and what it may do follows the caller's role. Any active member, the same rule as /admin/depots.",
       "params": [
         {
           "name": "label",

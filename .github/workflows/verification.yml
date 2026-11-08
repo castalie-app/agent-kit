@@ -102,6 +102,11 @@ jobs:
       - name: The instruction bench splits sections, picks session moments and maps the judge back
         run: node --test cs/bin/instruction-bench.test.mjs
 
+      # The git credential helper: a key goes only to the workspace written beside it, on git's own
+      # pipe, and the machine's own helper is never asked for that host. Temporary folders, no network.
+      - name: The git credential helper answers git for its own workspace only
+        run: node --test cs/bin/git-credential.test.mjs
+
       - name: The resume hook points the automatic continue at /cs:continue
         run: node --test cs/bin/usage-limit-continue.test.mjs
 
