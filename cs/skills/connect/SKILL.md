@@ -18,15 +18,19 @@ want their repository to talk to Castalie. Which of the two paths that takes is 
 **They have one** — the rest of this skill applies. Diagnose, then the setup command.
 
 **They do not** — open one for them, now, from here. No e-mail to type, no page to open, no token to
-copy: run this yourself, at the root of the repository they work in:
+copy. Ask **one** question first, and nothing else: *"Quel est le nom de votre entreprise ?"* — the
+workspace carries it, on its address (`<name>.castalie.app`, with a short suffix when it is taken) and
+on every screen. If they already named their company in this conversation, use that and ask nothing.
+Never take the folder's or the repository's name instead: a repository is called `Test` or `app`, and
+the workspace would show it everywhere. Then run this yourself, at the root of the repository they
+work in:
 
 ```bash
-npx -y github:castalie-app/agent-kit --new --name "<a name for the workspace>"
+npx -y github:castalie-app/agent-kit --new --name "<their company's name>"
 ```
 
-The name is optional — the folder's name stands in for it — and it only seeds the workspace's address
-(`<name>.castalie.app`, with a short suffix when it is taken). Take it from what they said, or from the
-repository; do not ask for one.
+`--name` is required here: run by an agent, with no terminal to ask in, the command refuses without it
+rather than guess.
 
 What it does, and why you may run it yourself where you may not run the token command:
 
