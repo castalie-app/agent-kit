@@ -31,6 +31,7 @@
 //   GET  /api/pm/artifacts                 -> { success, artifacts }
 //   POST /api/pm/site                      <- multipart/form-data: paths (JSON array), files (one part each)
 //   GET  /api/pm/site                      -> site_get's answer
+//   GET  /api/pm/company-registry/<siren>/documents/<id>[?kind=acte|bilan] -> application/pdf
 //
 // Commands:
 //   cs search <query>
@@ -58,6 +59,7 @@
 //   cs git-credential get|store|erase  # git's credential protocol, called by git itself
 //   cs site publish <folder> [--exclude <a,b>]   # the workspace's static site, uploaded as bytes (site.mjs)
 //   cs site get                        # the site's address, live version and files
+//   cs registry download <siren> <document_id> <file> [--kind acte|bilan]   # a filed PDF, straight to a file (registry.mjs)
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -67,6 +69,7 @@ import { defaultEndpoint, loginCommand, NO_ENDPOINT_HELP, openBrowser, renew, re
 import { attachFiles } from "./attach.mjs";
 import { ArtifactError, prepareArtifact } from "./artifact.mjs";
 import { prepareSite, SiteError } from "./site.mjs";
+import { downloadDocument, parseDownload, RegistryError } from "./registry.mjs";
 
 const TYPES = new Set(["feature-brief", "feature-spec", "bug"]);
 
@@ -305,6 +308,19 @@ async function cmdSite(args) {
   if (answer.success === false) process.exitCode = 1;
 }
 
+// Writes a PDF filed with the company register to a file (registry.mjs): the bytes never pass through
+// the conversation, which the MCP verb's base64 did. Only the file, its size and its SHA-256 are printed.
+async function cmdRegistry(args) {
+  const [action, ...rest] = args._;
+  if (action !== "download") die("Usage: cs registry download <siren> <document_id> <file> [--kind acte|bilan]");
+  try {
+    print(await downloadDocument(parseDownload({ ...args, _: rest })));
+  } catch (e) {
+    if (e instanceof RegistryError) die(`${e.error}: ${e.message}`);
+    die(e.code === "login_required" ? `${e.message} Run '${loginCommand(e.endpoint)}' first.` : e.message);
+  }
+}
+
 // ── arg parsing / output ────────────────────────────────────────────────────
 function parseArgs(argv) {
   const out = { _: [] };
@@ -353,6 +369,9 @@ const HELP = `cs — Castalie project-management CLI
                                     #   never through a tool call. Dotfiles, README/CLAUDE/AGENTS.md,
                                     #   node_modules and unserved types (.less) stay, and are listed
   cs site get                       # the site's address, live version and files
+  cs registry download <siren> <document_id> <file> [--kind acte|bilan]
+                                    # a PDF filed with the French company register (from
+                                    #   company_registry_documents), written straight to <file>
   cs agent-tasks help               # declare this workstation's agent tasks to Castalie
   cs worktrees help                 # give back the agent copies and build outputs nobody uses
   cs prompt screen --kind <kind> (--file <path> | --stdin) [--sender <label>] [--subject <s>] [--json]
@@ -454,6 +473,7 @@ async function main() {
     case "attach": return cmdAttach(args);
     case "artifact": return cmdArtifact(args);
     case "site": return cmdSite(args);
+    case "registry": return cmdRegistry(args);
     case "login": return cmdLogin(args);
     // What `kit_feedback_send` reports as `kit_version`: read from the manifest beside this file,
     // so a Claude and a Codex session name the same number without knowing where the plugin sits.

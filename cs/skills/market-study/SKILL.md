@@ -70,8 +70,11 @@ workspace's Castalie MCP:
 3. `company_registry_accounts` — the annual accounts, newest first: revenue (FJ), net income (HN),
    equity (DL), headcount (YP), year on year — **the growth and the profitability nobody publishes on
    their pricing page**;
-4. `company_registry_documents`, then `company_registry_download` for the deeds that matter — the
-   statutes, a capital increase (a fund came in: at what valuation?), a change of directors.
+4. `company_registry_documents`, then the deeds that matter — the statutes, a capital increase (a
+   fund came in: at what valuation?), a change of directors — written straight to a file with
+   `cs registry download <siren> <document_id> <file>`, or `curl -sfo <file> <download_url>` from
+   `company_registry_download`'s answer. Never ask for `include_content`: a set of statutes is a
+   megabyte of base64, past what a tool answer carries.
 
 The INPI account is shared — 6 requests a minute and 300 a day for a workspace: ask for the
 competitors that matter, not all forty, and on `rate_limited` wait the `retry_after_seconds`, never
