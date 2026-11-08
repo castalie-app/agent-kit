@@ -9,5 +9,5 @@
   "engines": {
     "node": ">=22.23.4"
   },
-  "license": "SEE LICENSE IN ../LICENSE"
+  "license": "Apache-2.0"
 }
