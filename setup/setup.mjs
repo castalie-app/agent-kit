@@ -12,7 +12,8 @@
 // it reads it from there.
 //
 // Does four things, in order, each best-effort with a clear message on failure:
-//   a) installs the plugin via the Claude CLI (marketplace add + install) — removing first any
+//   a) installs the plugin via the Claude CLI (marketplace add, then refresh, then install or
+//      update to the marketplace's current version) — removing first any
 //      marketplace still registered under a former name — or prints manual steps if
 //      `claude` isn't on PATH; then turns on the marketplace's auto-update in the user's settings,
 //      off by default for every marketplace that is not Anthropic's;
@@ -38,7 +39,8 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from "node:fs";
-import { join, basename } from "node:path";
+import { join } from "node:path";
+import { createInterface } from "node:readline/promises";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
@@ -55,7 +57,7 @@ import { fileURLToPath } from "node:url";
  * `connect` skill. The promise held; the grep found six and there was no sixth place. Whoever
  * renames next should expect the same and be told if it is not. Since 1.68 the address is also
  * the source of the auto-update entry a host repository commits: `KIT_REPOSITORY` in
- * `cs/bin/worktree-settings.mjs` (this file is packed alone for npx and cannot import it) and the
+ * `cs/bin/worktree-settings.mjs` (npx packs this file without `cs/bin/`, so it cannot import it) and the
  * snippet in the `adapt` skill — two more to change, and invariant 3 refuses the old one in each.
  *
  * GitHub redirects the old path, which is exactly what makes a stale one easy to keep: everything
@@ -212,8 +214,10 @@ const HELP = `castalie-setup — connect your agent to your Castalie workspace
   <token>       your Castalie API token
   --endpoint    the address of your workspace
   --new         no workspace yet: open a free one now — no e-mail, no screen — and connect it here.
-                Its name is --name, or this folder's name. Attach an e-mail address later, from
-                your agent (account_claim) or from your profile in Castalie
+  --name        with --new: your company's name, which names the workspace. Asked for in a
+                terminal when missing; required when nothing can answer (an agent, a script).
+                Attach an e-mail address later, from your agent (account_claim) or from your
+                profile in Castalie
   --no-statusline  do not touch the status line under your prompt
   --no-pane        do not enable the pane beside the transcript (/where)
   --enable-pane    enable that pane and do nothing else (no token needed)
@@ -271,7 +275,9 @@ function installPlugin(haveClaude) {
       console.log(`      claude plugin marketplace remove ${former}   # only if that entry exists`);
     }
     console.log(`      claude plugin marketplace add ${REPOSITORY}`);
+    console.log(`      claude plugin marketplace update ${MARKETPLACE_NAME}`);
     console.log(`      claude plugin install ${PLUGIN}`);
+    console.log(`      claude plugin update ${PLUGIN}`);
   };
   if (!haveClaude) {
     warn("`claude` not found on PATH — skipping the automatic install.");
@@ -288,12 +294,63 @@ function installPlugin(haveClaude) {
       warn(`could not remove the former marketplace \`${former}\`; the install below may land beside it.`);
     }
   }
-  if (run(["plugin", "marketplace", "add", REPOSITORY]) && run(["plugin", "install", PLUGIN])) {
-    ok("plugin installed.");
-  } else {
+  // `marketplace add` on a marketplace this workstation already knows keeps the copy it has, and
+  // `plugin install` on a plugin already installed keeps ITS version: run a release apart, the
+  // pair left the plugin a version behind the marketplace (ticket 370, 8 November 2026 — 1.89.0
+  // installed, 1.90.0 offered, `claude plugin update` typed by hand). So the marketplace is
+  // refreshed, and the plugin updated whenever its version still differs from the marketplace's.
+  const added = run(["plugin", "marketplace", "add", REPOSITORY]) || marketplaceVersion() !== null;
+  if (added && !run(["plugin", "marketplace", "update", MARKETPLACE_NAME])) {
+    warn(`could not refresh the marketplace \`${MARKETPLACE_NAME}\` — the version below may be the one it already had.`);
+  }
+  if (!added || !run(["plugin", "install", PLUGIN])) {
     warn("the Claude CLI reported an error — finish the install by hand:");
     manual();
+    return;
   }
+  const offered = marketplaceVersion();
+  if (offered && installedVersion() !== offered) run(["plugin", "update", PLUGIN, "--scope", "user"]);
+  const installed = installedVersion();
+  if (offered && installed === offered) ok(`plugin installed, at the marketplace's version (${installed}).`);
+  else if (!offered) ok(`plugin installed${installed ? ` (${installed})` : ""}.`);
+  else {
+    warn(`plugin at ${installed ?? "an unknown version"}, the marketplace offers ${offered} — bring it level with:`);
+    console.log(`      claude plugin update ${PLUGIN}`);
+  }
+}
+
+const claudeConfigDir = () => process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+const readJson = (path) => { try { return JSON.parse(readFileSync(path, "utf8")); } catch { return null; } };
+
+/**
+ * The version the `castalie` marketplace offers, read from the copy the CLI keeps of it — its
+ * manifest names the plugin's folder, whose own manifest carries the number. Null when any of it
+ * is not where the CLI writes it.
+ * @returns {string | null}
+ */
+function marketplaceVersion() {
+  const at = readJson(join(claudeConfigDir(), "plugins", "known_marketplaces.json"))?.[MARKETPLACE_NAME]?.installLocation;
+  if (typeof at !== "string") return null;
+  const entry = readJson(join(at, ".claude-plugin", "marketplace.json"))?.plugins?.find((p) => p?.name === PLUGIN.split("@")[0]);
+  if (entry?.version) return String(entry.version);
+  const folder = typeof entry?.source === "string" ? entry.source : null;
+  const version = folder && readJson(join(at, folder, ".claude-plugin", "plugin.json"))?.version;
+  return version ? String(version) : null;
+}
+
+/**
+ * The plugin as installed for this user — the scope setup installs it in. Null when it is not.
+ * @returns {{ version?: string, installPath?: string } | null}
+ */
+function installedPlugin() {
+  const entries = readJson(join(claudeConfigDir(), "plugins", "installed_plugins.json"))?.plugins?.[PLUGIN];
+  return Array.isArray(entries) ? entries.find((e) => e?.scope === "user") ?? null : null;
+}
+
+/** @returns {string | null} */
+function installedVersion() {
+  const version = installedPlugin()?.version;
+  return version ? String(version) : null;
 }
 
 /**
@@ -526,9 +583,14 @@ async function smoke(endpoint, token) {
  */
 function installStatusLine(endpoint, token) {
   step("Installing the status line that names the work this copy has in hand");
-  const script = fileURLToPath(new URL("../cs/statusline/bg-statusline.mjs", import.meta.url));
-  if (!existsSync(script)) {
-    warn("no status line script in this copy of the kit — skipped, nothing else is affected.");
+  // npx runs a packed copy of this repository, holding only what package.json's `files` lists —
+  // which, until ticket 366, was this file alone: every setup run through npx skipped the row.
+  // The script is packed now; the plugin installed a moment ago carries it too, and stands in.
+  const own = fileURLToPath(new URL("../cs/statusline/bg-statusline.mjs", import.meta.url));
+  const installed = installedPlugin()?.installPath;
+  const script = [own, installed && join(installed, "statusline", "bg-statusline.mjs")].find((p) => p && existsSync(p));
+  if (!script) {
+    warn("no status line script in this copy of the kit nor in the installed plugin — skipped, nothing else is affected.");
     return;
   }
   // The address and the token are handed over rather than resolved: this runs in the same
@@ -543,7 +605,7 @@ function installStatusLine(endpoint, token) {
     return;
   }
   ok(String(run.stdout || "").trim() || "installed.");
-  const shim = join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "bg-statusline.mjs");
+  const shim = join(claudeConfigDir(), "bg-statusline.mjs");
   ok(`to remove it: node "${shim}" --uninstall`);
 }
 
@@ -619,7 +681,7 @@ function setUserEnv(name, value) {
 // PowerShell 7.6.6 crashed laying it out in a Windows Terminal tab still too narrow for it, and every
 // tab a launcher opened for Claude died before Claude started. The plugin's SessionStart hook
 // `powershell-quiet.mjs` keeps it set on every update; this is the same gesture for a first install
-// (this file is packed alone for npx and cannot import the hook).
+// (npx packs this file without the hooks, so it cannot import the hook).
 function quietPowerShell() {
   if (process.platform !== "win32") return "skipped";
   if (String(process.env.POWERSHELL_UPDATECHECK ?? "").trim().toLowerCase() === "off") return "already";
@@ -658,6 +720,27 @@ async function openWorkspace(signupAddress, name) {
   return body;
 }
 
+/**
+ * The name of the person's company, which names the new workspace. Never the folder's name: a
+ * repository is called `Test`, `app` or `site-v2`, and the workspace's address and every screen
+ * went on showing it (ticket 372, Benoît: « demander le nom de l'entreprise pour créer l'espace
+ * plutôt que de prendre le nom du dossier courant »). `--name` answers it; a terminal is asked,
+ * once; with nobody to ask — an agent, a script — it refuses in one line, and `connect` asks the
+ * person before it runs this.
+ * @param {string | undefined} given `--name`
+ * @returns {Promise<string>}
+ */
+async function companyName(given) {
+  const refuse = () => fail(`--new needs your company's name: pass --name "<your company>".`);
+  if (given !== undefined) return given.trim() || refuse();
+  if (!process.stdin.isTTY || !process.stdout.isTTY) refuse();
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const closed = new Promise((resolve) => rl.once("close", () => resolve("")));
+  const answer = await Promise.race([rl.question("Your company's name (it names your workspace): "), closed]);
+  rl.close();
+  return String(answer).trim() || refuse();
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.help) { console.log(HELP); return; }
@@ -690,8 +773,8 @@ async function main() {
     if (existsSync(existing)) {
       fail(`this folder is already connected (${existing}). Run setup with that workspace's token instead of --new,\n  or remove ${CONFIG_DIR}/ first if you really want a second workspace.`);
     }
-    const name = (args.name ?? basename(process.cwd())).trim();
-    step(`Opening a free Castalie workspace${name ? ` named "${name}"` : ""} — no e-mail, no screen`);
+    const name = await companyName(args.name);
+    step(`Opening a free Castalie workspace named "${name}" — no e-mail, no screen`);
     const opened = await openWorkspace(args.signup ?? SIGNUP_ADDRESS, name);
     ok(`workspace "${opened.workspace?.name ?? name}" opened at ${opened.endpoint}`);
     ok("its first token goes into this project's configuration below, and is never printed.");
