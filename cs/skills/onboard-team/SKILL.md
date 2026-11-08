@@ -55,10 +55,14 @@ already have. On their yes:
 - **The repository**: `mcp__castalie__git_repository_create` with a name that says what it holds
   (`pratiques`, `practices`), in the company's language. Keep the `clone_url` it returns —
   `https://<workspace>.castalie.app/git/<name>.git` — and never build that address by hand.
-- **This machine's git password**: `mcp__castalie__git_credential_issue` with the machine's name as
-  `label`, then give its `credential_input` to `git credential approve` on standard input, so the
-  machine's credential helper keeps it. The password never goes into a file, a message or the
-  reply; it opens this workspace's repositories and nothing else.
+- **git's access, with no password**: run the `git_auth` command the creation returned —
+  `cs git-credential install <clone_url>`. git on this machine then asks the kit for this
+  workspace's repositories, with the sign-in the kit already holds: nothing is issued, shown or
+  typed, so no secret crosses the conversation and an unattended assistant pushes as well as an
+  attended one. When it says the kit holds no key for the workspace, `cs login <workspace url>`
+  once, then go on. Only on a machine without the kit: `mcp__castalie__git_credential_issue`, its
+  `credential_input` given to `git credential approve` on standard input, never into a file, a
+  message or the reply.
 - **The first push**: `git clone <clone_url>` into a working folder (« You appear to have cloned an
   empty repository » is expected), write the files below, commit, `git push origin HEAD:main`.
 
