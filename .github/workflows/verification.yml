@@ -128,6 +128,11 @@ jobs:
       - name: cs artifact publish reads a folder and checks the limits before sending
         run: node --test cs/bin/artifact.test.mjs
 
+      # What a folder becomes before `cs site publish` uploads it (Castalie ticket 367): the served
+      # files, what stays and is listed, the server's limits, and the multipart body with its paths.
+      - name: cs site publish reads a folder and checks the limits before uploading
+        run: node --test cs/bin/site.test.mjs
+
       # The decisions panel the same way: its cards, its groups per agent and its whole sheet are
       # pure functions, replayed on answers in the server's own shape. What reaches the engine
       # itself — the bind, the panes, a press, on the terminal's table and the desktop's — is

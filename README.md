@@ -160,6 +160,18 @@ opens only when you ask (`artifact_share`). A folder with images or a few MB goe
 on your machine; the limits (5 MiB a file, 25 MiB and 500 files an artifact) are checked before
 anything is sent.
 
+### Your workspace's site, published from a folder
+
+`cs site publish <folder>` publishes a folder as the workspace's static site, at the address
+Castalie answers (`https://<workspace>.castalie.page/`): the folder is the WHOLE site, uploaded as
+bytes in one request, so a page with its images goes online in seconds and none of it passes
+through the assistant's tool calls. `--exclude material,drafts` keeps folders on your machine;
+dotfiles, `README.md`, `CLAUDE.md`, `AGENTS.md`, `node_modules/` and every type a site does not
+serve (a `.less` source) stay too, and the answer lists the latter under `skipped_files`. The
+limits (5 MiB a file, 25 MiB and 1000 files a site) are checked before anything is sent; the rule
+is the site verbs' (an owner or a member publishes). `cs site get` reads the address and the live
+version.
+
 ### How updates reach you
 
 The marketplace tracks this repository, so a skill improved here reaches every installation without
@@ -763,6 +775,7 @@ cs proof-pack compute               # the delivery's proof, computed from the to
 cs proof-pack push --spec 42 --pr <url>           # stores that pack on the spec; no code, only paths, counts and hashes
 cs artifact publish ./deck          # the folder's index.html and its files, for the workspace's members
 cs artifact list                    # the workspace's artifacts, with their addresses
+cs site publish ./site --exclude material   # the folder as the workspace's site, uploaded as bytes
 cs worktrees status                 # what a sweep would remove, copy by copy, and what each one keeps
 cs worktrees sparse --write         # worktree.sparsePaths = the tracked folders minus agentCheckoutExclude
 ```
@@ -910,6 +923,7 @@ cs/
   bin/castalie-files-mcp.mjs      # starts castalie-files: attach_file and login (castalie-files.mjs)
   bin/attach.mjs                  # reads, lightens and uploads a local file — shared by attach_file and cs attach
   bin/artifact.mjs                # cs artifact publish: a folder read, checked against the limits, sent
+  bin/site.mjs                    # cs site publish: a folder read, its served files uploaded as multipart
   bin/auth.mjs                    # the workspace sign-in (OAuth, PKCE, loopback) and its renewal
   bin/config.mjs                  # where the endpoint and a hand-written token are read from
   bin/agent-tasks.mjs             # cs agent-tasks: this workstation's agent tasks, reported to Castalie
