@@ -132,6 +132,12 @@
         "method": "GET",
         "path": "/api/pm/artifacts",
         "returns": "{ success, artifacts } — the same answer as artifact_list"
+      },
+      {
+        "method": "GET",
+        "path": "/api/pm/company-registry/{siren}/documents/{document_id}?kind=acte|bilan",
+        "note": "The same public-only rule, quota and refusals as company_registry_download; kind is optional (the deeds are looked in first, then the filed accounts). `cs registry download <siren> <document_id> <file>` writes the answer to a file.",
+        "returns": "the PDF (application/pdf), or { success: false, error, message } with 404 document_not_found, 429 rate_limited | daily_limit_reached, 413 document_too_large, 503 when the register is not reachable from this deployment"
       }
     ]
   },
@@ -6121,7 +6127,7 @@
     {
       "name": "company_registry_download",
       "kind": "read",
-      "description": "One public PDF filed with the French company register — a deed (acte) or annual accounts (bilan) — by SIREN and the id company_registry_documents lists, as content_base64. The deployment shares one INPI account (10 requests a minute, INPI terms article 6.1): answers are cached by SIREN for 24 h, calls beyond the quota queue up to two minutes, then answer rate_limited with retry_after_seconds — wait, do not loop. A workspace gets at most 6 of the minute's 10 and 300 a day (daily_limit_reached past it). Every answer carries `source` with a ready `citation`: cite it wherever the data is reused, never alter the data. Any member. Refusals: authentication_required, invalid_siren, company_registry_not_configured, rate_limited, daily_limit_reached, registry_credentials_refused, outbound_flow_disabled, registry_unavailable. Also invalid_kind, invalid_document_id, document_not_found, document_too_large (10 MiB).",
+      "description": "One public PDF filed with the French company register — a deed (acte) or annual accounts (bilan) — by SIREN and the id company_registry_documents lists. It answers `download_url`, a link good for ten minutes that needs no token (`curl -sfo <file> <download_url>`), and `cli`, the `cs registry download` line that does the same: the bytes land on disk without passing through the conversation. content_base64 comes back only with include_content true — avoid it, a set of statutes is a megabyte of text. The deployment shares one INPI account (10 requests a minute, INPI terms article 6.1): answers are cached by SIREN for 24 h, calls beyond the quota queue up to two minutes, then answer rate_limited with retry_after_seconds — wait, do not loop. A workspace gets at most 6 of the minute's 10 and 300 a day (daily_limit_reached past it). Every answer carries `source` with a ready `citation`: cite it wherever the data is reused, never alter the data. Any member. Refusals: authentication_required, invalid_siren, company_registry_not_configured, rate_limited, daily_limit_reached, registry_credentials_refused, outbound_flow_disabled, registry_unavailable. Also invalid_kind, invalid_document_id, document_not_found, document_too_large (10 MiB).",
       "params": [
         {
           "name": "siren",
@@ -6140,6 +6146,12 @@
           "type": "string",
           "required": true,
           "description": "From company_registry_documents."
+        },
+        {
+          "name": "include_content",
+          "type": "bool",
+          "required": false,
+          "description": "True also returns the PDF as content_base64. Leave it out and fetch download_url."
         }
       ],
       "returns": {
@@ -6148,7 +6160,10 @@
         "content_type": "string",
         "size_bytes": "int",
         "sha256": "string",
-        "content_base64": "string",
+        "download_url": "string",
+        "download_expires_at": "string",
+        "cli": "string",
+        "content_base64": "string (only with include_content)",
         "source": "object",
         "error": "string"
       }
