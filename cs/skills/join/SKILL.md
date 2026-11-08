@@ -295,7 +295,7 @@ never a company skill of the same name. Two sentences and the line to type:
 - **Never stretch the quick win**: no code, no access right requested from anyone, no tool to
   install. Their mailbox is the only access it may ask for.
 - **Never write someone else's profile**: `member_profile_set` records the person in front of you.
-- **Never open a second Castalie workspace**, and never run `connect`'s enrolment: the person was
+- **Never open a second Castalie workspace**, and never run `connect`'s `--new`: the person was
   invited into the company's existing one.
 - **Never write a git password** anywhere but the machine's credential helper: not in a file, a
   remote's address, a message or the reply.
