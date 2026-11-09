@@ -9,11 +9,11 @@ A decision's robot resume was written elsewhere, by the agent that filed the dec
 agent that holds the workstation's credentials with nobody watching. So the text goes through Jev
 before an agent plays it, and a refusal launches nothing.
 
-**A scheduled task's prompt is not screened**, neither when it is saved nor when it is played.
+**An agentic scheduled task's prompt is not screened**, neither when it is saved nor when it is played.
 Benoît, 26 October 2026: « Jev refuse du code légitime, vire le contrôle Jev tout court ici. » Jev
 refused prompts a workspace owner wrote and answers for — a scraping quality bench, a production
 cleaning pass — and a TypeSafe organisation out of credits had stopped every run of every task on
-the 25th. Only a workspace owner writes a scheduled task: that is its guard.
+the 25th. Only a workspace owner writes an agentic scheduled task: that is its guard.
 
 ## The screen: `cs prompt screen`
 
@@ -78,7 +78,7 @@ it through. It stays for the launchers that call it.
 
 **An unattended launch of a prompt written elsewhere goes through `cs prompt screen` first**: a
 message, a decision's robot resume, a ticket's text that becomes a session's first prompt. A
-scheduled task's prompt, written by a workspace owner, is the exception (« Why »). A person who types their own prompt needs no screen; a text that reaches an
+agentic scheduled task's prompt, written by a workspace owner, is the exception (« Why »). A person who types their own prompt needs no screen; a text that reaches an
 agent with nobody watching does. A refusal launches nothing, and a refused prompt is never played in
 part.
 

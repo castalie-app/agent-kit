@@ -2940,7 +2940,7 @@
     {
       "name": "scheduled_task_list",
       "kind": "read",
-      "description": "List the workspace's scheduled tasks: the schedule in plain words, the workstation that plays it (workstation_hostname, empty for any), the next run in the task's time zone and in UTC, the last run and its label, whether an occurrence went unplayed and since when, and the number of runs. Archived tasks only on request.",
+      "description": "List the workspace's agentic scheduled tasks: the schedule in plain words, the workstation that plays it (workstation_hostname, empty for any), the next run in the task's time zone and in UTC, the last run and its label, whether an occurrence went unplayed and since when, and the number of runs. Archived tasks only on request.",
       "params": [
         {
           "name": "include_archived",
@@ -2957,7 +2957,7 @@
     {
       "name": "scheduled_task_get",
       "kind": "read",
-      "description": "Read one scheduled task: title, description, prompt, cron expression, time zone, maximum duration, recommended model and effort, the workstation that plays it (workstation_hostname, empty for any), enabled, next run.",
+      "description": "Read one agentic scheduled task: title, description, prompt, cron expression, time zone, maximum duration, recommended model and effort, the workstation that plays it (workstation_hostname, empty for any), enabled, next run.",
       "params": [
         {
           "name": "id",
@@ -2973,7 +2973,7 @@
     {
       "name": "scheduled_task_create",
       "kind": "write",
-      "description": "Create a scheduled task: a prompt a workstation plays unattended at the hours a cron expression names, in a time zone. Workspace OWNER only (forbidden otherwise, nothing written). review-rules --install creates the weekly review pass with it, after looking it up by title with scheduled_task_list so it never makes a second one.",
+      "description": "Create an agentic scheduled task: a prompt a workstation plays unattended at the hours a cron expression names, in a time zone. Workspace OWNER only (forbidden otherwise, nothing written). review-rules --install creates the weekly review pass with it, after looking it up by title with scheduled_task_list so it never makes a second one.",
       "params": [
         {
           "name": "title",
@@ -3042,7 +3042,7 @@
     {
       "name": "scheduled_task_update",
       "kind": "write",
-      "description": "Change a scheduled task; only the fields given change. Workspace OWNER only (forbidden otherwise, nothing written). Runs already created keep the prompt they were created with.",
+      "description": "Change an agentic scheduled task; only the fields given change. Workspace OWNER only (forbidden otherwise, nothing written). Runs already created keep the prompt they were created with.",
       "params": [
         {
           "name": "id",
@@ -3108,7 +3108,7 @@
     {
       "name": "scheduled_task_run_now",
       "kind": "write",
-      "description": "Create a manual run of a scheduled task, due now or at not_before. Allowed on a disabled task, refused on an archived one (task_archived) and while a run of the task is pending or held (run_already_pending). Any member.",
+      "description": "Create a manual run of an agentic scheduled task, due now or at not_before. Allowed on a disabled task, refused on an archived one (task_archived) and while a run of the task is pending or held (run_already_pending). Any member.",
       "params": [
         {
           "name": "scheduled_task_id",
@@ -3130,7 +3130,7 @@
     {
       "name": "scheduled_task_run_list",
       "kind": "read",
-      "description": "List scheduled-task runs, newest first, optionally for one task and one label.",
+      "description": "List agentic scheduled task runs, newest first, optionally for one task and one label.",
       "params": [
         {
           "name": "scheduled_task_id",
@@ -3165,7 +3165,7 @@
     {
       "name": "scheduled_task_run_get",
       "kind": "read",
-      "description": "Read one scheduled-task run with its task: the prompt copied when the run was created, the continuation it carries, who holds it and until when, and its verdict once closed.",
+      "description": "Read one agentic scheduled task run with its task: the prompt copied when the run was created, the continuation it carries, who holds it and until when, and its verdict once closed.",
       "params": [
         {
           "name": "id",
@@ -3211,7 +3211,7 @@
     {
       "name": "scheduled_task_run_complete",
       "kind": "write",
-      "description": "Close a scheduled-task run with its verdict. notes_md is required; closing twice answers already_completed and keeps the first verdict. follow_up_not_before creates, in the same transaction, a manual run due at that time carrying follow_up_md as its continuation.",
+      "description": "Close an agentic scheduled task run with its verdict. notes_md is required; closing twice answers already_completed and keeps the first verdict. follow_up_not_before creates, in the same transaction, a manual run due at that time carrying follow_up_md as its continuation.",
       "params": [
         {
           "name": "id",

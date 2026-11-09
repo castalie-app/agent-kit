@@ -1,14 +1,14 @@
 ---
 name: scheduled-run
-description: Play one run of a Castalie scheduled task, unattended — `/cs:scheduled-run <run_id>` reads the run this workstation holds, plays the prompt copied onto it as the user's request, and closes it with a verdict a person can re-read. Never asks a question, never picks a run itself, files a ticket only for a symptom seen in production and only on its second occurrence, puts a decision to a person through Castalie's decision mechanism, and signs everything as an agent. Launched by a workstation's launcher, not typed by a person.
+description: Play one run of a Castalie agentic scheduled task, unattended — `/cs:scheduled-run <run_id>` reads the run this workstation holds, plays the prompt copied onto it as the user's request, and closes it with a verdict a person can re-read. Never asks a question, never picks a run itself, files a ticket only for a symptom seen in production and only on its second occurrence, puts a decision to a person through Castalie's decision mechanism, and signs everything as an agent. Launched by a workstation's launcher, not typed by a person.
 ---
 
-# scheduled-run — one run of a scheduled task, played without anyone watching
+# scheduled-run — one run of an agentic scheduled task, played without anyone watching
 
-A scheduled task is an order the workspace owner wrote once, played on a schedule by an agent on one
-of the team's workstations. Castalie keeps the task, materialises its runs and shows their verdicts;
-the launcher on the workstation takes a run and starts a headless session on this skill. What a
-scheduled task is, who writes it and what the launcher owes are in
+An agentic scheduled task is an order the workspace owner wrote once, played on a schedule by an
+agent on one of the team's workstations. Castalie keeps the task, materialises its runs and shows
+their verdicts; the launcher on the workstation takes a run and starts a headless session on this
+skill. What an agentic scheduled task is, who writes it and what the launcher owes are in
 `${CLAUDE_PLUGIN_ROOT}/instructions/scheduled-tasks.md`.
 
 **Nobody reads this session while it runs.** Its only output that counts is the verdict it writes

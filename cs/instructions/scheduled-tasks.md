@@ -1,17 +1,19 @@
-# Scheduled tasks — an order written once, played on a schedule by your own workstation
+# Agentic scheduled tasks — an order written once, played on a schedule by your own workstation
 
-Read by `scheduled-run`, and by whoever writes a scheduled task or installs the launcher that plays
-them.
+Read by `scheduled-run`, and by whoever writes an agentic scheduled task or installs the launcher
+that plays them.
 
-## What a scheduled task is
+## What an agentic scheduled task is
 
-A **scheduled task** is a prompt for an agent with a schedule: a five-field cron expression read in
-the task's time zone (daylight saving included), a maximum duration (5 to 480 minutes), and the model
-and effort it recommends. Castalie keeps it, shows it on its screen and serves it through its MCP
-verbs, with the same rights on both. A task may also name the workstation that plays it
-(`workstation_hostname`, a host name as `workstation_list` reports it, compared ignoring case); empty,
-any workstation of the team plays it. A task that needs one machine's local services — a database, a
-signed-in browser, a device — names that machine.
+An **agentic scheduled task** (« tâche planifiée agentique ») is a prompt for an agent with a
+schedule, kept by Castalie — not a **scheduled task** (« tâche planifiée »), which is the operating
+system's (Task Scheduler, cron, launchd) and starts a script with no agent. It has a five-field cron
+expression read in the task's time zone (daylight saving included), a maximum duration (5 to 480
+minutes), and the model and effort it recommends. Castalie keeps it, shows it on its screen and
+serves it through its MCP verbs, with the same rights on both. A task may also name the workstation
+that plays it (`workstation_hostname`, a host name as `workstation_list` reports it, compared
+ignoring case); empty, any workstation of the team plays it. A task that needs one machine's local
+services — a database, a signed-in browser, a device — names that machine.
 
 Each occurrence produces a **run**. The run carries a copy of the prompt as it stood when the run was
 created (`prompt_snapshot_md`), so the history says what was asked that day even after the prompt
@@ -28,7 +30,7 @@ with a verdict:
 | skipped | `skipped`, final status other than `human_required` |
 
 Castalie runs nothing in the background. Due runs are materialised when a launcher asks for the next
-one, or when somebody opens the scheduled tasks screen or the attention screen. Several missed
+one, or when somebody opens the agentic scheduled tasks screen or the attention screen. Several missed
 occurrences give one run, whose `missed_occurrences` counts them. A scheduled run still pending when
 the next occurrence comes due is closed `skipped`, replaced by the next. A run being played blocks
 the next one of the same task: two runs of one task never play at once. A run whose last verdict is
@@ -88,9 +90,10 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    session ended without a verdict": exit code, duration, last lines of output>)`. An
    `already_completed` answer means the session closed the run itself: the normal case.
 8. **A log line per run** on the workstation: slot, run, task, start, end, exit code, cost.
-9. **Its own health, reported.** The launcher is itself a task of the workstation's scheduler: install
-   `cs agent-tasks` on that machine (`--always-on` on a robot) so Castalie shows whether it runs, fails
-   or is stuck, beside the tasks it plays — `${CLAUDE_PLUGIN_ROOT}/instructions/agent-tasks.md`.
+9. **Its own health, reported.** The launcher is itself a scheduled task of the workstation's
+   scheduler: install `cs agent-tasks` on that machine (`--always-on` on a robot) so Castalie shows
+   whether it runs, fails or is stuck, beside the tasks it plays —
+   `${CLAUDE_PLUGIN_ROOT}/instructions/agent-tasks.md`.
 
 ## How to name and describe the task
 

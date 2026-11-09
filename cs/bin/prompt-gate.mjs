@@ -191,7 +191,7 @@ export const HELP = `cs prompt gate — clear a prompt stored in Castalie before
   cs prompt gate scheduled-run <run_id>         [--endpoint <url>] [--repo <dir>] [-- <command> <args...>]
   cs prompt gate decision-resume <decision_id>  [--endpoint <url>] [--repo <dir>] [-- <command> <args...>]
 
-scheduled-run: reads the run and lets it through — scheduled tasks are not screened. Kept for the
+scheduled-run: reads the run and lets it through — agentic scheduled tasks are not screened. Kept for the
 launchers that call it.
 decision-resume: reads resume_prompt_md with the person's answer and screens it with Jev (cs prompt
 screen, fails closed). Refused: the resume is closed failed (decision_resume_complete) and the

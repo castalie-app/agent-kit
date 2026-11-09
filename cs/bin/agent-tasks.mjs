@@ -1,6 +1,6 @@
 // cs agent-tasks — a workstation declares to Castalie the agent tasks it runs for this workspace.
 //
-// What runs on a team's machines by itself (the engine that plays Castalie's scheduled tasks, a
+// What runs on a team's machines by itself (the engine that plays Castalie's agentic scheduled tasks, a
 // bug-fixing robot, the guards around them, a nightly routine) lives in each machine's own
 // scheduler, where nobody reads it from anywhere else. A task dead for weeks, one stuck waiting for
 // a password, a forgotten test: each was found by hand, the day somebody happened to look.

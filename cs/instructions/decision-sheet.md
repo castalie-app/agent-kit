@@ -109,7 +109,7 @@ whether to spend, what to say publicly — is still a decision: ask the choice, 
 **Playing a SQL script** (`sql_script_is_not_a_decision`). Never ask whether to play, run or apply
 a script: it is an action to do, not a choice to weigh.
 
-- **Unattended run** (a scheduled task, an autofix, a robot account): declare the script on its
+- **Unattended run** (an agentic scheduled task, an autofix, a robot account): declare the script on its
   ticket — `bug_declare_sql_script(self_applied=false)`, with the rows it touches in production,
   counted today by a read-only query, in `purpose_md` — and carry on. The ticket requires a person
   and shows on the ticket board until the script is attested (`bug_mark_sql_script_applied`) or
@@ -543,7 +543,7 @@ of your workspace.
 }
 ```
 
-This one is filed on the brief that owns the scheduled task. Where the workspace knows
+This one is filed on the brief that owns the agentic scheduled task. Where the workspace knows
 `scheduled_task_run`, file it on the run instead; where `decisions`/`robot_resume` is `on`, a robot
 can play the resume: `resume_mode` `robot_prompt` with a `resume_prompt_md` in place of the state.
 

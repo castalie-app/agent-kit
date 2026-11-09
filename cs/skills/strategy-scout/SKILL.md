@@ -1,6 +1,6 @@
 ---
 name: strategy-scout
-description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the strategy drifts, digs the best few itself, settles each one it can take back with one revert, listing what it changed in its report, and never spends a run on an empty field of the tree. Only a business tension the leader alone can settle (money above their line, the company's public voice, the owners' call, what only they know, the irreversible) becomes a Castalie decision — one a day at most, none while three of its questions wait. A few topics drawn at random look for a thread to pull. Learns from the answers, « Décide-toi » included. Unattended-safe: a Castalie scheduled task the team's robot plays (`scheduled-run`); never opens a session on anybody's machine.
+description: A daily scout over the workspace's strategy — `/cs:strategy-scout [--max N] [--random K] [--to <email>]` reads the objectives, key results, weekly points, SWOT, briefs and pending decisions, scores the topics where the strategy drifts, digs the best few itself, settles each one it can take back with one revert, listing what it changed in its report, and never spends a run on an empty field of the tree. Only a business tension the leader alone can settle (money above their line, the company's public voice, the owners' call, what only they know, the irreversible) becomes a Castalie decision — one a day at most, none while three of its questions wait. A few topics drawn at random look for a thread to pull. Learns from the answers, « Décide-toi » included. Unattended-safe: an agentic scheduled task the team's robot plays (`scheduled-run`); never opens a session on anybody's machine.
 allowed-tools: Bash, Read, Skill, mcp__castalie__strategy_create_key_result, mcp__castalie__strategy_update_key_result, mcp__castalie__strategy_create_check_in, mcp__castalie__feature_brief_update, mcp__castalie__feature_spec_update, mcp__castalie__whoami, mcp__castalie__strategy_list_periods, mcp__castalie__strategy_get_full_strategy, mcp__castalie__strategy_my_okrs, mcp__castalie__strategy_get_objective, mcp__castalie__strategy_get_objective_breadcrumb, mcp__castalie__strategy_navigate_children, mcp__castalie__strategy_check_in_history, mcp__castalie__strategy_key_result_history, mcp__castalie__strategy_list_swot, mcp__castalie__hfpn_list, mcp__castalie__feature_brief_list, mcp__castalie__feature_brief_get, mcp__castalie__feature_brief_list_key_results, mcp__castalie__followup_run_list, mcp__castalie__decision_list, mcp__castalie__decision_get, mcp__castalie__decision_create, mcp__castalie__decision_add_context, mcp__castalie__decision_supersede, mcp__castalie__decision_mark_applied, mcp__castalie__scheduled_task_get
 ---
 
@@ -56,7 +56,7 @@ person's own scheduler.
 - `cs on-behalf` — `unattended`, and `robot_user_id` for the signature (step 7).
 - **The leader**, first rung that gives an active member
   (`${CLAUDE_PLUGIN_ROOT}/instructions/on-whose-behalf.md`):
-  1. `--to`, or the person the scheduled task's prompt names (resolve an address with
+  1. `--to`, or the person the agentic scheduled task's prompt names (resolve an address with
      `user_lookup(email)`);
   2. under `scheduled-run`, the task's last editor: `updated_by_user_id`, else
      `created_by_user_id`, from `mcp__castalie__scheduled_task_get` — a workspace owner, since only
@@ -260,8 +260,8 @@ answer. The run closes `outcome="passed"`, `final_status="done"`, with the repor
 ## Every morning, on its own
 
 A workspace owner schedules the scout once, and it plays on a workstation of the team
-(`${CLAUDE_PLUGIN_ROOT}/instructions/scheduled-tasks.md`): a Castalie scheduled task, created on
-the scheduled tasks screen or with `scheduled_task_create`:
+(`${CLAUDE_PLUGIN_ROOT}/instructions/scheduled-tasks.md`): an agentic scheduled task, created on
+the agentic scheduled tasks screen or with `scheduled_task_create`:
 
 | Field | Value |
 |---|---|
