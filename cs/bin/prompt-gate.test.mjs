@@ -86,7 +86,7 @@ test("scheduled run, any prompt goes through: launched, Jev never asked, nothing
 
   assert.equal(code, 3, "the session's own exit code");
   assert.deepEqual(launched, [LAUNCH], "the command exactly as the launcher wrote it");
-  assert.equal(requests.length, 0, "scheduled tasks are not screened");
+  assert.equal(requests.length, 0, "agentic scheduled tasks are not screened");
   assert.deepEqual(calls.map((c) => c.name), ["scheduled_task_run_get"]);
   assert.deepEqual(JSON.parse(printed[0]), { verdict: "pass", reasons: [], warnings: [], warning_md: null, closed: false, note_md: null, calls: [] });
 });

@@ -734,7 +734,7 @@ Eighteen skills that take a need from idea to shipped, each driven by the Castal
 | `decisions-panel` | The decisions waiting for you on this working copy's objective, beside the conversation, as cards grouped by the agent that asked, each opening whole in a pane of its own, where you answer it — an option, or your own words — in the terminal and in the desktop app. |
 | `decision-resume` | Pick the work back up once a person has answered an agent's decision: play a robot's resume, answer a reader who asked for more context, or resume one decision by its id. Never answers in a person's place. |
 | `sql-cleaning` | Every week, drop the tables a delivery retired but could not remove: each removal script declared in Castalie, once nothing reads its tables and the change that retired them is served and fifteen days old, proved on a throwaway database, played on every database through the channel your team declares, stamped played — or handed to a person as a ticket when you declare no channel. |
-| `scheduled-run` | Play one run of a scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
+| `scheduled-run` | Play one run of an agentic scheduled task unattended, on the workstation whose launcher picked it: the prompt copied onto the run, no question, a ticket only on recurrence, a decision put to a person, and a verdict a person can re-read. |
 | `retro` | Post durable learnings from a run as retro suggestions for later review. |
 | `retro-review` | Work the retrospective queue: the 100 oldest pending suggestions, each claim verified against the current code, the lessons that hold written at the file that owns them in one pull request, every suggestion closed with a reason. |
 | `review-rules` | Once a week, act on what the review panel learned: at most three proposed pull requests turning undisputed rules into a hook or an analyzer rule with its test, or retiring the rules the team keeps declining; the pre-existing findings fixed or closed. `--install` schedules it with `retro-review` (about 8 to 10 $ a pass). |
@@ -782,7 +782,7 @@ cs worktrees sparse --write         # worktree.sparsePaths = the tracked folders
 
 An unattended launch of a prompt written elsewhere goes through Jev first, a screen that fails
 closed — a decision's robot resume through `cs prompt gate`, which reads the stored prompt from
-Castalie and closes the resume on a refusal. A scheduled task's prompt, written by a workspace owner,
+Castalie and closes the resume on a refusal. An agentic scheduled task's prompt, written by a workspace owner,
 is not screened. The screen, its policy by kind and its thresholds are in `cs/instructions/prompt-screen.md`.
 
 It reads its config from `CASTALIE_ENDPOINT` / `CASTALIE_TOKEN` or `.cs/config.json` (the variables and

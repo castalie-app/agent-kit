@@ -17,7 +17,7 @@ panel saw on lines outside a diff and left for later.
 steps; `AskUserQuestion` is never called and no turn ends on « shall I go on? ». What a person must
 judge is a pull request they review, never a question in the turn.
 
-The skill declares no model and no effort: the scheduled task carries them (`--install`), and a value
+The skill declares no model and no effort: the agentic scheduled task carries them (`--install`), and a value
 written here would override it.
 
 ## Arguments

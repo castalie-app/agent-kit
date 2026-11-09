@@ -200,6 +200,20 @@ A leader's next step is the first one still missing: `/cs:onboard-team` while
 `/cs:site` while their `CLAUDE.md` names no demo site (a new version of the company website), then
 a first quick win for themselves (the sixth section of `/cs:join`). Proposed in one sentence.
 
+## One name for each thing
+
+Every project that uses Castalie says these the same way, in English and in French:
+
+- **scheduled task** (« tâche planifiée ») — the operating system's or the host's own: Windows Task
+  Scheduler, cron, launchd, a hosted job (an Azure job, a Logic App…). It starts a script or a
+  program; no AI agent.
+- **agentic scheduled task** (« tâche planifiée agentique ») — one registered in Castalie
+  (`scheduled_task_*`, `/cs:scheduled-run`), whose runs a workstation takes to start an AI agent
+  (`${CLAUDE_PLUGIN_ROOT}/instructions/scheduled-tasks.md`).
+
+A sentence about both names both. Where a context mixes them, the first says which scheduler
+(« tâche planifiée Windows »). Identifiers keep their names: `scheduled_task_*`, `scheduled-run`.
+
 ## Work you hand off
 
 **What you delegate, you follow.** Parallel work goes to a background sub-agent, in a working
@@ -221,15 +235,15 @@ agent session started for them, no worktree reserved in their name. Unattended m
 run, a headless `claude --print`, a robot, a hook: nobody is at the keyboard to ask. An answer to a
 decision is not that ask: « go ahead », « livre tout » settles what is done, not who starts it on
 whose machine. Work that follows an answer goes to the team's robot — the decision's robot resume, a
-ticket the robot takes, a scheduled task it plays — and the report says where it went. On
+ticket the robot takes, an agentic scheduled task it plays — and the report says where it went. On
 27 October 2026 a scout run from a person's own Task Scheduler applied an answer by opening three
 sessions on their workstation; they had asked for none.
 
-**No person's workstation schedules an agent.** Recurring agent work is a Castalie scheduled task,
-played by the team's robot (`${CLAUDE_PLUGIN_ROOT}/instructions/scheduled-tasks.md`). A task in a
-person's own scheduler that starts an agent session on the team's work is removed, and its prompt
-becomes a scheduled task. A person's own automations — their mailbox, their bank — are theirs, and
-none of this touches them.
+**No person's workstation schedules an agent.** Recurring agent work is an agentic scheduled task,
+played by the team's robot (`${CLAUDE_PLUGIN_ROOT}/instructions/scheduled-tasks.md`). A scheduled
+task in a person's own scheduler that starts an agent session on the team's work is removed, and its
+prompt becomes an agentic scheduled task. A person's own automations — their mailbox, their bank —
+are theirs, and none of this touches them.
 
 **A sub-agent's copy is given back by the kit**, not by you: the `worktree-sweep` hook removes a copy
 under `.claude/worktrees/` once nothing in it exists nowhere else and nobody touched it for a day. So
