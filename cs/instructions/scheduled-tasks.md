@@ -117,7 +117,7 @@ The prompt is short; the procedure lives in your repository, where it is reviewe
   repair, how to judge. The prompt says what this task asks of it.
 - **Its constraints**: the window it covers, its budget, what it must never do alone.
 - **Who decides**: the person responsible for its decisions, by name or address. Without one, the
-  task's last editor is asked.
+  owner of the subject is asked — its domain's, then its objective's — never the task's last editor.
 - **Where to tell them**: the brief or spec whose thread receives the mention, by id. Without one,
   the decision waits in the queue and nobody is mentioned.
 
