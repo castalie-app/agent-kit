@@ -150,10 +150,25 @@ answered ones (step 1; `decision-sheet.md` § Read your answers at every step):
 | `description_100_md`, `description_250_md`, `description_500_md` | the description at three depths, each an explanation in 100, 250 and 500 words — targets within ±10 %, not caps — written for a business reader (`decision-sheet.md` § Written for a business reader): each opens on one or two sentences of context — which subject this is, what happened, why it comes up now, for a reader who remembers nothing of the work — then the first gives the fact that decides, with the figures, and says what you recommend; the deeper ones add what was measured and what each option leads to |
 | `answer_shape`, `options` | `choice`, two or three options on different axes, each a card the person clicks: `gives_up_md`, its `cost_text` when there is one (on every option when `money`), its `effect`, one `is_recommended` |
 | `blocked_items` | how many gestures wait for the answer |
-| `addressee_user_id` | the responsible person: the one the prompt names (resolve an address with `user_lookup(email)`), else the task's last editor (`updated_by_user_id`, else `created_by_user_id`, from `scheduled_task_get`) |
+| `addressee_user_id` | the responsible person (below). None found: omit it, Castalie routes the decision |
 | `resume_mode`, `resume_prompt_md` | `robot_prompt`, with a prompt a robot plays alone: the task id, this run's id, the figures, and what to do with each answer. Refused `resume_mode_unavailable` (no robot resumes on this workspace): `asker`, the same content in `resume_state_md`, and the next run of this task applies it (step 1) |
 | `dedupe_key`, `asked_by_agent` | the key above, `scheduled-task:<task id>` |
 | `author_kind` | `agent` (section 6) |
+
+**The responsible person** owns the subject, not the task. Whoever last edited a task configured
+it; in many workspaces one person edited them all. First found of:
+
+1. the person the prompt names (resolve an address with `user_lookup(email)`);
+2. the owner of the subject's domain: `domain_list_owners(domain_id)`, a named person, the
+   responsible before a deputy; a domain with none hands over to its parent (`parent_domain_id` in
+   `domain_list`), up to the top;
+3. the owner of the Castalie objective the subject is linked to — its brief's or spec's objective,
+   or the objective whose key result the task measures;
+4. the host's own owner rule, when its instructions declare one (the last author in `git log` of
+   the failing code, for example).
+
+None found: no addressee, and a ticket stays on its team. Never the task's last editor
+(`updated_by_user_id`, `created_by_user_id`), never the workspace owner.
 
 **Close** the run with `final_status="human_required"` and `outcome="skipped"` — or `failed` when
 something else this run touched also stays broken. `outcome_type="decision"` and `outcome_ref_id`
@@ -177,6 +192,7 @@ A ticket is the team's work, and the robot's name on a wrong one costs a colleag
   ones). A match open for the same symptom gets a `discussion_post(entity_type="bug", …)` with this
   occurrence, its date and figures — never a second ticket.
 - **Create** with `bug_create`, the title in the words of whoever suffers it, `author_kind="agent"`.
+  Assign it only to the responsible person of section 4; none found, it stays on its team.
 - **A skill whose product is a proved defect** — `bug-bash`, `state-machine-audit` — files what it
   proved on the first occurrence: a failing reproduction test, or a code path an adversarial verifier
   traced from a wired entry point to the write, is not an automatic signal. It still searches before
