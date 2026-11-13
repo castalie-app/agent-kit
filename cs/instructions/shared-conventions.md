@@ -225,10 +225,16 @@ sub-agent never waits on a background task or a monitor of its own — nothing r
 runs its commands in the foreground. A tab or a window the person has to watch hands the follow-up
 to them: open one only when they ask for it.
 
-**A session does what a session can do.** Labelling, a bench reference, a one-off judgment or
-backfill runs in the session, spread over parallel agents, never through a per-call model API, which
-costs about forty times more; that API is for what runs unattended. A tool offering only the API for
-such work first gets a write path for the session.
+**A session does what a session can do.** A bench's reference, its judge, a merge gate the session
+plays before its own merge, labelling, a one-off judgment or backfill: each runs on the session's
+subscription — in the session, spread over parallel agents, or through child `claude -p` processes —
+never through a per-call model API, which costs about forty times more. That API is kept for what
+runs unattended: a hosted pipeline no session plays, a product feature. A gate replaying hundreds of
+cases is no exception: on 12 November 2026 one replayed 334 through the API, about 277 $ in five
+hours, on work the subscription covered. A child `claude -p` (or a script that starts one) runs with
+`ANTHROPIC_API_KEY` removed from its environment: a key present there wins over the subscription and
+bills every call. A bench, judge or gate that only the API can feed first gets a path for the session
+— an answer an agent writes, a judge played by `claude -p` — before it runs again.
 
 **An unattended run never opens work on a person's machine** — no tab, no window, no terminal, no
 agent session started for them, no worktree reserved in their name. Unattended means a scheduled
