@@ -102,6 +102,11 @@ jobs:
       - name: The instruction bench splits sections, picks session moments and maps the judge back
         run: node --test cs/bin/instruction-bench.test.mjs
 
+      # A child `claude` the kit starts (a bench's `claude -p`, the session `cs prompt gate` starts)
+      # never receives a variable that would bill it per call instead of the subscription.
+      - name: A child claude runs on the subscription, never on a per-call API
+        run: node --test cs/bin/subscription-env.test.mjs
+
       # The git credential helper: a key goes only to the workspace written beside it, on git's own
       # pipe, and the machine's own helper is never asked for that host. Temporary folders, no network.
       - name: The git credential helper answers git for its own workspace only

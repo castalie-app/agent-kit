@@ -32,6 +32,7 @@ import { readConfigFrom, resolveToken } from "./agent-tasks.mjs";
 import { resolveConnection } from "./auth.mjs";
 import { bareEndpoint } from "./config.mjs";
 import { hostKeyEnv, screenPrompt } from "./prompt-screen.mjs";
+import { subscriptionEnv } from "./subscription-env.mjs";
 
 /** One stateless `tools/call`, as `cs agent-tasks report` makes it; throws instead of exiting. */
 export async function callTool({ endpoint, token, fetch }, name, args) {
@@ -176,7 +177,8 @@ async function connect(args) {
 export function runCommand([command, ...args]) {
   return new Promise((done) => {
     let child;
-    try { child = spawn(command, args, { stdio: "inherit", windowsHide: true }); } catch (e) {
+    // The unattended session runs on the subscription (subscription-env.mjs).
+    try { child = spawn(command, args, { stdio: "inherit", windowsHide: true, env: subscriptionEnv() }); } catch (e) {
       console.error(`cs prompt gate: could not launch ${command}: ${e.message}`);
       done(1);
       return;

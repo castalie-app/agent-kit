@@ -78,9 +78,10 @@ credentials stay on that workstation; Castalie receives the verdict and the cost
    there.
 5. **The session.** Unattended environment (`CS_UNATTENDED=1`, and `CS_ROBOT_USER_ID` when the
    workspace has a robot account, `on-whose-behalf.md`); the task's `recommended_model` and
-   `recommended_effort`, the launcher's defaults otherwise; `ANTHROPIC_API_KEY` removed from its
-   environment, so the run is played on the workstation's Claude Code subscription and not billed per
-   call (`shared-conventions.md` § Work you hand off); headless with machine-readable output (for
+   `recommended_effort`, the launcher's defaults otherwise; `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,
+   `CLAUDE_CODE_USE_BEDROCK` and `CLAUDE_CODE_USE_VERTEX` removed from its environment (`cs prompt
+   gate` does it for the command it starts), so the run is played on the workstation's Claude Code
+   subscription and not billed per call (`shared-conventions.md` § Work you hand off); headless with machine-readable output (for
    Claude Code, `claude --print --output-format json "/cs:scheduled-run <run_id>"`), empty input,
    the permission policy the workstation grants its unattended sessions. Cut the session at
    `max_duration_minutes`, killing its whole process tree.
