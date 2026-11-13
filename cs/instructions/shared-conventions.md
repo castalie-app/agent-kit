@@ -236,6 +236,18 @@ hours, on work the subscription covered. A child `claude -p` (or a script that s
 bills every call. A bench, judge or gate that only the API can feed first gets a path for the session
 — an answer an agent writes, a judge played by `claude -p` — before it runs again.
 
+**A bench that replays on a schedule is an agentic scheduled task, never a batch.** A bench, its
+gate, its judge or its reference that must replay regularly — every night, every week, every month —
+is written once as an agentic scheduled task (`scheduled_task_create`) and played by
+`/cs:scheduled-run` on the Claude Code subscription of the workstation that plays it, under the
+task's maximum duration and the workspace's monthly ceiling. It never goes through a traditional
+batch: no batch job, no cron or other scheduled task of the system, no Logic App or hosted job, no
+hosted service of the product, no loop of code that calls a model case after case. Such a batch is
+not the "hosted pipeline" above: it bills every call at API price, escapes the ceiling, and closes no
+run a person can re-read. The agentic task shows on the attention screen when it fails, ends each run
+on a verdict and records its cost. A batch already replaying a bench is removed, its procedure
+becomes a versioned skill, and an agentic scheduled task plays that skill.
+
 **An unattended run never opens work on a person's machine** — no tab, no window, no terminal, no
 agent session started for them, no worktree reserved in their name. Unattended means a scheduled
 run, a headless `claude --print`, a robot, a hook: nobody is at the keyboard to ask. An answer to a
