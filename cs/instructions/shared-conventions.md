@@ -236,7 +236,11 @@ hours, on work the subscription covered. A child `claude -p` (or a script that s
 removed from its environment — the kit's own launchers already do it: any of them present there wins
 over the subscription and bills every call. A bench, judge or gate that only the API can feed first
 gets a path for the session — an answer an agent writes, a judge played by `claude -p` — before it
-runs again.
+runs again. A tool that calls a model itself (the kit's bug-evaluation runner) plays every Anthropic
+model Claude Code can play through such a child `claude -p`, and keeps the API for what the
+subscription cannot play: another provider's model, a setting Claude Code does not have
+(`temperature`, `top_p`). What the subscription plays is recorded at the cost Claude Code reports, as
+an equivalent (`subscription_allocation`), never as an invoice: it spends no financial budget.
 
 **A bench that replays on a schedule is an agentic scheduled task, never a batch.** A bench, its
 gate, its judge or its reference that must replay regularly — every night, every week, every month —

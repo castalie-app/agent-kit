@@ -3,16 +3,22 @@
 //
 // The runner owns source, patches, prompts and reports. Castalie receives only the typed MCP
 // contract and opaque artifact hashes. Every command is an allow-listed operation; provider
-// adapters use a named, documented API schema with bounded JSON, never a shell or arbitrary CLI.
+// adapters use a named, documented API schema with bounded JSON, never a shell or arbitrary CLI —
+// with one named exception: an Anthropic model that Claude Code can play is played by a child
+// `claude -p` on the workstation's subscription, never billed per call through the Messages API
+// (`instructions/shared-conventions.md` § Work you hand off). The API is kept for what the
+// subscription cannot play: another provider's model, a setting Claude Code does not have.
 
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync,
   copyFileSync, linkSync, rmSync, renameSync } from "node:fs";
 import { promises as fsp } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
+import { subscriptionEnv } from "./subscription-env.mjs";
 
 const MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024 * 1024;
 const MAX_PATCH_BYTES = 20 * 1024 * 1024;
@@ -1013,11 +1019,80 @@ class OpenAIResponsesAdapter {
   judge(payload, options) { return this.request("judge", payload, options); }
   reconcile() { return { status: "not_found" }; }
 }
+// What a subscription receipt says: the amount Claude Code reports for the call, an equivalent at
+// list price and not an invoice. Castalie keeps it out of the financial budget.
+const SUBSCRIPTION_PRICING = "claude-code-equivalent-v1";
+// Sampling settings the Messages API takes and Claude Code does not: a model configured with one
+// of them can only be played through the API.
+const API_ONLY_PARAMETERS = ["temperature", "top_p"];
+
+/** Why the subscription cannot play this model, or null when Claude Code can. */
+function subscriptionRefusal(model) {
+  const absent = API_ONLY_PARAMETERS.filter(name => model?.parameters?.[name] !== undefined);
+  return absent.length ? `setting_absent_from_claude_code: ${absent.join(",")}` : null;
+}
+function claudeCodeAvailable() {
+  const probe = spawnSync("claude", ["--version"], { encoding: "utf8", windowsHide: true, timeout: 30000,
+    shell: process.platform === "win32", env: subscriptionEnv() });
+  return probe.status === 0;
+}
+function runClaudeCode(command, args, input, env, cwd, signal) {
+  // The default `claude` is resolved by the shell on Windows (claude.exe or claude.cmd), each
+  // argument quoted; the prompt goes on stdin, never on the command line.
+  const [executable, ...prefix] = command;
+  const shell = command.length === 1 && process.platform === "win32";
+  const argv = [...prefix, ...args].map(arg => shell ? `"${arg}"` : arg);
+  return new Promise((resolvePromise, rejectPromise) => {
+    let child; let stdout = ""; let stderr = ""; let settled = false;
+    const finish = (error, value) => { if (settled) return; settled = true; if (error) rejectPromise(error); else resolvePromise(value); };
+    try { child = spawn(executable, argv, { cwd, env, shell, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] }); }
+    catch (error) { finish(new Error(`provider_request_failed: claude_code: ${error.message}`)); return; }
+    const abort = () => { try { child.kill("SIGKILL"); } catch { /* already exited */ } finish(new Error("provider_request_aborted")); };
+    if (signal) { if (signal.aborted) { abort(); return; } signal.addEventListener("abort", abort, { once: true }); }
+    child.stdout.on("data", chunk => { stdout += chunk; if (stdout.length > 4 * 1024 * 1024) abort(); });
+    child.stderr.on("data", chunk => { stderr = (stderr + chunk).slice(-2000); });
+    child.on("error", error => finish(new Error(`provider_request_failed: claude_code: ${error.message}`)));
+    child.on("close", status => {
+      if (signal) signal.removeEventListener("abort", abort);
+      finish(null, { status, stdout, stderr });
+    });
+    child.stdin.end(input);
+  });
+}
+function claudeCodeModel(output, model) {
+  // `claude -p` reports every model it used under modelUsage; the configured one answered, and
+  // nothing else did.
+  const used = Object.keys(output?.modelUsage || {});
+  if (!used.length) die("effective_model_attestation_missing: model");
+  const matches = id => id === model.modelId || id.startsWith(`${model.modelId}[`);
+  if (!used.every(matches)) die(`effective_model_mismatch: provider returned ${used.join(",")}`);
+  return model.modelId;
+}
+function jsonText(text) {
+  const trimmed = String(text || "").trim();
+  const fenced = /^```(?:json)?\s*\n([\s\S]*?)\n```$/.exec(trimmed);
+  return fenced ? fenced[1] : trimmed;
+}
+
 class AnthropicMessagesAdapter {
-  constructor() {
+  /**
+   * `claudeCommand`: how to start Claude Code — omitted, `claude` when it answers on this
+   * workstation; `null`, a workstation without Claude Code, where the API is the only way.
+   */
+  constructor({ claudeCommand } = {}) {
     this.provider = "anthropic"; this.harness = "anthropic-messages-v1"; this.harnessVersion = "v1"; this.safeRetry = false;
-    this.endpoint = providerEndpoint("anthropic", "messages", "https://api.anthropic.com/v1/messages");
-    this.apiKey = providerApiKey("anthropic");
+    this.claudeCommand = claudeCommand;
+  }
+  // Read only when the API is used: a workstation that plays everything on its subscription needs no key.
+  get endpoint() { return providerEndpoint("anthropic", "messages", "https://api.anthropic.com/v1/messages"); }
+  get apiKey() { return providerApiKey("anthropic"); }
+  /** The subscription's command when it can play `model`, else the API with the reason why. */
+  transport(model) {
+    const refusal = subscriptionRefusal(model);
+    if (refusal) return { kind: "api", reason: refusal };
+    if (this.claudeCommand === undefined) this.claudeCommand = claudeCodeAvailable() ? ["claude"] : null;
+    if (!this.claudeCommand) return { kind: "api", reason: "claude_code_not_installed" };
+    return { kind: "subscription", command: this.claudeCommand };
   }
   assertModel(model, role) {
     if (!model || model.provider !== this.provider || model.harness !== this.harness || model.harnessVersion !== this.harnessVersion)
@@ -1032,10 +1107,13 @@ class AnthropicMessagesAdapter {
     const parameters = modelParameters(model, "anthropic");
     const thinkingBudgetTokens = parameters.thinkingBudgetTokens;
     delete parameters.thinkingBudgetTokens;
+    if (model.effort !== "none" && thinkingBudgetTokens === undefined) die("anthropic_effort_budget_required");
+    const transport = this.transport(model);
+    if (transport.kind === "subscription")
+      return this.requestOnSubscription(role, payload, model, schema, max, thinkingBudgetTokens, transport.command, signal);
     const body = { model: model.modelId, max_tokens: max, system: providerPrompt(role, schema),
       messages: [{ role: "user", content: JSON.stringify(payload) }], ...parameters };
     if (model.effort !== "none") {
-      if (thinkingBudgetTokens === undefined) die("anthropic_effort_budget_required");
       body.thinking = { type: "enabled", budget_tokens: thinkingBudgetTokens };
     }
     const serialized = JSON.stringify(body); if (Buffer.byteLength(serialized, "utf8") > MAX_LOG_BYTES) die("provider_request_too_large");
@@ -1051,8 +1129,51 @@ class AnthropicMessagesAdapter {
     if (!outputText) die(`provider_response_empty: ${role}`);
     let output; try { output = JSON.parse(outputText); } catch { die(`provider_response_schema_invalid: ${role}`); }
     const result = providerJson(output, role); result.effectiveModel = effectiveProviderModel(this.provider, model, parsedResponse, this.harness, this.harnessVersion);
+    result.effectiveModel.transport = "api"; result.effectiveModel.transportReason = transport.reason;
     result.usage = responseUsage(parsedResponse); result.providerRequestId = parsedResponse.id;
     return result;
+  }
+  /**
+   * The same request — the role's system prompt, the payload as the one user message, no tool —
+   * played by a child `claude -p` on the subscription: no key and no provider switch in its
+   * environment, no setting, MCP server, CLAUDE.md or slash command picked up on the way. The
+   * effort goes as --effort, the thinking budget as MAX_THINKING_TOKENS, the output ceiling as
+   * CLAUDE_CODE_MAX_OUTPUT_TOKENS. Its cost is the equivalent Claude Code reports, not an invoice.
+   */
+  async requestOnSubscription(role, payload, model, schema, max, thinkingBudgetTokens, command, signal) {
+    const input = JSON.stringify(payload);
+    if (Buffer.byteLength(input, "utf8") > MAX_LOG_BYTES) die("provider_request_too_large");
+    const scratch = mkdtempSync(join(tmpdir(), "cs-bug-evaluation-"));
+    try {
+      const systemFile = join(scratch, "system.md");
+      writeFileSync(systemFile, providerPrompt(role, schema), "utf8");
+      const args = ["-p", "--model", model.modelId, "--effort", model.effort, "--output-format", "json", "--tools", "",
+        "--system-prompt-file", systemFile, "--setting-sources", "", "--strict-mcp-config", "--no-session-persistence",
+        "--disable-slash-commands"];
+      const extra = { CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(max) };
+      if (thinkingBudgetTokens !== undefined) extra.MAX_THINKING_TOKENS = String(thinkingBudgetTokens);
+      const out = await runClaudeCode(command, args, input, subscriptionEnv(process.env, extra), scratch, signal);
+      if (out.status !== 0 && !out.stdout.trim()) die(`provider_request_failed: claude_code exit ${out.status}: ${out.stderr.slice(-300)}`);
+      let parsedResponse; try { parsedResponse = JSON.parse(out.stdout); } catch { die("provider_response_not_json"); }
+      if (parsedResponse.is_error || parsedResponse.subtype !== "success")
+        die(`provider_response_incomplete: ${parsedResponse.subtype || "error"}`);
+      const modelId = claudeCodeModel(parsedResponse, model);
+      if (!String(parsedResponse.result || "").trim()) die(`provider_response_empty: ${role}`);
+      let output; try { output = JSON.parse(jsonText(parsedResponse.result)); } catch { die(`provider_response_schema_invalid: ${role}`); }
+      const result = providerJson(output, role);
+      result.effectiveModel = { ...effectiveProviderModel(this.provider, model, { model: modelId }, this.harness, this.harnessVersion),
+        attestation: "claude-code-model-usage-plus-validated-request", transport: "claude-code-subscription" };
+      const usage = parsedResponse.usage || {};
+      const count = value => Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+      const cache = [usage.cache_creation_input_tokens, usage.cache_read_input_tokens].map(count).filter(v => v !== undefined);
+      result.usage = { inputTokens: count(usage.input_tokens), outputTokens: count(usage.output_tokens),
+        cacheTokens: cache.length ? cache.reduce((sum, v) => sum + v, 0) : undefined };
+      const amount = Number(parsedResponse.total_cost_usd);
+      if (Number.isFinite(amount) && amount >= 0)
+        result.cost = { amount, currency: "USD", basis: "subscription_allocation", pricingVersion: SUBSCRIPTION_PRICING };
+      result.providerRequestId = typeof parsedResponse.session_id === "string" ? parsedResponse.session_id : undefined;
+      return result;
+    } finally { rmSync(scratch, { recursive: true, force: true }); }
   }
   analyze(payload, options) { return this.request("analyst", payload, options); }
   solve(payload, options) { return this.request("solver", payload, options); }
@@ -1898,7 +2019,11 @@ Limits: snapshot 2 GiB, patch 20 MiB, log 50 MiB. Secrets, histories, caches, in
 Production Castalie endpoints require explicit --allow-production after the approved budget and worker are ready.
 Every published run requires a frozen IsolationProfileHash plus --profile-file and --profile-root; the profile is re-qualified before work.
 Oracle descriptors use one immutable script mounted against /input for baseline, reference and candidate; independent scripts are refused.
-Supported provider adapters: openai (Responses API, openai-responses-v1) and anthropic (Messages API, anthropic-messages-v1).
+Supported provider adapters: openai (Responses API, openai-responses-v1) and anthropic (anthropic-messages-v1).
+An Anthropic model is played by a child "claude -p" on this workstation's Claude Code subscription — no key in
+its environment, its cost recorded as subscription_allocation, an equivalent that spends no financial budget.
+The Messages API (ANTHROPIC_API_KEY) is used only for what the subscription cannot play: temperature or top_p,
+or a workstation without Claude Code.
 Unknown providers and harnesses are refused; fixture is restricted to the controlled self-test.
 Provider requests are journaled and reconciled by idempotency key before any retry. CASTALIE_TOKEN is read only from the process environment.
 Historical audit requires --final-root and --final-sha matching the case's explicitly chosen ReferenceHeadSha.`;
