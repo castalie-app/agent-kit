@@ -117,19 +117,90 @@ globalThis.fetch = async (_url, options) => {
   return { ok: true, status: 200, text: async () => JSON.stringify({ id: "msg_test", model: "claude-controlled",
     content: [{ type: "text", text: JSON.stringify({ diagnosis: "controlled diagnosis" }) }], usage: { input_tokens: 5, output_tokens: 4 } }) };
 };
-const anthropic = new AnthropicMessagesAdapter();
+// A workstation without Claude Code: the Messages API is the only way to play the model.
+const anthropic = new AnthropicMessagesAdapter({ claudeCommand: null });
 const anthropicResult = await anthropic.analyze({ model: { provider: "anthropic", modelId: "claude-controlled",
   harness: "anthropic-messages-v1", harnessVersion: "v1", effort: "high", parameters: { thinkingBudgetTokens: 1024 }, limits: {} }, context: {} },
   { idempotencyKey: "synthetic-anthropic-key" });
 assert.equal(anthropicResult.effectiveModel.provider, "anthropic");
 assert.equal(anthropicResult.effectiveModel.modelId, "claude-controlled");
 assert.equal(anthropicResult.usage.outputTokens, 4);
+assert.equal(anthropicResult.effectiveModel.transport, "api");
+assert.equal(anthropicResult.effectiveModel.transportReason, "claude_code_not_installed");
 await assert.rejects(() => anthropic.analyze({ model: { provider: "anthropic", modelId: "claude-controlled",
   harness: "anthropic-messages-v1", harnessVersion: "v1", effort: "high", parameters: {}, limits: {} }, context: {} }),
   /anthropic_effort_budget_required/);
 await assert.rejects(() => anthropic.analyze({ model: { provider: "anthropic", modelId: "claude-controlled",
   harness: "anthropic-messages-v1", harnessVersion: "v1", effort: "high", parameters: { unknown: true }, limits: {} }, context: {} }),
   /unsupported_model_parameter/);
+
+// An Anthropic model Claude Code can play goes to a child `claude -p` on the subscription: a fake
+// `claude` reports what it received, and the Messages API is never called.
+const fakeClaude = join(root, "fake-claude.mjs");
+writeFileSync(fakeClaude, `import { readFileSync } from "node:fs";
+let input = "";
+process.stdin.on("data", (d) => { input += d; }).on("end", () => {
+  const argv = process.argv.slice(2); const at = (name) => argv[argv.indexOf(name) + 1];
+  const report = { argv, input: JSON.parse(input), system: readFileSync(at("--system-prompt-file"), "utf8"),
+    leaked: ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX"]
+      .filter((name) => process.env[name] !== undefined),
+    thinking: process.env.MAX_THINKING_TOKENS, maxOutput: process.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS };
+  const answered = process.env.FAKE_CLAUDE_MODEL || at("--model");
+  console.log(JSON.stringify({ type: "result", subtype: "success", is_error: false, session_id: "session-fake",
+    result: "\\\`\\\`\\\`json\\n" + JSON.stringify({ diagnosis: JSON.stringify(report) }) + "\\n\\\`\\\`\\\`",
+    total_cost_usd: 0.0123, usage: { input_tokens: 11, cache_read_input_tokens: 5, output_tokens: 3 },
+    modelUsage: { [answered]: { costUSD: 0.0123 } } }));
+});
+`);
+const billingVariables = ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX"];
+const savedBilling = Object.fromEntries(billingVariables.map((name) => [name, process.env[name]]));
+for (const name of billingVariables) process.env[name] = "synthetic";
+let apiCalls = 0;
+globalThis.fetch = async () => { apiCalls += 1; throw new Error("the Messages API must not be called"); };
+try {
+  const subscription = new AnthropicMessagesAdapter({ claudeCommand: [process.execPath, fakeClaude] });
+  const playable = { provider: "anthropic", modelId: "claude-controlled", harness: "anthropic-messages-v1", harnessVersion: "v1",
+    effort: "high", parameters: { thinkingBudgetTokens: 2048 }, limits: { maxOutputTokens: 900 } };
+  const played = await subscription.analyze({ model: playable, contract: {}, context: { need: "controlled" } });
+  const report = JSON.parse(played.diagnosis);
+  assert.equal(apiCalls, 0);
+  assert.deepEqual(report.leaked, [], "no key or provider switch reaches the child claude");
+  assert.equal(report.thinking, "2048"); assert.equal(report.maxOutput, "900");
+  assert.equal(report.argv[report.argv.indexOf("--model") + 1], "claude-controlled");
+  assert.equal(report.argv[report.argv.indexOf("--effort") + 1], "high");
+  assert.equal(report.argv[report.argv.indexOf("--tools") + 1], "", "the child gets no tool");
+  for (const flag of ["-p", "--strict-mcp-config", "--no-session-persistence", "--disable-slash-commands"])
+    assert.ok(report.argv.includes(flag), flag);
+  assert.equal(report.input.context.need, "controlled", "the payload is the one user message, on stdin");
+  assert.match(report.system, /controlled bug-evaluation role/);
+  assert.equal(played.effectiveModel.modelId, "claude-controlled");
+  assert.equal(played.effectiveModel.transport, "claude-code-subscription");
+  assert.deepEqual(played.cost, { amount: 0.0123, currency: "USD", basis: "subscription_allocation",
+    pricingVersion: "claude-code-equivalent-v1" }, "a subscription cost is an equivalent, never billed");
+  assert.deepEqual(played.usage, { inputTokens: 11, outputTokens: 3, cacheTokens: 5 });
+  assert.equal(played.providerRequestId, "session-fake");
+
+  // Another model answering is refused, as on the API.
+  process.env.FAKE_CLAUDE_MODEL = "claude-other";
+  await assert.rejects(() => subscription.analyze({ model: playable, contract: {}, context: {} }), /effective_model_mismatch/);
+  delete process.env.FAKE_CLAUDE_MODEL;
+
+  // A setting Claude Code does not have keeps the model on the API, and says why.
+  globalThis.fetch = async (_url, options) => {
+    apiCalls += 1;
+    assert.equal(JSON.parse(options.body).temperature, 0.2);
+    return { ok: true, status: 200, text: async () => JSON.stringify({ id: "msg_api", model: "claude-controlled",
+      content: [{ type: "text", text: JSON.stringify({ diagnosis: "api" }) }], usage: { input_tokens: 1, output_tokens: 1 } }) };
+  };
+  const onApi = await subscription.analyze({ model: { ...playable, parameters: { thinkingBudgetTokens: 2048, temperature: 0.2 } },
+    contract: {}, context: {} });
+  assert.equal(apiCalls, 1);
+  assert.equal(onApi.effectiveModel.transport, "api");
+  assert.equal(onApi.effectiveModel.transportReason, "setting_absent_from_claude_code: temperature");
+} finally {
+  for (const [name, value] of Object.entries(savedBilling)) if (value === undefined) delete process.env[name]; else process.env[name] = value;
+  process.env.ANTHROPIC_API_KEY = "synthetic-anthropic-key";
+}
 assert.throws(() => createProviderAdapter("unknown-provider"), /unsupported_provider_adapter/);
 const criteria = [{ Code: "behavior" }, { Code: "regression" }];
 const invalidJudge = validateJudgeCriteria({ oracleStatus: "passed", criteria: { behavior: true, regression: true, unknown: true }, extra: "reject" }, criteria);

@@ -38,7 +38,7 @@ test("the unattended session cs prompt gate starts receives no key", async () =>
 
 // Every launcher of a child `claude` in the kit — a bench's own `claude -p`, or the command an
 // unattended run starts — builds its environment with subscriptionEnv, never from process.env as is.
-const LAUNCHERS = ["instruction-bench.mjs", "review-bench.mjs", "prompt-gate.mjs"];
+const LAUNCHERS = ["instruction-bench.mjs", "review-bench.mjs", "prompt-gate.mjs", "bug-evaluation-runner.mjs"];
 
 test("every launcher of a child claude goes through subscriptionEnv", () => {
   const found = readdirSync(here).filter((file) => file.endsWith(".mjs") && !file.endsWith(".test.mjs"))
