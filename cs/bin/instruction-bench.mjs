@@ -41,6 +41,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { subscriptionEnv } from "./subscription-env.mjs";
 
 export const CONFIG_PATH = ".castalie/instruction-bench.json";
 export const DEFAULT_FILES = [".claude/CLAUDE.md", "CLAUDE.md", "AGENTS.md"];
@@ -395,7 +396,8 @@ function loadConfig(root) {
 
 function spawnAsync(command, args, { input, cwd, timeoutMs = 10 * 60_000 }) {
   return new Promise((resolvePromise) => {
-    const child = spawn(command, args, { cwd, env: process.env, shell: process.platform === "win32" });
+    // On the subscription, never a per-call API (subscription-env.mjs).
+    const child = spawn(command, args, { cwd, env: subscriptionEnv(), shell: process.platform === "win32" });
     let stdout = ""; let stderr = "";
     const timer = setTimeout(() => child.kill(), timeoutMs);
     child.stdout.on("data", (d) => { stdout += d; });

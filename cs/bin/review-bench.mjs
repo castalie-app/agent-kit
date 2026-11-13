@@ -41,6 +41,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { subscriptionEnv } from "./subscription-env.mjs";
 
 export const CONFIG_PATH = ".castalie/review-bench.json";
 export const DEFAULT_MODEL = "claude-opus-5-5";
@@ -266,7 +267,8 @@ ${diff}`;
 
 function spawnAsync(command, args, { input, cwd, env, timeoutMs = 15 * 60_000 }) {
   return new Promise((resolvePromise) => {
-    const child = spawn(command, args, { cwd, env, shell: process.platform === "win32" });
+    // A lens's `claude -p`, or its command, runs on the subscription (subscription-env.mjs).
+    const child = spawn(command, args, { cwd, env: subscriptionEnv(env ?? process.env), shell: process.platform === "win32" });
     let stdout = ""; let stderr = "";
     const timer = setTimeout(() => child.kill(), timeoutMs);
     child.stdout.on("data", (d) => { stdout += d; });

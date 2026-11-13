@@ -232,9 +232,11 @@ never through a per-call model API, which costs about forty times more. That API
 runs unattended: a hosted pipeline no session plays, a product feature. A gate replaying hundreds of
 cases is no exception: on 12 November 2026 one replayed 334 through the API, about 277 $ in five
 hours, on work the subscription covered. A child `claude -p` (or a script that starts one) runs with
-`ANTHROPIC_API_KEY` removed from its environment: a key present there wins over the subscription and
-bills every call. A bench, judge or gate that only the API can feed first gets a path for the session
-— an answer an agent writes, a judge played by `claude -p` — before it runs again.
+`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_USE_BEDROCK` and `CLAUDE_CODE_USE_VERTEX`
+removed from its environment — the kit's own launchers already do it: any of them present there wins
+over the subscription and bills every call. A bench, judge or gate that only the API can feed first
+gets a path for the session — an answer an agent writes, a judge played by `claude -p` — before it
+runs again.
 
 **A bench that replays on a schedule is an agentic scheduled task, never a batch.** A bench, its
 gate, its judge or its reference that must replay regularly — every night, every week, every month —
