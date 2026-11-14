@@ -344,7 +344,9 @@ Open the page with the kit's own browser, the `playwright` server (headless) or
 yourself when you are allowed to. When you are not (a payment, a legal acceptance, a choice only
 they can make), stop on the ready screen and hand over one gesture: « Cliquez sur "Valider" ».
 Typed instructions only for a sign-in wall that needs a password you do not have. Never clear the
-data of the attached browser: it signs the person out of every site. A missing Node.js or browser
+data of the attached browser: it signs the person out of every site. A command waiting for a secret
+or an answer only the person holds is yours to launch, in a window of its own: hand over « Tapez
+votre mot de passe dans la fenêtre ouverte », never a command to type. A missing Node.js or browser
 is yours to install, never theirs to type: `${CLAUDE_PLUGIN_ROOT}/instructions/browser.md`.
 
 ## What the hand-back is not
