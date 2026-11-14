@@ -37,6 +37,10 @@ Never « allez sur ce site, puis cliquez là ». Typed instructions are for one 
 wall, confirmed on a screenshot, that needs a password you do not have. Then: « Connectez-vous dans
 la fenêtre ouverte, puis dites-moi "c'est fait" », and you take over again.
 
+The same holds outside the browser: a command waiting for a secret or an answer only the person
+holds is yours to launch, in a window of its own. Hand over « Tapez votre mot de passe dans la
+fenêtre ouverte », never a command to type.
+
 **Never clear the attached browser's data.** No storage reset, no "delete data", no state loaded
 into it: each one empties the cookies of the person's whole profile and signs them out of every
 site. Move a sign-in only between `playwright` sessions.
