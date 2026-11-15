@@ -1091,7 +1091,9 @@ class AnthropicMessagesAdapter {
     const refusal = subscriptionRefusal(model);
     if (refusal) return { kind: "api", reason: refusal };
     if (this.claudeCommand === undefined) this.claudeCommand = claudeCodeAvailable() ? ["claude"] : null;
-    if (!this.claudeCommand) return { kind: "api", reason: "claude_code_not_installed" };
+    // A model the subscription can play never falls back to the per-call API: a missing Claude Code
+    // is a workstation to fix, not a reason to bill every call (shared conventions, LLM judges).
+    if (!this.claudeCommand) die("claude_code_not_installed: install Claude Code to play this Anthropic model on the subscription");
     return { kind: "subscription", command: this.claudeCommand };
   }
   assertModel(model, role) {

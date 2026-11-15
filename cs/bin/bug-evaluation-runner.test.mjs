@@ -117,16 +117,20 @@ globalThis.fetch = async (_url, options) => {
   return { ok: true, status: 200, text: async () => JSON.stringify({ id: "msg_test", model: "claude-controlled",
     content: [{ type: "text", text: JSON.stringify({ diagnosis: "controlled diagnosis" }) }], usage: { input_tokens: 5, output_tokens: 4 } }) };
 };
-// A workstation without Claude Code: the Messages API is the only way to play the model.
+// A setting Claude Code does not have (`temperature`) can only be played through the Messages API.
 const anthropic = new AnthropicMessagesAdapter({ claudeCommand: null });
 const anthropicResult = await anthropic.analyze({ model: { provider: "anthropic", modelId: "claude-controlled",
-  harness: "anthropic-messages-v1", harnessVersion: "v1", effort: "high", parameters: { thinkingBudgetTokens: 1024 }, limits: {} }, context: {} },
+  harness: "anthropic-messages-v1", harnessVersion: "v1", effort: "high", parameters: { thinkingBudgetTokens: 1024, temperature: 1 }, limits: {} }, context: {} },
   { idempotencyKey: "synthetic-anthropic-key" });
 assert.equal(anthropicResult.effectiveModel.provider, "anthropic");
 assert.equal(anthropicResult.effectiveModel.modelId, "claude-controlled");
 assert.equal(anthropicResult.usage.outputTokens, 4);
 assert.equal(anthropicResult.effectiveModel.transport, "api");
-assert.equal(anthropicResult.effectiveModel.transportReason, "claude_code_not_installed");
+assert.equal(anthropicResult.effectiveModel.transportReason, "setting_absent_from_claude_code: temperature");
+// A model the subscription can play, on a workstation without Claude Code: refused, never billed per call.
+await assert.rejects(() => anthropic.analyze({ model: { provider: "anthropic", modelId: "claude-controlled",
+  harness: "anthropic-messages-v1", harnessVersion: "v1", effort: "high", parameters: { thinkingBudgetTokens: 1024 }, limits: {} }, context: {} }),
+  /claude_code_not_installed/);
 await assert.rejects(() => anthropic.analyze({ model: { provider: "anthropic", modelId: "claude-controlled",
   harness: "anthropic-messages-v1", harnessVersion: "v1", effort: "high", parameters: {}, limits: {} }, context: {} }),
   /anthropic_effort_budget_required/);
