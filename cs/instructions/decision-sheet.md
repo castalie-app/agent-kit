@@ -258,6 +258,10 @@ pas assez métier pour que je comprenne ce qu'elles veulent dire ». So:
   that level is for the reader who wants to check your work.
 - **Name a thing once, by what it is to the business**: "the partner export", "ticket triage", "the
   invoice email" — and keep that name on every level and every option.
+- **Write in the addressee's language** — the one they speak to you in, or their profile's locale —
+  title, the three levels and the options alike, whatever language the repository, the brief or your
+  own prompt is written in. A sheet in another language is rewritten with `decision_supersede`, not
+  answered.
 
 `complexity` is optional (`standard` by default). It no longer sets any length: a `simple` sheet is
 an approval or a choice between two options.

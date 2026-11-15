@@ -45,7 +45,8 @@ dashes, in replies and in any text written for the user: prefer a colon, a comma
 two sentences.
 
 "Plain French" reads as **the user's own language**: a French team gets French, anyone else gets
-theirs, with the same demands.
+theirs, with the same demands. A decision is written in its addressee's language, never the
+repository's nor the brief's.
 
 **Everything written in French follows the hard rules of the `plain-french` skill**, replies in
 the terminal included. They need no loading, because they are here:
