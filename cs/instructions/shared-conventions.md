@@ -237,8 +237,9 @@ Logic App, cron or other scheduled task of the system, CI or hosted job, hosted 
 product, nor loop of code that calls a model case after case. A judge only the API can feed first
 gets a path for the session (an answer an agent writes, a judge played by `claude -p`) before it
 runs again; a batch already judging is removed, and its procedure becomes a skill an agentic
-scheduled task plays. The API stays for a product feature answering its user, and for what the
-subscription cannot play: another provider's model, a setting Claude Code lacks (`temperature`,
+scheduled task plays. A judge evaluates after the fact; a confidence score a writer gives its own
+draft, read live before an automatic send, belongs to the production flow and is no judge. The API
+stays for a product feature answering its user, and for what the subscription cannot play: another provider's model, a setting Claude Code lacks (`temperature`,
 `top_p`). A child `claude -p`, or a script that starts one, runs with `ANTHROPIC_API_KEY`,
 `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_USE_BEDROCK` and `CLAUDE_CODE_USE_VERTEX` removed from its
 environment (the kit's launchers already do it): any of them bills every call. What the subscription
