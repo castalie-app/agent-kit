@@ -226,34 +226,24 @@ sub-agent never waits on a background task or a monitor of its own — nothing r
 runs its commands in the foreground. A tab or a window the person has to watch hands the follow-up
 to them: open one only when they ask for it.
 
-**A session does what a session can do.** A bench's reference, its judge, a merge gate the session
-plays before its own merge, labelling, a one-off judgment or backfill: each runs on the session's
-subscription — in the session, spread over parallel agents, or through child `claude -p` processes —
-never through a per-call model API, which costs about forty times more. That API is kept for what
-runs unattended: a hosted pipeline no session plays, a product feature. A gate replaying hundreds of
-cases is no exception: on 12 November 2026 one replayed 334 through the API, about 277 $ in five
-hours, on work the subscription covered. A child `claude -p` (or a script that starts one) runs with
-`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_USE_BEDROCK` and `CLAUDE_CODE_USE_VERTEX`
-removed from its environment — the kit's own launchers already do it: any of them present there wins
-over the subscription and bills every call. A bench, judge or gate that only the API can feed first
-gets a path for the session — an answer an agent writes, a judge played by `claude -p` — before it
-runs again. A tool that calls a model itself (the kit's bug-evaluation runner) plays every Anthropic
-model Claude Code can play through such a child `claude -p`, and keeps the API for what the
-subscription cannot play: another provider's model, a setting Claude Code does not have
-(`temperature`, `top_p`). What the subscription plays is recorded at the cost Claude Code reports, as
-an equivalent (`subscription_allocation`), never as an invoice: it spends no financial budget.
-
-**A bench that replays on a schedule is an agentic scheduled task, never a batch.** A bench, its
-gate, its judge or its reference that must replay regularly — every night, every week, every month —
-is written once as an agentic scheduled task (`scheduled_task_create`) and played by
-`/cs:scheduled-run` on the Claude Code subscription of the workstation that plays it, under the
-task's maximum duration and the workspace's monthly ceiling. It never goes through a traditional
-batch: no batch job, no cron or other scheduled task of the system, no Logic App or hosted job, no
-hosted service of the product, no loop of code that calls a model case after case. Such a batch is
-not the "hosted pipeline" above: it bills every call at API price, escapes the ceiling, and closes no
-run a person can re-read. The agentic task shows on the attention screen when it fails, ends each run
-on a verdict and records its cost. A batch already replaying a bench is removed, its procedure
-becomes a versioned skill, and an agentic scheduled task plays that skill.
+**An LLM judge runs as an agentic batch on the subscription, never as a traditional batch.** A
+bench's judge or reference, a judge of production answers, a merge gate that judges, labelling, a
+backfill, a re-judgment of past verdicts: each runs on Claude Code's subscription, either by the
+session's own agents (in the session, in parallel agents, in child `claude -p` processes) or, when
+it recurs, as an agentic scheduled task (`scheduled_task_create`) played by `/cs:scheduled-run`
+under its maximum duration and the workspace's monthly ceiling. A re-judgment runs in the session.
+Never a traditional batch that calls a per-call model API, about forty times more expensive: no
+Logic App, cron or other scheduled task of the system, CI or hosted job, hosted service of the
+product, nor loop of code that calls a model case after case. A judge only the API can feed first
+gets a path for the session (an answer an agent writes, a judge played by `claude -p`) before it
+runs again; a batch already judging is removed, and its procedure becomes a skill an agentic
+scheduled task plays. The API stays for a product feature answering its user, and for what the
+subscription cannot play: another provider's model, a setting Claude Code lacks (`temperature`,
+`top_p`). A child `claude -p`, or a script that starts one, runs with `ANTHROPIC_API_KEY`,
+`ANTHROPIC_AUTH_TOKEN`, `CLAUDE_CODE_USE_BEDROCK` and `CLAUDE_CODE_USE_VERTEX` removed from its
+environment (the kit's launchers already do it): any of them bills every call. What the subscription
+plays is recorded at the cost Claude Code reports, as an equivalent (`subscription_allocation`),
+never as an invoice.
 
 **An unattended run never opens work on a person's machine** — no tab, no window, no terminal, no
 agent session started for them, no worktree reserved in their name. Unattended means a scheduled

@@ -1,6 +1,6 @@
 ---
 name: review-bench
-description: The reviewer bench — the review lenses scored on the team's own regressions. `/cs:review-bench` shows each lens's note, its blocked modifications and the month's spending; `--install` declares the lenses, adds the pull-request step that replays ONLY a modified lens on 30 cases and blocks the pull request when its note drops, and schedules the monthly pass; `--monthly` (unattended-safe, `scheduled-run`) files the new cases — recorded regressions, reverted pull requests, sound pull requests drawn at random — then replays every lens on about 100 cases. Fires on "banc d'essai du relecteur", "note nos relecteurs", "reviewer bench", "is our review getting better?".
+description: The reviewer bench — the review lenses scored on the team's own regressions. `/cs:review-bench` shows each lens's note, its blocked modifications and the month's spending; `--install` declares the lenses, the pull-request check the modifying session plays (ONLY the modified lens, 30 cases, the pull request blocked when its note drops), and schedules the monthly pass; `--monthly` (unattended-safe, `scheduled-run`) files the new cases — recorded regressions, reverted pull requests, sound pull requests drawn at random — then replays every lens on about 100 cases. Fires on "banc d'essai du relecteur", "note nos relecteurs", "reviewer bench", "is our review getting better?".
 ---
 
 # review-bench — the review lenses scored on the team's own regressions
@@ -20,11 +20,10 @@ neither catches nor counts as noise.
 The economical rhythm, the default:
 
 - **In the pull request that modifies a lens**: that lens alone replays 30 cases drawn from its
-  reference, and its note is compared with the reference's **on the same cases**. Lower → the step
-  fails, naming the cases lost. About 10 $ per modification at Opus 5.5 API price. The session that
-  modifies the lens plays `cs review-bench check` itself, on its subscription (shared conventions,
-  « A session does what a session can do »); the step's model key is for a pull request no session
-  plays.
+  reference, and its note is compared with the reference's **on the same cases**. Lower → the check
+  fails, naming the cases lost. About 10 $ per modification at Opus 5.5 API price, played on the
+  subscription: the session that modifies the lens plays `cs review-bench check` before its merge,
+  never a CI job with a model key (shared conventions, « An LLM judge runs as an agentic batch »).
 - **Once a month**: every lens replays about 100 cases, half regressions, half sound. Each pass
   becomes its lens's reference. About 140 $ for four lenses.
 
@@ -65,38 +64,10 @@ the workspace has not opened the evaluation module, and stop.
    findings schema, and declare them. Set `"model": "claude-opus-5-5"` and the effort the host's
    review runs at (`high` when nothing says). `cs review-bench lenses` prints each lens's hash: check
    it reads every file.
-2. **The pull-request step** — on GitHub, `.github/workflows/review-bench.yml` (the host's own CI
-   otherwise, same commands):
-
-   ```yaml
-   name: review-bench
-   on:
-     pull_request:
-       paths: ['.castalie/**', <every instructions and watch path of the config>]
-   jobs:
-     modified-lens:
-       runs-on: ubuntu-latest
-       timeout-minutes: 45
-       steps:
-         - uses: actions/checkout@v4
-           with: { fetch-depth: 0 }
-         - uses: actions/checkout@v4
-           with: { repository: castalie-app/agent-kit, path: .tmp/agent-kit }
-         - uses: actions/setup-node@v4
-           with: { node-version: '20' }
-         - run: npm install -g @anthropic-ai/claude-code
-         - run: node .tmp/agent-kit/cs/bin/cs.mjs review-bench check
-           env:
-             CASTALIE_ENDPOINT: ${{ vars.CASTALIE_ENDPOINT }}
-             CASTALIE_TOKEN: ${{ secrets.CASTALIE_TOKEN }}
-             ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-             GH_TOKEN: ${{ github.token }}
-   ```
-
-   The step needs the workspace address (`CASTALIE_ENDPOINT`, a repository variable), the token of
-   the workspace's automation account (`CASTALIE_TOKEN`) and a model key (`ANTHROPIC_API_KEY`), both
-   repository secrets. Missing ones are a gesture for the person at the keyboard: name them in one
-   line each; until they exist the step prints « not measured » and passes.
+2. **The pull-request check** — no CI job: the session that modifies a lens plays
+   `cs review-bench check` before its merge, on its subscription, and fixes the lens when it fails.
+   Write that line where the host's merge path reads its checks (`cs:adapt`'s merge step, the
+   repository's `CLAUDE.md`). A `review-bench.yml` that replays with a model key is removed.
 3. **The monthly task** — a workspace owner only (anyone else: one line, and skip it).
    `mcp__castalie__scheduled_task_list` → the title « Monthly reviewer bench »: found →
    `scheduled_task_update`, absent → `scheduled_task_create`. Never a second task.
@@ -116,11 +87,11 @@ the workspace has not opened the evaluation module, and stop.
 4. **The first cases** — `cs review-bench seed` (§ Monthly, step 1), then the Status. The bench's first
    monthly pass gives every lens its reference; until then a modification is measured as the lens's
    first pass (`baseline`) and passes.
-5. Report in four lines: the lenses declared, the step written, the task's next run, the cost line —
+5. Report in four lines: the lenses declared, the check written, the task's next run, the cost line —
    **≈ 10 $ per lens modification, ≈ 140 $ per monthly pass at Opus 5.5 API price, ≈ 250 $ a month
    for ten modifications**, under the workspace's ceiling.
 
-Commit the config, the lens files and the workflow through the host's own path (`cs:ship`).
+Commit the config, the lens files and the check line through the host's own path (`cs:ship`).
 
 ## Monthly
 
