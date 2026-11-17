@@ -224,7 +224,7 @@ not assumed**: while one runs, a recurring check (every twenty minutes) looks fo
 relaunches an agent that went idle without finishing, and deletes itself once none is left. A
 sub-agent never waits on a background task or a monitor of its own — nothing reliably wakes it: it
 runs its commands in the foreground. A tab or a window the person has to watch hands the follow-up
-to them: open one only when they ask for it.
+to them: open one only when they ask for it. A tab is always opened through the project's own launcher, with the project's colours and profile, never by a bare terminal command (`wt new-tab`, `start`); a project without a launcher opens it in the terminal profile the person uses, never a colourless default and never with `NO_COLOR` set.
 
 **An LLM judge runs as an agentic batch on the subscription, never as a traditional batch.** A
 bench's judge or reference, a judge of production answers, a merge gate that judges, labelling, a
