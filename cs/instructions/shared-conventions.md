@@ -19,7 +19,11 @@ decode; two sessions ending a turn two different ways cost more than either shap
 verdicts: finished here for you, the session can be closed — only once its work item is closed
 where it is tracked, its code is merged into the main branch, its working copy is clean and parked
 on that branch's head, and nothing is left for the user; what only an outside event or a release
-still moves is a scheduled follow-up, and the turn ends finished; for you to do: the gesture you tried and only the user can finish, where it
+still moves is a scheduled follow-up, and the turn ends finished, only when its sequel adds nothing
+the mission asked for (checking that already-tested code runs); when it delivers part of the mission
+(a measure, a datum, an answer owed), the session watches for the verdict in the background, with
+its recurring safety net, does that part itself, and the turn ends in progress, naming the watcher
+and what follows; for you to do: the gesture you tried and only the user can finish, where it
 is ready, what it unblocks; in progress: an agent is working on it right now, which one and on
 what; or, I need you: the question, its
 description in 100 words opening on the question's context, and its options as cards, each with what it costs. Never a topic name. Never two of them. Never end on a stated intention of your own
@@ -101,9 +105,11 @@ render it.
 - **Exactly one of the four**, and it is the last block of the turn.
 - **In progress only while an agent is at work, and always while one is**, whatever the turn
   answered (a sub-agent, a workflow, a tab or another
-  session this one handed it to, its own background command). What no agent moves (a release
-  pipeline, an outside event, a date) is a scheduled follow-up, and the turn ends on *Finished*;
-  what needs a person's choice is a filed decision, and the turn ends on *I need you*; what needs a
+  session this one handed it to, its own background command, its watcher on a release or an
+  outside event whose sequel is part of the mission). What no agent moves (a release pipeline, an
+  outside event, a date) is a scheduled follow-up, and the turn ends on *Finished*, only when its
+  sequel adds nothing the mission asked for; otherwise the session watches it as the rule above
+  says, and the turn ends on *In progress*; what needs a person's choice is a filed decision, and the turn ends on *I need you*; what needs a
   person's gesture is work, and the turn ends on *For you to do*. No turn ends on an
   open wait.
 - **Finished waits for the tracker**: while the work item is still open where it is tracked (the
@@ -111,7 +117,8 @@ render it.
   unmerged into the main branch, its working copy dirty or off that branch's head, or a decision
   its work settled still pending (§ Your decisions, at the start and at the end), the
   verdict is *In progress* or *I need you*, on whatever closes it; a remaining phase no agent is on
-  is work for this same turn. One exception: when all that is left is a production
+  is work for this same turn. One exception, for a release whose sequel adds nothing the mission
+  asked for: when all that is left is a production
   release already requested with this session's identifier on it, and a post-deploy check registered
   for its pull request (`followup-conventions.md`), the verdict is *Finished*: that check is played
   right after the release, and a failure becomes a ticket for the workspace's automation account, naming who shipped it — no workstation
