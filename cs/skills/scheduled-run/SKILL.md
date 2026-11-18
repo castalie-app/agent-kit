@@ -43,6 +43,9 @@ itself would play a run no launcher is watching, with nobody to cut it at its ma
 Then read once what the rest needs:
 
 - `cs on-behalf` — `unattended` and `robot_user_id`, for the signature (section 6);
+- the task's responsible person: `owner_user_id` and `owner_name` from
+  `mcp__castalie__scheduled_task_get(id=<task id>)` (the run carries `task.owner_user_id` too) —
+  read **before naming anyone** in a decision or a ticket (section 4);
 - the clock: the run must be closed before `picked_at + task.max_duration_minutes`, when the launcher
   cuts the session. Keep ten minutes for the close.
 
@@ -155,20 +158,25 @@ answered ones (step 1; `decision-sheet.md` § Read your answers at every step):
 | `dedupe_key`, `asked_by_agent` | the key above, `scheduled-task:<task id>` |
 | `author_kind` | `agent` (section 6) |
 
-**The responsible person** owns the subject, not the task. Whoever last edited a task configured
-it; in many workspaces one person edited them all. First found of:
+**The responsible person** owns the subject, not the task's configuration. Whoever last edited a
+task configured it; in many workspaces one person edited them all. First found of:
 
-1. the person the prompt names (resolve an address with `user_lookup(email)`);
-2. the owner of the subject's domain: `domain_list_owners(domain_id)`, a named person, the
+1. the task's responsible person — its « Responsable » field, `owner_user_id` from
+   `scheduled_task_get`, read in section 1: the workspace owner set it on purpose, so it wins;
+2. the person the prompt names (resolve an address with `user_lookup(email)`);
+3. the owner of the subject's domain: `domain_list_owners(domain_id)`, a named person, the
    responsible before a deputy; a domain with none hands over to its parent (`parent_domain_id` in
    `domain_list`), up to the top;
-3. the owner of the Castalie objective the subject is linked to — its brief's or spec's objective,
+4. the owner of the Castalie objective the subject is linked to — its brief's or spec's objective,
    or the objective whose key result the task measures;
-4. the host's own owner rule, when its instructions declare one (the last author in `git log` of
+5. the host's own owner rule, when its instructions declare one (the last author in `git log` of
    the failing code, for example).
 
 None found: no addressee, and a ticket stays on its team. Never the task's last editor
-(`updated_by_user_id`, `created_by_user_id`), never the workspace owner.
+(`updated_by_user_id`, `created_by_user_id`), never the workspace owner unless the task names him.
+Castalie applies the first rung itself: a decision filed with `asked_by_agent="scheduled-task:<task
+id>"`, or on this run, and a ticket filed with that same `asked_by_agent`, go to the task's
+responsible person when they name nobody — so pass `asked_by_agent` on both.
 
 **Close** the run with `final_status="human_required"` and `outcome="skipped"` — or `failed` when
 something else this run touched also stays broken. `outcome_type="decision"` and `outcome_ref_id`
@@ -191,8 +199,9 @@ A ticket is the team's work, and the robot's name on a wrong one costs a colleag
   open tickets only), then `pm_search` on the words that name the failing thing (older and parked
   ones). A match open for the same symptom gets a `discussion_post(entity_type="bug", …)` with this
   occurrence, its date and figures — never a second ticket.
-- **Create** with `bug_create`, the title in the words of whoever suffers it, `author_kind="agent"`.
-  Assign it only to the responsible person of section 4; none found, it stays on its team.
+- **Create** with `bug_create`, the title in the words of whoever suffers it, `author_kind="agent"`,
+  `asked_by_agent="scheduled-task:<task id>"`. Assign it only to the responsible person of section 4;
+  none found, it stays on its team.
 - **A skill whose product is a proved defect** — `bug-bash`, `state-machine-audit` — files what it
   proved on the first occurrence: a failing reproduction test, or a code path an adversarial verifier
   traced from a wired entry point to the write, is not an automatic signal. It still searches before
