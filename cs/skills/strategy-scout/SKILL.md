@@ -58,9 +58,10 @@ person's own scheduler.
   (`${CLAUDE_PLUGIN_ROOT}/instructions/on-whose-behalf.md`):
   1. `--to`, or the person the agentic scheduled task's prompt names (resolve an address with
      `user_lookup(email)`);
-  2. under `scheduled-run`, the task's last editor: `updated_by_user_id`, else
-     `created_by_user_id`, from `mcp__castalie__scheduled_task_get` — a workspace owner, since only
-     an owner writes a task;
+  2. under `scheduled-run`, the task's responsible person: `owner_user_id` from
+     `mcp__castalie__scheduled_task_get`; when it names nobody, the task's last editor:
+     `updated_by_user_id`, else `created_by_user_id` — a workspace owner, since only an owner
+     writes a task;
   3. otherwise the caller: `mcp__castalie__whoami`.
 - **Today's budget.** Fixes: `N = min(--max, 5)`. Questions:
   `mcp__castalie__decision_list(scope=asked_by_agent, asked_by_agent="strategy-scout", status=all,
