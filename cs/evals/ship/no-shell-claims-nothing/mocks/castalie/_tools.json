@@ -1,0 +1,29 @@
+{
+ "tools": [
+  {
+   "name": "whoami",
+   "description": "Return the authenticated user and workspace.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   }
+  },
+  {
+   "name": "review_record",
+   "description": "Record a review panel's findings for a pull request.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "pr_url": {
+      "type": "string"
+     },
+     "findings": {
+      "type": "array"
+     }
+    },
+    "required": []
+   }
+  }
+ ]
+}

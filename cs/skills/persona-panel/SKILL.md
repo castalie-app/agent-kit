@@ -1,10 +1,12 @@
 ---
 name: persona-panel
-description: Have a page, a screen, a text or an offer judged by a synthetic panel of precise personas, scored with semantic similarity rating (SSR, Maier, Wiecki et al., PyMC Labs and Colgate-Palmolive, arXiv 2510.08338) — each persona answers one free-text question in its own words, never a number, and the answer is mapped onto a 1–5 scale by its similarity to reference statements. Returns, per segment, the mean score and the share at 4 or 5, the five most frequent objections with a quote each, what attracts, three corrections ranked by expected effect, and the limits. Replays the same panel on two versions to keep the better one. Fires on "/cs:persona-panel", "fais juger cette page par nos personas", "panel de personas", "panel synthétique", "teste cette offre sur nos cibles", "persona panel", "what would our buyers think of this page", "compare these two versions on our personas". Compares versions and ranks objections; it never predicts a conversion rate.
+description: Have a page, a text or an offer judged by a synthetic panel of personas, scored by semantic similarity rating — scores, top objections, ranked corrections, two versions compared. Fires on « panel de personas », « fais juger cette page par nos personas », "persona panel".
 allowed-tools: Bash, Read, Write, Agent, WebFetch, Skill, mcp__castalie__whoami, mcp__castalie__feature_brief_get, mcp__castalie__feature_spec_get, mcp__castalie__discussion_post, mcp__castalie__artifact_publish, mcp__castalie__artifact_list
 ---
 
 # persona-panel — a synthetic panel, scored by semantic similarity
+
+**In short.** Have a page, a screen, a text or an offer judged by a synthetic panel of precise personas, scored with semantic similarity rating (SSR, Maier, Wiecki et al., PyMC Labs and Colgate-Palmolive, arXiv 2510.08338) — each persona answers one free-text question in its own words, never a number, and the answer is mapped onto a 1–5 scale by its similarity to reference statements. Returns, per segment, the mean score and the share at 4 or 5, the five most frequent objections with a quote each, what attracts, three corrections ranked by expected effect, and the limits. Replays the same panel on two versions to keep the better one. Fires on "/cs:persona-panel", "fais juger cette page par nos personas", "panel de personas", "panel synthétique", "teste cette offre sur nos cibles", "persona panel", "what would our buyers think of this page", "compare these two versions on our personas". Compares versions and ranks objections; it never predicts a conversion rate.
 
 **Reference.** Benjamin F. Maier, Ulf Aslak, Luca Fiaschi, Nina Rismal, Kemble Fletcher,
 Christian C. Luhmann, Robbie Dow, Kli Pappas, Thomas V. Wiecki (PyMC Labs and Colgate-Palmolive),

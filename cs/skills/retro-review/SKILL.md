@@ -1,9 +1,11 @@
 ---
 name: retro-review
-description: Work the queue of retrospective suggestions `retro` left in Castalie — `/cs:retro-review [--preview] [--keep-pending]` takes at most the 100 oldest pending ones, exported to disk and never into context, groups them, checks every claim against the current code, writes the lessons that hold at the file that owns them (a skill, an instruction file, the root instruction file last) in one pull request shipped through the host's own path, and closes every reviewed suggestion with a verdict and a reason. Reports how many stay pending so a caller can drain a backlog. Unattended-safe (`scheduled-run`): it never asks.
+description: Work the queue of pending retrospective suggestions — each claim checked against the code, the lessons that hold written in one pull request shipped through the host's path, every suggestion closed with a reason. Unattended-safe.
 ---
 
 # retro-review — the retrospective queue, verified and closed
+
+**In short.** Work the queue of retrospective suggestions `retro` left in Castalie — `/cs:retro-review [--preview] [--keep-pending]` takes at most the 100 oldest pending ones, exported to disk and never into context, groups them, checks every claim against the current code, writes the lessons that hold at the file that owns them (a skill, an instruction file, the root instruction file last) in one pull request shipped through the host's own path, and closes every reviewed suggestion with a verdict and a reason. Reports how many stay pending so a caller can drain a backlog. Unattended-safe (`scheduled-run`): it never asks.
 
 `retro` posts a suggestion at the end of a run: a lesson and the rule it would encode, aimed at a
 file. Left alone, the queue only grows, and a rule nobody wrote down is rediscovered the hard way

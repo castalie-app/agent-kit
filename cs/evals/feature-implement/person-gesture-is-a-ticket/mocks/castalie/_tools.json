@@ -1,0 +1,170 @@
+{
+ "tools": [
+  {
+   "name": "whoami",
+   "description": "Return the authenticated user and workspace.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   }
+  },
+  {
+   "name": "feature_spec_get",
+   "description": "Get a spec with its phases, risks, acceptance tests and body.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id"
+    ]
+   }
+  },
+  {
+   "name": "feature_spec_pick",
+   "description": "Claim a spec for its lead.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "lead_user_id": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id"
+    ]
+   }
+  },
+  {
+   "name": "feature_spec_set_phase_status",
+   "description": "Set a phase's status.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "phase_id": {
+      "type": "integer"
+     },
+     "status": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "id"
+    ]
+   }
+  },
+  {
+   "name": "decision_list",
+   "description": "List decisions.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "asked_by_agent": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    },
+    "required": []
+   }
+  },
+  {
+   "name": "decision_create",
+   "description": "Ask a person to decide something.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "subject_kind": {
+      "type": "string"
+     },
+     "subject_id": {
+      "type": "integer"
+     },
+     "answer_shape": {
+      "type": "string"
+     },
+     "escalation_reason": {
+      "type": "string"
+     },
+     "description_100_md": {
+      "type": "string"
+     },
+     "description_250_md": {
+      "type": "string"
+     },
+     "description_500_md": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "title",
+     "subject_kind"
+    ]
+   }
+  },
+  {
+   "name": "bug_create",
+   "description": "File a ticket.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ticket_type": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "description_md": {
+      "type": "string"
+     },
+     "feature_spec_id": {
+      "type": "integer"
+     },
+     "assigned_to_user_id": {
+      "type": "integer"
+     },
+     "author_kind": {
+      "type": "string"
+     }
+    },
+    "required": []
+   }
+  },
+  {
+   "name": "bug_set_requires_human",
+   "description": "Park a ticket on a person, with a reason.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "requires_human": {
+      "type": "boolean"
+     },
+     "reason": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "requires_human"
+    ]
+   }
+  }
+ ]
+}

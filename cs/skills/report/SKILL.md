@@ -124,14 +124,24 @@ place that truthful context in the appropriate structured section.
 
 ## The link
 
-After a successful creation or duplicate confirmation, render the ticket link as the final line
-and render nothing after it. On the formatted create path, the one-line server-proposal
+After a successful creation or duplicate confirmation, render the ticket link as the last line of the reply
+and render nothing after it but the turn's verdict. On the formatted create path, the one-line server-proposal
 acknowledgement comes immediately before that final link:
 
 `👁️ https://<space>/tickets/<id>`
 
 Use the connected workspace address and the returned ticket id. Do not add a recap, a closing
-sentence, punctuation, or a second ticket link after this line.
+sentence, punctuation, or a second ticket link between this line and the verdict.
+The verdict is the shared conventions' own block, a quote opening on its bold heading, never a
+plain sentence:
+
+```
+👁️ https://<space>/tickets/<id>
+
+> **Finished here for you**: the ticket is filed, the session can be closed.
+```
+
+(the heading in the person's language: « Terminé ici pour vous » in French).
 
 ## Too big for a ticket → feature-brief
 

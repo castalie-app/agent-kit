@@ -126,6 +126,13 @@ conversation is a token in a log, in a backup, and in whatever the transcript is
 
 Say what changed, in one line, then get out of the way — the user came to work, not to configure.
 
+**Kit updates reach them only when auto-update is on for the `castalie` marketplace.** Setup writes
+`"autoUpdate": true` on its entry in their own `~/.claude/settings.json`; a repository may commit the
+same entry in `.claude/settings.json`. Claude Code's new default (on or after 30 November 2026)
+covers only a marketplace their organisation declares in MANAGED settings, so outside managed
+settings the line stays needed. `cs worktrees status` says when it is missing; say so in one
+sentence only then.
+
 **Then know who is in front of you** (the shared conventions, « Who is in front of you »): their
 `CLAUDE.md` first, the one question when it says nothing.
 

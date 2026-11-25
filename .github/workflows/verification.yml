@@ -18,12 +18,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The eval verdict compares the plugin's version at the head and at the base.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24.22.1'
 
       - name: Le format des skills, l'absence d'adresse, l'absence de commande fantome
         run: node scripts/validate.mjs
+
+      # A publication — a pull request that raises the plugin's version — carries the verdict of the
+      # kit's eval suite (`npm run eval`, played on the publishing workstation: it needs a Claude
+      # sign-in, which no CI job holds), for that version and, on a pull request, for that very tree.
+      - name: A publication carries a passing eval of what it publishes
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          CHECK_TREE: ${{ github.event_name == 'pull_request' && '1' || '0' }}
+        run: node scripts/check-eval-verdict.mjs
 
       # La garantie produit : aucun verbe n'accepte de code, de diff ni de contenu de fichier.
       # La couche statique ne demande aucun reseau et se joue donc partout.

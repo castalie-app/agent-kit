@@ -1,9 +1,11 @@
 ---
 name: okr-review
-description: The state of play of your objectives, starting from the ones you pinned as your priorities — the tree with its progress, and the key results that are off track or that nobody has reported on in a fortnight, at the top, then the key results that read off no report. Use it before a review, at the start of a quarter check, or whenever someone asks how the period is going — and to prepare the person's CODIR review for a meeting with them, written straight into the review screen. Reads via the Castalie MCP; writes nothing but the pins the person confirms, the CODIR meeting date they give when none is scheduled, and the review drafts they approve, and never submits the review.
+description: The state of play of your objectives, pinned priorities first, with off-track or unreported key results at the top. Use before a review or a quarter check, or to prepare a CODIR review in the review screen. Writes only what the person confirms, never submits the review.
 ---
 
 # okr-review — where the objectives really stand
+
+**In short.** The state of play of your objectives, starting from the ones you pinned as your priorities — the tree with its progress, and the key results that are off track or that nobody has reported on in a fortnight, at the top, then the key results that read off no report. Use it before a review, at the start of a quarter check, or whenever someone asks how the period is going — and to prepare the person's CODIR review for a meeting with them, written straight into the review screen. Reads via the Castalie MCP; writes nothing but the pins the person confirms, the CODIR meeting date they give when none is scheduled, and the review drafts they approve, and never submits the review.
 
 A stocktake, not a conversation. It reads the objectives of one period, ranks the key results by
 how much doubt they carry, and says for each what is left to close. Output is your analysis, in the

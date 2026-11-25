@@ -1,9 +1,11 @@
 ---
 name: okr-panel
-description: Show or hide, beside the transcript, the strategy tree of what this working copy has in hand — the objective each brief serves, its specs, their phases and the checks scheduled after delivery. A toggle, not a conversation - the panel is drawn by the plugin's own hook and answers instantly. Use it whenever someone asks where the work sits in the strategy, or asks to open, close or refresh the objectives panel.
+description: Show or hide, beside the transcript, the strategy tree of what this working copy has in hand. Use when someone asks where the work sits in the strategy, or to open, close or refresh the objectives panel.
 ---
 
 # okr-panel — the strategy tree, beside the transcript
+
+**In short.** Show or hide, beside the transcript, the strategy tree of what this working copy has in hand — the objective each brief serves, its specs, their phases and the checks scheduled after delivery. A toggle, not a conversation - the panel is drawn by the plugin's own hook and answers instantly. Use it whenever someone asks where the work sits in the strategy, or asks to open, close or refresh the objectives panel.
 
 `/cs:okr-panel` opens the panel named « Où j'en suis » next to the conversation, and run again it
 closes it. The choice is remembered across sessions of this machine. A machine whose settings set
