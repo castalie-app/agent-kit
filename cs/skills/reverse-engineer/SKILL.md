@@ -52,6 +52,15 @@ claude mcp add --scope local rea -e JADX_MCP_JAR=/opt/jadx-mcp.jar \
   -- node "${CLAUDE_PLUGIN_ROOT}/skills/reverse-engineer/rea-mcp.mjs" --keep-env=JADX_MCP_JAR
 ```
 
+**Read as `castalie:reverse-engineer`, without the plugin**, there is no plugin root on disk: fetch
+the same launcher from the kit's repository into the user's folder, then register that copy:
+
+```bash
+mkdir -p ~/.castalie && curl -fsSL -o ~/.castalie/rea-mcp.mjs \
+  https://raw.githubusercontent.com/castalie-app/agent-kit/main/cs/skills/reverse-engineer/rea-mcp.mjs
+claude mcp add --scope local rea -- node "$HOME/.castalie/rea-mcp.mjs"
+```
+
 Never register the bare `npx -y rea-agents@6.5.0 mcp` (`cmd.exe /d /c npx …` on Windows): it is the
 same server with every key of the session in its environment. Node.js missing → install it as
 `${CLAUDE_PLUGIN_ROOT}/instructions/browser.md` says, then register.
