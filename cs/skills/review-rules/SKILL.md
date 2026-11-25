@@ -1,9 +1,11 @@
 ---
 name: review-rules
-description: One weekly pass over what the review panel learned — `/cs:review-rules [--install]` reads Castalie's ranking of this repository's review rules, turns at most three of them into a proposed pull request each (a rule the panel applies and nobody disputes becomes a write hook or an analyzer rule with its test; a rule the team keeps rejecting is removed or rewritten, its rejection rate and reasons quoted), then works the queue of pre-existing findings — the defects the panel saw outside a diff — fixing the real ones in one grouped pull request shipped through the host's own path and closing the rest with a reason. Unattended-safe (`scheduled-run`): it never asks. `--install` schedules the weekly pass, together with `retro-review`, for a workspace owner.
+description: Weekly pass over what the review panel learned — up to three undisputed rules turned into hooks or analyzer rules, rules the team keeps rejecting rewritten or removed, pre-existing findings fixed or closed. Unattended-safe; `--install` schedules it with `retro-review`.
 ---
 
 # review-rules — the review panel's rules, ranked once a week and acted on
+
+**In short.** One weekly pass over what the review panel learned — `/cs:review-rules [--install]` reads Castalie's ranking of this repository's review rules, turns at most three of them into a proposed pull request each (a rule the panel applies and nobody disputes becomes a write hook or an analyzer rule with its test; a rule the team keeps rejecting is removed or rewritten, its rejection rate and reasons quoted), then works the queue of pre-existing findings — the defects the panel saw outside a diff — fixing the real ones in one grouped pull request shipped through the host's own path and closing the rest with a reason. Unattended-safe (`scheduled-run`): it never asks. `--install` schedules the weekly pass, together with `retro-review`, for a workspace owner.
 
 Every pull request the kit's panel reviews is recorded in Castalie with the host rule each finding
 cites and what became of it (`${CLAUDE_PLUGIN_ROOT}/instructions/review-lenses.md` § Recording).

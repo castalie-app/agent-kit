@@ -1,9 +1,11 @@
 ---
 name: instruction-bench
-description: The instruction bench — each section of the repository's instruction file (CLAUDE.md, AGENTS.md) replayed with and without it on situations drawn from the team's real sessions, and classified — misleads (to correct), no decision changed (to remove or move to a domain file), improves decisions (to keep). `/cs:instruction-bench` shows the latest report and the month's spending; `--install` writes the optional configuration, plays a first pass and schedules the monthly pass; `--run` plays a pass by hand; `--monthly` is the scheduled pass (unattended-safe, `scheduled-run`). One model call per trial, no tool, under a monthly ceiling Castalie enforces. It proposes; it never edits the instruction file. Fires on "banc d'instructions", "notre CLAUDE.md est trop long", "quelles sections servent ?", "instruction bench", "which CLAUDE.md sections matter?".
+description: Measure each section of the instruction file (CLAUDE.md, AGENTS.md) on situations from the team's real sessions — which misleads, which changes nothing, which helps. Proposes, never edits. Fires on « banc d'instructions », « notre CLAUDE.md est trop long », "instruction bench".
 ---
 
 # instruction-bench — each section of the instruction file measured on real situations
+
+**In short.** The instruction bench — each section of the repository's instruction file (CLAUDE.md, AGENTS.md) replayed with and without it on situations drawn from the team's real sessions, and classified — misleads (to correct), no decision changed (to remove or move to a domain file), improves decisions (to keep). `/cs:instruction-bench` shows the latest report and the month's spending; `--install` writes the optional configuration, plays a first pass and schedules the monthly pass; `--run` plays a pass by hand; `--monthly` is the scheduled pass (unattended-safe, `scheduled-run`). One model call per trial, no tool, under a monthly ceiling Castalie enforces. It proposes; it never edits the instruction file. Fires on "banc d'instructions", "notre CLAUDE.md est trop long", "quelles sections servent ?", "instruction bench", "which CLAUDE.md sections matter?".
 
 The instruction file goes out with every request. It grows, and nobody knows which section changes
 what the agent decides, which changes nothing, and which leads it astray. The bench answers on the

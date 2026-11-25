@@ -1,0 +1,238 @@
+{
+ "tools": [
+  {
+   "name": "whoami",
+   "description": "Return the authenticated user and workspace.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   }
+  },
+  {
+   "name": "bug_get",
+   "description": "Read one ticket with its history.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id"
+    ]
+   }
+  },
+  {
+   "name": "bug_claim",
+   "description": "Claim a ticket.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id"
+    ]
+   }
+  },
+  {
+   "name": "bug_add_comment",
+   "description": "Add a comment to a ticket.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "body_md": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "body_md"
+    ]
+   }
+  },
+  {
+   "name": "discussion_read",
+   "description": "Read the discussion of a brief, spec or bug.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "entity_type": {
+      "type": "string"
+     },
+     "entity_id": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "entity_type",
+     "entity_id"
+    ]
+   }
+  },
+  {
+   "name": "discussion_post",
+   "description": "Post in the discussion of a brief, spec or bug.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "entity_type": {
+      "type": "string"
+     },
+     "entity_id": {
+      "type": "integer"
+     },
+     "body_md": {
+      "type": "string"
+     },
+     "author_kind": {
+      "type": "string"
+     },
+     "mentioned_user_ids": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     }
+    },
+    "required": [
+     "entity_type",
+     "entity_id",
+     "body_md"
+    ]
+   }
+  },
+  {
+   "name": "bug_declare_sql_script",
+   "description": "Declare a corrective SQL script on a ticket.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "filename": {
+      "type": "string"
+     },
+     "sql_content": {
+      "type": "string"
+     },
+     "purpose_md": {
+      "type": "string"
+     },
+     "verification_query": {
+      "type": "string"
+     },
+     "self_applied": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "id",
+     "filename",
+     "sql_content"
+    ]
+   }
+  },
+  {
+   "name": "bug_set_requires_human",
+   "description": "Park a ticket on a person, with a reason.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "requires_human": {
+      "type": "boolean"
+     },
+     "reason": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "requires_human"
+    ]
+   }
+  },
+  {
+   "name": "bug_set_status",
+   "description": "Set a ticket's status.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "status": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "id",
+     "status"
+    ]
+   }
+  },
+  {
+   "name": "decision_create",
+   "description": "Ask a person to decide something.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "subject_kind": {
+      "type": "string"
+     },
+     "subject_id": {
+      "type": "integer"
+     },
+     "answer_shape": {
+      "type": "string"
+     },
+     "escalation_reason": {
+      "type": "string"
+     },
+     "description_100_md": {
+      "type": "string"
+     },
+     "description_250_md": {
+      "type": "string"
+     },
+     "description_500_md": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "title",
+     "subject_kind"
+    ]
+   }
+  },
+  {
+   "name": "pm_search",
+   "description": "Search briefs, specs and tickets.",
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "query": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "query"
+    ]
+   }
+  }
+ ]
+}

@@ -158,10 +158,46 @@ for (const skill of skills) {
     if (!fields.get(required)) fail(`skill \`${skill}\``, `\`${required}\` is missing or empty — it is mandatory in the SKILL.md format`);
   }
 
+  // A plain YAML scalar cannot hold ": " nor " #": the parser stops there, and Claude Code then
+  // loads the skill with EMPTY metadata — no description in the listing, so the model never picks
+  // it, and nothing says so. Six skills shipped that way until 25 November 2026, found by
+  // `claude plugin validate` and `/skill-doctor` while every check here was green. Quote the
+  // value, or reword it.
+  for (const line of front[1].split(/\r?\n/)) {
+    const match = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+    if (match === null) continue;
+    const value = match[2].trim();
+    if (value === "" || /^["'|>[{]/.test(value)) continue;
+    if (/: |\s#/.test(value)) {
+      fail(`skill \`${skill}\``, `\`${match[1]}\` is a plain YAML scalar holding ": " or " #" — it does not parse, and the skill loads with no metadata. Quote it or reword it`);
+    }
+  }
+
   // Le nom déclaré et le dossier se répondent : c'est le dossier qui nomme la skill à
   // l'invocation, et un écart fait répondre une skill sous le nom d'une autre.
   if (fields.has("name") && fields.get("name") !== skill) {
     fail(`skill \`${skill}\``, `declares name: ${fields.get("name")} — it must match its directory`);
+  }
+}
+
+// -------------------------------------------------- 1b. an eval case is played once and judged once
+
+// Benoît Galy, 25 November 2026: the eval suite that gates a publication plays each case ONCE and
+// judges it ONCE — no rejudging, no vote. `claude plugin eval` runs an `llm` or `baseline` grader as
+// three judge calls and keeps the majority, so neither may appear here; and a case says `runs: 1`.
+const evalsDir = join(ROOT, "cs", "evals");
+const walkEvals = (dir) => readdirSync(dir).flatMap((e) => {
+  const p = join(dir, e);
+  return statSync(p).isDirectory() ? (e === "results" ? [] : walkEvals(p)) : [p];
+});
+for (const file of statSync(evalsDir, { throwIfNoEntry: false })?.isDirectory() ? walkEvals(evalsDir) : []) {
+  const where = relative(ROOT, file).replace(/\\/g, "/");
+  const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(file, "utf8"))?.[1] ?? "";
+  if (/[\\/]graders[\\/][^\\/]+\.md$/.test(file) && /^type:\s*(llm|baseline)\s*$/m.test(front)) {
+    fail(`eval grader \`${where}\``, "calls a judge model, which votes three times; grade from the transcript (tool_used, tool_order, regex, file_exists)");
+  }
+  if (/[\\/]prompt\.md$/.test(file) && !/^runs:\s*1\s*$/m.test(front)) {
+    fail(`eval case \`${where}\``, "must declare `runs: 1` — a case is played once");
   }
 }
 

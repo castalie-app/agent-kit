@@ -1,9 +1,11 @@
 ---
 name: workflows
-description: See and change what Castalie's skills do on their own — put up a preview, close a refused ticket, how your pipeline releases and goes back. Fires on "quels réglages Castalie sont actifs ?", "castalie settings", "arrête de fusionner tout seul", "demande-moi avant de livrer". Shows what your administrator decided for the whole workspace and what is left to you, says plainly that merging and releasing are never a personal setting, and points at the page on your Castalie account.
+description: See and change what Castalie's skills do on their own — previews, closing refused tickets, release and rollback. Fires on « quels réglages Castalie sont actifs ? », « arrête de fusionner tout seul », « demande-moi avant de livrer », "castalie settings".
 ---
 
 # workflows — what the skills do on their own
+
+**In short.** See and change what Castalie's skills do on their own — put up a preview, close a refused ticket, how your pipeline releases and goes back. Fires on "quels réglages Castalie sont actifs ?", "castalie settings", "arrête de fusionner tout seul", "demande-moi avant de livrer". Shows what your administrator decided for the whole workspace and what is left to you, says plainly that merging and releasing are never a personal setting, and points at the page on your Castalie account.
 
 Every preference here answers one question: **when a skill reaches a step it could take on its own,
 what does it do?** Putting a branch on a preview, closing a ticket it found is not a defect,

@@ -1,9 +1,11 @@
 ---
 name: sql-cleaning
-description: Remove what a delivery retired but could not drop — `/cs:sql-cleaning [--script <path>] [--install]` takes the table-removal scripts declared in Castalie's SQL inventory (folder `tools`, nature `schema`), checks that nothing still reads each table and that the change that retired it is served and old enough to survive a rollback, proves the script on a throwaway database, plays it on every database through the channel the host declares, reads the tables back and stamps the script played. Without a declared channel it hands the proven script to a person as a ticket. Unattended-safe (`scheduled-run`): it never asks. `--install` schedules the weekly pass for a workspace owner. Not for a schema change that ships with the code, nor a data repair on a ticket.
+description: Drop the tables a delivery retired but could not remove, once nothing reads them and the retiring change is served — proven on a throwaway database, then played through the host's declared channel. Unattended-safe; `--install` schedules the weekly pass. Fires on « nettoyage SQL », "sql cleaning".
 ---
 
 # sql-cleaning — drop what the delivery could not
+
+**In short.** Remove what a delivery retired but could not drop — `/cs:sql-cleaning [--script <path>] [--install]` takes the table-removal scripts declared in Castalie's SQL inventory (folder `tools`, nature `schema`), checks that nothing still reads each table and that the change that retired it is served and old enough to survive a rollback, proves the script on a throwaway database, plays it on every database through the channel the host declares, reads the tables back and stamps the script played. Without a declared channel it hands the proven script to a person as a ticket. Unattended-safe (`scheduled-run`): it never asks. `--install` schedules the weekly pass for a workspace owner. Not for a schema change that ships with the code, nor a data repair on a ticket.
 
 A delivery that is safe to play automatically builds and alters; it does not destroy. A team that
 takes `DROP` away from its migration account — the sound choice, since the day a script ran

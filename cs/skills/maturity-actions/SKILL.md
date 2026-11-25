@@ -1,9 +1,11 @@
 ---
 name: maturity-actions
-description: Carry out the audit actions this workspace has ACCEPTED — one gesture per action, in the order that unblocks the most, ending at a single pull request. Fires on "mets en œuvre ce qu'on a validé", "applique les actions de l'audit", "vide la file", "carry out the accepted actions". It takes nothing on its own initiative — an action nobody accepted is never touched, and an action whose procedure is not written is skipped out loud rather than improvised. Its one pull request ships through the host's own merge and release path without asking anyone: the workspace already accepted every action in it.
+description: Carry out the audit actions this workspace ACCEPTED, one gesture each, ending in one pull request shipped without asking; an action nobody accepted is never touched. Fires on « applique les actions de l'audit », « mets en œuvre ce qu'on a validé », "carry out the accepted actions".
 ---
 
 # maturity-actions — carry out what was accepted, and nothing else
+
+**In short.** Carry out the audit actions this workspace has ACCEPTED — one gesture per action, in the order that unblocks the most, ending at a single pull request. Fires on "mets en œuvre ce qu'on a validé", "applique les actions de l'audit", "vide la file", "carry out the accepted actions". It takes nothing on its own initiative — an action nobody accepted is never touched, and an action whose procedure is not written is skipped out loud rather than improvised. Its one pull request ships through the host's own merge and release path without asking anyone: the workspace already accepted every action in it.
 
 The audit observes and proposes; **this is the only skill that acts on what it found**, and it acts
 on one thing alone: what a person accepted, in writing, on their own page.

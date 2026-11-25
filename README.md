@@ -56,6 +56,13 @@ Use `--approve-only` when preparing a protocol without executing its judge.
 
 ## Install
 
+**Claude Code 2.1.289 or later.** The kit's hooks module and its two panes are typed against that
+version's API (`types/claude-code.d.ts` names it on its first line), and `cs/.claude-plugin/plugin.json`
+declares it: `"engines": { "claude-code": ">=2.1.289" }`. From Claude Code 2.1.323, a workstation
+outside that range neither installs, updates nor loads the kit, and an install picks the newest
+version that fits; an older Claude Code ignores the field. The range moves the day the kit starts
+using something newer, from what was checked, never by guess.
+
 ### No workspace yet — one command, no e-mail, no screen
 
 ```
@@ -139,6 +146,13 @@ Your agent does the gesture itself, up to the last click, and hands you only the
 `PLAYWRIGHT_MCP_HEADLESS`, `PLAYWRIGHT_MCP_EXTENSION_TOKEN` and the other `PLAYWRIGHT_MCP_*`
 variables are read as the server documents them. The method is `cs/instructions/browser.md`.
 
+**No other plugin to install.** Since Claude Code 2.1.331 a plugin may declare
+`optionalDependencies`, other plugins installed with it. The kit declares none, on purpose: the
+browser above is its own (`@playwright/mcp` pinned in `cs/bin/playwright-mcp.mjs`, moving only with
+a kit release), and the official `playwright` plugin installed beside it would start a second
+browser server at whatever version it serves that day. A skill that comes to rely on another plugin
+declares it in `plugin.json`, never in a sentence of this file.
+
 ### Files from your machine, attached by path
 
 A third server, `castalie-files`, joins a file from your disk (a screenshot, a PDF, a CSV) to a brief,
@@ -201,7 +215,17 @@ whole, so a different source points every session of that repository at it. Clau
 the marketplace a few minutes after the first message of a session and says
 `Plugin updated: cs · Run /reload-plugins to apply`. `cs worktrees status` says when the default
 branch's `.claude/settings.json` lacks that entry, with the line to add, and the end-of-turn hook
-says it once. To pull the current state right now:
+says it once. **The default changes on or after 30 November 2026, for managed settings only.** Claude Code
+2.1.331 announced that a marketplace declared in the MANAGED `extraKnownMarketplaces` (the settings
+an organisation deploys to its machines) auto-updates by default, `"autoUpdate": false` opting it
+out. An organisation that deploys the `castalie` entry that way gets kit updates with no
+`autoUpdate` line. Everywhere else nothing changes: the entry `claude plugin marketplace add`
+writes, your own `~/.claude/settings.json` and a repository's `.claude/settings.json` still need
+`"autoUpdate": true`, which is why setup writes it and `cs worktrees status` checks it. The
+« Marketplace auto-update » row of `/status` (Claude Code 2.1.329) says which state a workstation
+is in.
+
+To pull the current state right now:
 
 ```
 claude plugin marketplace update castalie
@@ -935,6 +959,7 @@ cs/
   bin/proof-pack.mjs              # cs proof-pack: canary, compute, render, gate (instructions/proof-pack.md)
   bin/image.mjs                   # image compression with sharp, installed on first use
   .mcp.json                       # the plugin's own MCP servers: playwright, playwright-attach, castalie-files
+  evals/<skill>/<case>/           # the eval suite `npm run eval` plays before a publication
 types/claude-code.d.ts            # the function-hooks API, as the engine wrote it; both panes are typed against this
 tsconfig.json                     # what CI recompiles on every push
 package.json                      # makes the repo itself runnable: npx -y github:castalie-app/agent-kit
@@ -942,7 +967,35 @@ setup/setup.mjs                   # the one-command setup
 scripts/build-codex.mjs           # the projection with this repository's defaults — a caller, not a copy
 scripts/check-where.mjs           # the pane's rows, replayed on both workspaces' real answers
 scripts/check-decisions.mjs       # the decisions panel's cards and sheet, replayed on answers in the server's shape
+scripts/plugin-eval.mjs           # npm run eval: the eval suite, each case played once, and eval-verdict.json
+scripts/check-eval-verdict.mjs    # in invariants: a version change carries a passing verdict for its tree
+eval-verdict.json                 # the last publication's eval verdict
 ```
+
+## Publishing the kit
+
+A publication is a pull request that raises `version` in `cs/.claude-plugin/plugin.json`: that is
+what makes a workstation's marketplace install the new copy. Before opening it:
+
+1. `node scripts/validate.mjs` and `npm run -s verify:codex`;
+2. raise the version (patch for a correction, minor for a new behaviour) and commit;
+3. `npm run eval`: `claude plugin eval` plays every case of `cs/evals/` once against the
+   committed tree and writes `eval-verdict.json` (version, tree of `cs/`, score of each case);
+   commit it;
+4. open the pull request, and squash-merge it once `invariants` is green.
+
+`invariants` refuses a version change without a passing verdict for that version and that tree
+(`scripts/check-eval-verdict.mjs`): a case under 1.0 blocks the publication. The suite needs a
+Claude sign-in, so it runs on the publishing workstation, never in CI. **A case is played once and
+judged once**: one run, no baseline arm, and only graders that read the transcript (a tool called or
+never called, a pattern in the last reply). An `llm` grader asks a judge three times and keeps the
+majority, so `validate.mjs` refuses one here.
+
+The cases come from the team's benches where one exists: a case's `prompt.md` names the
+instruction-bench situation it replays. The reviewer bench has no confirmed case yet; its
+regressions join the suite once confirmed. A case states one behaviour a skill promises, with the
+Castalie verbs it calls answered by fixed replies (`mocks/castalie/`), and no `Bash` in
+`allowed_tools`: native Windows has no sandbox for a granted shell, and the suite must run there.
 
 ## License
 

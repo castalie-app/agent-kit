@@ -1,9 +1,11 @@
 ---
 name: review-bench
-description: The reviewer bench — the review lenses scored on the team's own regressions. `/cs:review-bench` shows each lens's note, its blocked modifications and the month's spending; `--install` declares the lenses, the pull-request check the modifying session plays (ONLY the modified lens, 30 cases, the pull request blocked when its note drops), and schedules the monthly pass; `--monthly` (unattended-safe, `scheduled-run`) files the new cases — recorded regressions, reverted pull requests, sound pull requests drawn at random — then replays every lens on about 100 cases. Fires on "banc d'essai du relecteur", "note nos relecteurs", "reviewer bench", "is our review getting better?".
+description: Score the review lenses on the team's own regressions and sound pull requests, and block a lens change whose note drops. Shows notes and spending; `--install`, `--monthly`. Fires on « banc d'essai du relecteur », « note nos relecteurs », "reviewer bench".
 ---
 
 # review-bench — the review lenses scored on the team's own regressions
+
+**In short.** The reviewer bench — the review lenses scored on the team's own regressions. `/cs:review-bench` shows each lens's note, its blocked modifications and the month's spending; `--install` declares the lenses, the pull-request check the modifying session plays (ONLY the modified lens, 30 cases, the pull request blocked when its note drops), and schedules the monthly pass; `--monthly` (unattended-safe, `scheduled-run`) files the new cases — recorded regressions, reverted pull requests, sound pull requests drawn at random — then replays every lens on about 100 cases. Fires on "banc d'essai du relecteur", "note nos relecteurs", "reviewer bench", "is our review getting better?".
 
 A review lens — its instructions, its model, its effort — changes often, and nobody measures whether
 the change made it better. The bench measures it on what the team already paid for: **every recorded

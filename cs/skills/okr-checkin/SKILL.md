@@ -1,9 +1,11 @@
 ---
 name: okr-checkin
-description: The check-in ritual — go through the key results you own in one pass, record where each one really stands (value, confidence, one sentence), and say what changed and what has just tipped into risk. A key result measured by a report of the workspace is recalculated from it, not asked; one whose report lives elsewhere is read off that report, and its check-in cites the address. Writes to Castalie through the MCP; every figure comes from a report or from the user, never from you.
+description: The check-in ritual — where each key result you own really stands (value, confidence, one sentence), recalculated from its report when it has one, and what has just tipped into risk. Every figure comes from a report or the user.
 ---
 
 # okr-checkin — record where the key results stand
+
+**In short.** The check-in ritual — go through the key results you own in one pass, record where each one really stands (value, confidence, one sentence), and say what changed and what has just tipped into risk. A key result measured by a report of the workspace is recalculated from it, not asked; one whose report lives elsewhere is read off that report, and its check-in cites the address. Writes to Castalie through the MCP; every figure comes from a report or from the user, never from you.
 
 The Monday-morning ritual. One pass over what the user owns, one question, then a dated trace on
 every figure that moved. A check-in is signed and timestamped: it is what turns a number on a

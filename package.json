@@ -22,6 +22,8 @@
     "check:statusline": "node scripts/check-statusline.mjs",
     "check:where": "node scripts/check-where.mjs",
     "check:decisions": "node scripts/check-decisions.mjs",
-    "check:types": "npx -y -p typescript@5 tsc -p tsconfig.json"
+    "check:types": "npx -y -p typescript@5 tsc -p tsconfig.json",
+    "eval": "node scripts/plugin-eval.mjs",
+    "check:eval-verdict": "node scripts/check-eval-verdict.mjs"
   }
 }

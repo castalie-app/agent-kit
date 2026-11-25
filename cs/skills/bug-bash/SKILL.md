@@ -1,9 +1,11 @@
 ---
 name: bug-bash
-description: Hunt bugs on a running app before its users meet them — five to ten explorers at once, each on one area with one posture (first-time user, numbers and copy, edge input, state across reloads, error paths), then every finding sorted against the source and proved by a reproduction test that fails for the reason reported. Only the proved ones become tickets. Fires on "bug bash", "chasse aux bugs", "explore l'appli et trouve ce qui casse", "teste cette branche comme un utilisateur", "bug bash the checkout". Never fixes, never merges; it hands each confirmed bug to `bug-fix`.
+description: Hunt bugs on a running app with several explorers at once, one area and one posture each; only findings proved by a failing reproduction test become tickets, handed to `bug-fix`. Fires on « chasse aux bugs », « teste cette branche comme un utilisateur », "bug bash".
 ---
 
 # bug-bash — many explorers, and only the bugs that reproduce
+
+**In short.** Hunt bugs on a running app before its users meet them — five to ten explorers at once, each on one area with one posture (first-time user, numbers and copy, edge input, state across reloads, error paths), then every finding sorted against the source and proved by a reproduction test that fails for the reason reported. Only the proved ones become tickets. Fires on "bug bash", "chasse aux bugs", "explore l'appli et trouve ce qui casse", "teste cette branche comme un utilisateur", "bug bash the checkout". Never fixes, never merges; it hands each confirmed bug to `bug-fix`.
 
 An explorer driving an app reports a lot, and much of it is wrong: a link that opened in a new tab
 looks dead, a lazy image looks blank, seed data looks like a defect, two explorers on one account

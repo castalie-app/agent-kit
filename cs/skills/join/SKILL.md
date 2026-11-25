@@ -1,9 +1,11 @@
 ---
 name: join
-description: Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their access to the company's shared space handled end to end — in Castalie, with no other account, or on GitHub — the company's practices installed from the space Castalie names, a personal CLAUDE.md that says they are not a technician, their work recorded in their Castalie profile, a first quick win done together, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", right after the prompt of Castalie's public collaborator guide installed the kit, and on the guide's step 3 prompt ("Aide-moi à trouver un tout premier usage de l'IA dans mon travail", "find my first quick win"), which runs the quick win alone. Every technical gesture is done for the person; they are asked only for what they alone can give.
+description: Bring one collaborator into their company's AI once Claude is connected to its Castalie workspace — access, practices, a personal CLAUDE.md and a first quick win, every technical gesture done for them. Fires on « rejoindre l'I.A. de mon entreprise », « Aide-moi à trouver un tout premier usage de l'IA dans mon travail », "join my company's AI".
 ---
 
 # join — a collaborator joins the company's AI
+
+**In short.** Bring one collaborator into their company's AI, once their Claude is connected to the company's Castalie workspace — why the company does it, their access to the company's shared space handled end to end — in Castalie, with no other account, or on GitHub — the company's practices installed from the space Castalie names, a personal CLAUDE.md that says they are not a technician, their work recorded in their Castalie profile, a first quick win done together, and a first real use of the writing skill. Fires on "/cs:join", "rejoindre l'I.A. de mon entreprise", "join my company's AI", right after the prompt of Castalie's public collaborator guide installed the kit, and on the guide's step 3 prompt ("Aide-moi à trouver un tout premier usage de l'IA dans mon travail", "find my first quick win"), which runs the quick win alone. Every technical gesture is done for the person; they are asked only for what they alone can give.
 
 The person in front of you is a collaborator, not a technician. Their leader invited them into the
 company's Castalie workspace, which usually holds the company's shared practices space too, sent them the link to
