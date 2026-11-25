@@ -28,6 +28,8 @@ const partial = args.includes("--case");
 
 const git = (...a) => spawnSync("git", a, { cwd: ROOT, encoding: "utf8" });
 const dirty = git("status", "--porcelain", "--", "cs").stdout.trim() !== "";
+// The tree is read BEFORE the run: the run can last minutes, and what it evaluated is this one.
+const tree = git("rev-parse", "HEAD:cs").stdout.trim();
 const version = JSON.parse(readFileSync(join(ROOT, "cs", ".claude-plugin", "plugin.json"), "utf8")).version;
 const out = join(mkdtempSync(join(tmpdir(), "cs-eval-")), "result.json");
 
@@ -53,14 +55,16 @@ const passed = run.status === 0 && cases.length > 0 && cases.every((c) => c.scor
 console.log(`\n${passed ? "✓" : "✗"} ${cases.filter((c) => c.score === 1).length}/${cases.length} cases at 1.0, ${result.costUsd?.toFixed?.(2) ?? "?"} $`);
 for (const c of cases.filter((c) => c.score < 1)) console.log(`  ✗ ${c.name} ${c.score.toFixed(2)}`);
 
-if (partial || dirty) {
-  console.log(partial ? "Some cases only: no verdict written." : "Modified files under cs/: no verdict written. Commit, then play the suite again.");
+if (partial || dirty || !tree) {
+  console.log(partial ? "Some cases only: no verdict written."
+    : dirty ? "Modified files under cs/: no verdict written. Commit, then play the suite again."
+    : "git could not name the tree of cs/: no verdict written.");
   process.exit(passed ? 0 : 1);
 }
 
 const verdict = {
   version,
-  cs_tree: git("rev-parse", "HEAD:cs").stdout.trim(),
+  cs_tree: tree,
   passed,
   claude_code: result.claudeVersion ?? null,
   model: MODEL,
