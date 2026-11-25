@@ -1,0 +1,1 @@
+{"evidence_id":"ev_2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c","operation":"binary_overview","confidence":"observed","normalized_result":{"document":"acme-sync.exe","procedure_count":412,"string_count":1873,"image_base":"0x140000000","segments":[".text",".rdata",".data"]},"limitations":[]}

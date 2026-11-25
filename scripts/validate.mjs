@@ -392,6 +392,9 @@ for (const file of [hostInstructions, ...walk(join(ROOT, "cs", "skills")).filter
 // written down but spelled out by a path.
 const mocksRoot = join(ROOT, "cs", "evals");
 const ALIAS = "castalie";
+// The other servers a skill registers itself, under a name it spells: `reverse-engineer` registers
+// REA as `rea`. A mock folder may carry one of these names, and no other.
+const OTHER_SERVERS = ["rea"];
 
 function mockServerDirs(dir) {
   const out = [];
@@ -406,7 +409,7 @@ function mockServerDirs(dir) {
 
 if (existsSync(mocksRoot)) {
   for (const { path, name } of mockServerDirs(mocksRoot)) {
-    if (name !== ALIAS) {
+    if (name !== ALIAS && !OTHER_SERVERS.includes(name)) {
       fail(relative(ROOT, path), `is a mock folder named after the server \`${name}\`, but this kit registers its MCP server as \`${ALIAS}\` — so the graders call \`mcp__${ALIAS}__<tool>\` and nothing here answers them. The eval still runs, against an agent left to improvise, and reports on behaviour it never exercised. Rename the folder to \`${ALIAS}\`.`);
     }
   }

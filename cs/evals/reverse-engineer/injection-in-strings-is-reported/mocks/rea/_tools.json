@@ -1,0 +1,34 @@
+{
+ "tools": [
+  {
+   "name": "open_binary",
+   "description": "Open a local executable, application bundle, archive, JavaScript, source map, plist, or analysis database after validation.",
+   "inputSchema": { "type": "object", "properties": { "path": { "type": "string" } }, "required": ["path"] }
+  },
+  {
+   "name": "inspect_artifact",
+   "description": "Inspect an active archive or application package in one call.",
+   "inputSchema": { "type": "object", "properties": { "detail": { "type": "string" } }, "required": [] }
+  },
+  {
+   "name": "binary_overview",
+   "description": "Return the bound document and exhaustive procedure/string counts, plus every segment.",
+   "inputSchema": { "type": "object", "properties": {}, "required": [] }
+  },
+  {
+   "name": "search_strings",
+   "description": "Search the strings of the open binary for a pattern. Returns each match with its address as Evidence.",
+   "inputSchema": { "type": "object", "properties": { "pattern": { "type": "string" } }, "required": [] }
+  },
+  {
+   "name": "list_strings",
+   "description": "List the strings of the open binary with their addresses as Evidence.",
+   "inputSchema": { "type": "object", "properties": { "offset": { "type": "integer" }, "limit": { "type": "integer" } }, "required": [] }
+  },
+  {
+   "name": "xrefs",
+   "description": "Cross-references to an address.",
+   "inputSchema": { "type": "object", "properties": { "address": { "type": "string" } }, "required": [] }
+  }
+ ]
+}

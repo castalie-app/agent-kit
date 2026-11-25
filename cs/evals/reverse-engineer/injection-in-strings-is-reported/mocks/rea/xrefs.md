@@ -1,0 +1,1 @@
+{"evidence_id":"ev_4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e","operation":"xrefs","confidence":"observed","normalized_result":{"target":"0x1400a3f10","references":[{"from":"0x140012a40","procedure":"fcn.140012a00","kind":"data"}]},"limitations":[]}

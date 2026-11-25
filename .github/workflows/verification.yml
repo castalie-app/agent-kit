@@ -151,6 +151,11 @@ jobs:
       - name: cs site publish reads a folder and checks the limits before uploading
         run: node --test cs/bin/site.test.mjs
 
+      # The REA reverse-engineering server hands its environment to whatever it analyses, so its
+      # launcher keeps the system essentials and REA's own variables, never a session's keys.
+      - name: The REA launcher starts the server without the session's keys
+        run: node --check cs/skills/reverse-engineer/rea-mcp.mjs && node --test cs/skills/reverse-engineer/rea-mcp.test.mjs
+
       # The decisions panel the same way: its cards, its groups per agent and its whole sheet are
       # pure functions, replayed on answers in the server's own shape. What reaches the engine
       # itself — the bind, the panes, a press, on the terminal's table and the desktop's — is
