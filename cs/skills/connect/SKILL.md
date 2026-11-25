@@ -95,6 +95,7 @@ Read the answer against these four, which cover nearly every case:
 | the URL contains a `${…_MCP_URL}` variable unexpanded | it is declared through an environment variable nobody set | re-run setup; it registers literal values and stops depending on the shell |
 | `401` / `unauthorized` on any call | the token is revoked, belongs to another workspace, or its bearer's account was closed — the instance refuses a token whose membership is no longer active | a new token on the same page, then setup again; if that also fails, their account itself is closed and only an owner reopens it |
 | `castalie` defined in **two** scopes | two definitions, and the local one wins — often the broken one loses silently, or the wrong one wins | keep one: `claude mcp remove castalie -s project` or `-s local` |
+| every skill shows **twice**, as `cs:<skill>` and `castalie:<skill>` | the plugin is installed AND the `castalie` server serves the skills too, to a registration made before 1.106.0, which lacks the `X-Castalie-Plugin` header | re-run setup: it adds the header, and the server then lists none to this registration |
 | `castalie` answers, but a `get` or the connector panel says **“Needs authentication”** | a rename, and nothing else. Claude Code files an authenticated session under the SERVER's name, so a token minted while it was called `bg` or `cs` stayed filed under that old name. The calls keep working; only the label is stale | it is not a fault to repair. Re-run setup — it registers the value literally — or sign in once under the new name. Reported from sixteen working copies on 22 September 2026, the day the server took the product's name |
 
 ## The command
@@ -117,6 +118,28 @@ claims or writes something, and two worktrees of the same repository show two di
 status line already configured is kept and printed above it, never replaced. `--no-statusline`
 skips the step, and `node "<config dir>/bg-statusline.mjs" --uninstall` puts back exactly what
 was there before.
+
+### With the plugin, or without it
+
+The workspace's server serves the kit's skills itself (MCP "Skills over MCP"): connected with no
+plugin, the agent finds them as `castalie:<skill>`. `--no-plugin` connects that way, and installs
+nothing else. Installed alongside the plugin, setup registers the server with the header
+`X-Castalie-Plugin: cs`, and the server lists no skill to it — every skill is then `cs:<skill>`,
+once. Say which one they get in the line after success.
+
+**What a skill cannot bring, and stays with the plugin**, written here so nobody promises it:
+
+- **the hooks** — the shared conventions in force from the first reply of every session
+  (`shared-conventions.md`, how a turn ends), the `CLAUDE.md` guard, the row under the prompt and
+  the work handed back to its session, the reminders after a pull request or a merge, the sweep
+  of agent copies, the automatic continue after a usage limit. A skill runs when the agent chooses
+  it; a hook runs without being asked, and only a plugin installs one;
+- **the panes** (`/where`, the decisions and OKR panels), **the `cs` command and the scripts of
+  `bin/`**, **the plugin's MCP servers** (browser, `castalie-files`) and **its sub-agents**.
+
+Someone who wants any of these installs the plugin (`claude plugin marketplace add
+castalie-app/agent-kit`, then `claude plugin install cs@castalie`) and re-runs setup without
+`--no-plugin`.
 
 **Never run it yourself with a token the user pasted into the conversation.** Ask them to run it, or to
 run it with `!` in front so the shell handles the value and it never lands in a transcript. A token in a
