@@ -132,6 +132,16 @@ acknowledgement comes immediately before that final link:
 
 Use the connected workspace address and the returned ticket id. Do not add a recap, a closing
 sentence, punctuation, or a second ticket link between this line and the verdict.
+The verdict is the shared conventions' own block, a quote opening on its bold heading, never a
+plain sentence:
+
+```
+👁️ https://<space>/tickets/<id>
+
+> **Finished here for you**: the ticket is filed, the session can be closed.
+```
+
+(the heading in the person's language: « Terminé ici pour vous » in French).
 
 ## Too big for a ticket → feature-brief
 
