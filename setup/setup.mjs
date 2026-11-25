@@ -132,6 +132,11 @@ const PLUGIN = `cs@${MARKETPLACE_NAME}`;
 // tool twice, which is the doubt `connect` exists to clear.
 const MCP_ALIAS = "castalie";
 const FORMER_MCP_ALIASES = ["cs", "bg", FIRST_NAME];
+// The header a registration made beside the plugin carries. The workspace's MCP server serves the
+// kit's skills itself ("Skills over MCP", shown as `castalie:<skill>`); the plugin already carries
+// each of them as `cs:<skill>`, so a client that has both would see every skill twice. With this
+// header the server lists none, and the plugin's copy is the only one.
+const PLUGIN_HEADER = "X-Castalie-Plugin";
 
 // The command this kit installs, which is NOT the server's alias — it follows `/cs:`, the prefix a
 // person types. Until the alias moved to `castalie` the two were one string, and the line that
@@ -196,6 +201,7 @@ function parseArgs(argv) {
     else if (a === "--no-pane") { out.pane = false; }
     else if (a === "--enable-pane") { out.paneOnly = true; }
     else if (a === "--panes-off") { out.panesOff = true; }
+    else if (a === "--no-plugin") { out.plugin = false; }
     else out._.push(a);
   }
   return out;
@@ -221,6 +227,9 @@ const HELP = `castalie-setup — connect your agent to your Castalie workspace
   --no-statusline  do not touch the status line under your prompt
   --no-pane        do not enable the pane beside the transcript (/where)
   --enable-pane    enable that pane and do nothing else (no token needed)
+  --no-plugin      connect without installing the plugin: the skills then come from your
+                   workspace's MCP server, as castalie:<skill> (the plugin's hooks, panes,
+                   browser and cs command stay with the plugin)
   --panes-off      keep every pane from opening by itself (${PANES_SETTING}=off); the commands
                    still open them. Alone, it does nothing else (no token needed)
 
@@ -395,11 +404,12 @@ function installAutoUpdate() {
 }
 
 // (b) Register the MCP endpoint for this project, with literal values.
-function registerMcp(haveClaude, endpoint, token) {
+function registerMcp(haveClaude, endpoint, token, withPlugin) {
   step(`Registering the MCP endpoint for this project, as \`${MCP_ALIAS}\``);
   const url = `${endpoint}/mcp`;
   const manual = () => {
     console.log(`      claude mcp add --scope local ${MCP_ALIAS} --transport http ${url} \\`);
+    if (withPlugin) console.log(`        --header "${PLUGIN_HEADER}: cs" \\`);
     console.log(`        --header "Authorization: Bearer <your-token>"`);
   };
 
@@ -424,6 +434,7 @@ function registerMcp(haveClaude, endpoint, token) {
   const added = runClaude([
     "mcp", "add", "--scope", "local", MCP_ALIAS,
     "--transport", "http", url,
+    ...(withPlugin ? ["--header", `${PLUGIN_HEADER}: cs`] : []),
     "--header", `Authorization: Bearer ${token}`,
   ], { encoding: "utf8" });
 
@@ -434,6 +445,9 @@ function registerMcp(haveClaude, endpoint, token) {
     return;
   }
   ok(`${MCP_ALIAS} → ${url} (local scope: this project only, nothing committed).`);
+  ok(withPlugin
+    ? "the skills come from the plugin, as cs:<skill> — the server lists none to this registration."
+    : "the skills come from your workspace's server, as castalie:<skill> — no plugin needed.");
 
   // A second definition of the same name is the failure that looks like nothing: the local
   // one wins, and whichever the user thought they were editing sits there being ignored. A
@@ -793,10 +807,18 @@ async function main() {
 
   console.log("Castalie Agent Kit — setup");
   const haveClaude = claudeCli() !== null;
-  installPlugin(haveClaude);
-  installAutoUpdate();
+  // Without the plugin, the skills come from the workspace's own MCP server (`castalie:<skill>`).
+  const wantPlugin = args.plugin !== false;
+  if (wantPlugin) {
+    installPlugin(haveClaude);
+    installAutoUpdate();
+  }
   quietPowerShell();
-  registerMcp(haveClaude, endpoint, token);
+  // The header follows what IS installed, not what was asked: a plugin the CLI failed to install
+  // leaves the server's skills as the only ones, and they must stay listed.
+  // Any scope counts: a plugin installed for this project only still carries every skill.
+  const pluginEntries = readJson(join(claudeConfigDir(), "plugins", "installed_plugins.json"))?.plugins?.[PLUGIN];
+  registerMcp(haveClaude, endpoint, token, wantPlugin && Array.isArray(pluginEntries) && pluginEntries.length > 0);
   writeConfig(endpoint, token);
   await smoke(endpoint, token);
   if (args.statusline !== false) installStatusLine(endpoint, token);

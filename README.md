@@ -123,6 +123,44 @@ What that move *did* leave on an old workstation is the address the entry points
 keep arriving and nothing looks wrong, which is exactly why it is worth saying — a redirect is a
 courtesy, not an address. Re-running setup re-points the entry at `castalie-app/agent-kit`.
 
+### Option C — no plugin: the skills come with the connection
+
+Your workspace's MCP server serves this kit's skills itself, through the MCP "Skills over MCP"
+extension (`io.modelcontextprotocol/skills`). A client that supports it — Claude Code 2.1.331 and
+later, Claude — shows them as `castalie:<skill>` (`/castalie:feature-brief`) as soon as the
+`castalie` server is connected, with nothing else installed:
+
+```
+npx -y github:castalie-app/agent-kit <your-castalie-token> --endpoint https://<your-workspace>.castalie.app --no-plugin
+```
+
+The server reads the version published on this repository's `main` — the one `/plugin update`
+reads too — and checks for a newer one a few minutes after the last check, when an agent lists or
+loads a skill: a release reaches every connected workspace without anybody reinstalling anything.
+Each skill comes with the files of `cs/instructions/` it names, under `instructions/`.
+
+**What stays with the plugin.** A skill is a text the agent reads when it chooses to; the rest of
+the kit runs without being asked, and only the plugin installs that:
+
+- **the hooks** — the shared conventions put in force from the first reply of every session
+  (`cs/instructions/shared-conventions.md`, how a turn ends), the guard on `CLAUDE.md`, the row
+  under the prompt and the work handed back to the session that took it, the reminder when a pull
+  request leaves no trace or a merge leaves the copy on its branch, the sweep of agent copies,
+  the automatic continue after a usage limit;
+- **the panes** — `/where`, the decisions panel, the OKR panel;
+- **the `cs` command and the scripts under `cs/bin/`** — `cs content pull|push`, `cs proof-pack`,
+  `cs site publish`, the prompt gates — which some steps run;
+- **its own MCP servers and agents** — the browser, `castalie-files`, the audit's sub-agents.
+
+A skill served without the plugin ends on a line that says so, and names the two commands of
+option B for the step that needs it.
+
+**Never both lists at once.** The plugin already carries every skill as `cs:<skill>`. Option A
+registers the server with the header `X-Castalie-Plugin: cs` when the plugin is installed, and the
+server then lists no skill to that registration — so a client that has both sees each skill once,
+as `cs:<skill>`. A registration made before this release has no header: re-run the setup command
+of option A once.
+
 The plugin's own MCP servers are its browser (below); the `castalie` server is yours to connect.
 Open your agent in your repository and it will say so and point you at the `connect` skill — or
 run the setup command above, which does the same thing in one line.
